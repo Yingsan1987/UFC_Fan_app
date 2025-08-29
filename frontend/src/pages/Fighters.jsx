@@ -1,0 +1,1 @@
+// Fighters page content placeholder

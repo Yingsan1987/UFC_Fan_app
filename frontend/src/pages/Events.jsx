@@ -1,0 +1,1 @@
+// Events page content placeholder

@@ -1,0 +1,1 @@
+// Ranking page content placeholder
