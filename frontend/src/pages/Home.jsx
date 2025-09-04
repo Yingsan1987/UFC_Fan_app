@@ -1,4 +1,7 @@
-function Home() {
-  return <h1 style={{ color: "red" }}>Welcome to UFC Fan App</h1>;
+export default function Home() {
+  return (
+    <div className="text-center text-2xl mt-10">
+      🥊 Welcome to UFC Fan App 🥊
+    </div>
+  );
 }
-export default Home;
