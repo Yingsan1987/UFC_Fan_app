@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { io } from "socket.io-client";
 import { Menu, X } from "lucide-react";
+import Fighters from "./pages/Fighters";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -89,18 +90,7 @@ function App() {
         <div className="p-6 overflow-auto flex-1">
           {activeTab === "Home" && <h2 className="text-xl">Welcome to UFC Fan App 🥊</h2>}
 
-          {activeTab === "Fighters" && (
-            <>
-              <h2 className="text-xl font-semibold mb-2">Fighters</h2>
-              <ul>
-                {fighters.map(f => (
-                  <li key={f._id}>
-                    {f.name} - {f.division} ({f.record})
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          {activeTab === "Fighters" && <Fighters />}
 
           {activeTab === "Events" && (
             <>

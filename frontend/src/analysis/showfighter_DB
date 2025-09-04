@@ -1,0 +1,38 @@
+import { MongoClient } from "mongodb";
+
+const uri = "mongodb://localhost:27017"; // change if your DB is hosted elsewhere
+const dbName = "ufc_db";                  // replace with your database name
+const collectionName = "fighters";        // replace with your collection name
+
+const client = new MongoClient(uri);
+
+async function showFighters() {
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+    const collection = db.collection(collectionName);
+
+    const fighters = await collection.find({}).toArray();
+
+    if (fighters.length === 0) {
+      console.log("No fighters found!");
+      return;
+    }
+
+    console.table(
+      fighters.map(f => ({
+        Name: f.name,
+        Division: f.division,
+        Record: f.record,
+        Height: f.height || "N/A",
+        Weight: f.weight || "N/A"
+      }))
+    );
+  } catch (err) {
+    console.error("Error fetching fighters:", err);
+  } finally {
+    await client.close();
+  }
+}
+
+showFighters();
