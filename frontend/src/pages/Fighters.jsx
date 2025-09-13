@@ -12,6 +12,10 @@ export default function Fighters() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDivision, setSelectedDivision] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [syncing, setSyncing] = useState(false);
+  const [apiStatus, setApiStatus] = useState(null);
+  const [syncMessage, setSyncMessage] = useState("");
+  const [enhancedData, setEnhancedData] = useState(false);
 
   const divisions = [
     "Heavyweight", "Light Heavyweight", "Middleweight", "Welterweight", 
@@ -23,8 +27,10 @@ export default function Fighters() {
     const fetchFighters = async () => {
       try {
         const response = await axios.get(`${API_URL}/fighters`);
-        setFighters(response.data);
-        setFilteredFighters(response.data);
+        // Filter to show only champions from API (champion: true)
+        const apiChampions = response.data.filter(fighter => fighter.champion === true);
+        setFighters(apiChampions);
+        setFilteredFighters(apiChampions);
       } catch (err) {
         setError("Failed to fetch UFC fighters");
         console.error(err);
@@ -33,7 +39,17 @@ export default function Fighters() {
       }
     };
 
+    const fetchApiStatus = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/fighters/api-status`);
+        setApiStatus(response.data);
+      } catch (err) {
+        console.error("Failed to fetch API status:", err);
+      }
+    };
+
     fetchFighters();
+    fetchApiStatus();
   }, []);
 
   useEffect(() => {
@@ -64,6 +80,54 @@ export default function Fighters() {
 
     setFilteredFighters(filtered);
   }, [searchTerm, selectedDivision, statusFilter, fighters]);
+
+  const syncChampions = async () => {
+    setSyncing(true);
+    setSyncMessage("");
+    
+    try {
+      console.log('Starting sync...');
+      const url = enhancedData 
+        ? `${API_URL}/fighters/sync-champions?enhanced=true`
+        : `${API_URL}/fighters/sync-champions`;
+      const response = await axios.post(url);
+      console.log('Sync response:', response.data);
+      
+      // Check if response has the expected structure
+      if (response.data && response.data.success) {
+        const stats = response.data.stats || {};
+        const apiUsage = response.data.apiUsage || {};
+        
+        setSyncMessage(`✅ Sync completed! ${stats.newFighters || 0} new fighters, ${stats.updatedFighters || 0} updated. Remaining API calls: ${apiUsage.remaining || 'Unknown'}`);
+        
+        // Refresh fighters list (filter to show only champions)
+        const fightersResponse = await axios.get(`${API_URL}/fighters`);
+        const apiChampions = fightersResponse.data.filter(fighter => fighter.champion === true);
+        setFighters(apiChampions);
+        setFilteredFighters(apiChampions);
+        
+        // Refresh API status
+        const statusResponse = await axios.get(`${API_URL}/fighters/api-status`);
+        setApiStatus(statusResponse.data);
+      } else {
+        setSyncMessage(`❌ Unexpected response format: ${JSON.stringify(response.data)}`);
+      }
+      
+    } catch (err) {
+      console.error('Sync error:', err);
+      console.error('Error response:', err.response?.data);
+      
+      if (err.response?.status === 429) {
+        setSyncMessage(`❌ API limit exceeded: ${err.response.data?.message || 'Daily limit reached'}`);
+      } else if (err.response?.data) {
+        setSyncMessage(`❌ Sync failed: ${err.response.data.message || err.response.data.error || 'Unknown error'}`);
+      } else {
+        setSyncMessage(`❌ Sync failed: ${err.message}`);
+      }
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const getFlagEmoji = (nationality) => {
     const flags = {
@@ -171,6 +235,53 @@ export default function Fighters() {
             <span className="text-gray-700 font-medium">{filteredFighters.length} fighters</span>
           </div>
         </div>
+        
+        {/* API Status and Sync Button */}
+        <div className="mt-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="flex items-center gap-4">
+            {apiStatus && (
+              <div className="text-sm text-gray-600">
+                <span className="font-medium">API Calls:</span> {apiStatus.used}/{apiStatus.limit} 
+                <span className="ml-2 text-green-600">({apiStatus.remaining} remaining)</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={enhancedData}
+                onChange={(e) => setEnhancedData(e.target.checked)}
+                className="rounded border-gray-300 text-red-500 focus:ring-red-500"
+              />
+              <span>Enhanced Data (uses more API calls)</span>
+            </label>
+            
+            <button
+              onClick={syncChampions}
+              disabled={syncing || (apiStatus && !apiStatus.canMakeCall)}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                syncing || (apiStatus && !apiStatus.canMakeCall)
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-red-500 text-white hover:bg-red-600'
+              }`}
+            >
+              {syncing ? '🔄 Syncing...' : '🏆 Sync Champions from UFC API'}
+            </button>
+          </div>
+        </div>
+        
+        {/* Sync Message */}
+        {syncMessage && (
+          <div className={`mt-3 p-3 rounded-lg text-sm ${
+            syncMessage.includes('✅') 
+              ? 'bg-green-100 text-green-800 border border-green-200' 
+              : 'bg-red-100 text-red-800 border border-red-200'
+          }`}>
+            {syncMessage}
+          </div>
+        )}
       </div>
 
       {/* Fighters Grid */}
