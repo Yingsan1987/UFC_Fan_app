@@ -7,7 +7,12 @@ const connectDB = require('./config/database');
 const chatSocket = require('./sockets/chatSocket');
 
 dotenv.config();
-connectDB();
+
+// Connect to MongoDB (optional - app can work without it)
+connectDB().catch(err => {
+  console.log('⚠️  MongoDB connection failed, but app will continue running');
+  console.log('📰 News API will work without database');
+});
 
 const app = express();
 const server = http.createServer(app);
@@ -21,6 +26,7 @@ app.use(express.json());
 app.use('/api/fighters', require('./routes/fighters'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/chat', require('./routes/chat'));
+app.use('/api/news', require('./routes/news'));
 
 // Chat socket
 chatSocket(io);

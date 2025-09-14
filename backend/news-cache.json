@@ -1,0 +1,94 @@
+{
+  "articles": [
+    {
+      "title": "UFC 300: Championship Fight Announced",
+      "description": "The UFC has officially announced the main event for UFC 300, featuring a highly anticipated championship bout.",
+      "content": "The Ultimate Fighting Championship has revealed the main event for their milestone UFC 300 event. The championship fight promises to be one of the most exciting matchups in recent history, with both fighters bringing impressive records to the octagon.",
+      "url": "https://example.com/ufc-300-announcement",
+      "image": "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=400&h=300&fit=crop",
+      "publishedAt": "2025-09-14T05:32:41.765Z",
+      "source": "UFC.com",
+      "category": "announcements",
+      "readTime": "3 min read"
+    },
+    {
+      "title": "Fighter Suspended for Anti-Doping Violation",
+      "description": "A prominent UFC fighter has been suspended following a positive test for banned substances.",
+      "content": "The UFC has announced the suspension of a high-profile fighter after testing positive for performance-enhancing drugs. The fighter will face a lengthy suspension and potential career implications.",
+      "url": "https://example.com/fighter-suspension",
+      "image": "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=400&h=300&fit=crop",
+      "publishedAt": "2025-09-14T03:32:41.765Z",
+      "source": "ESPN MMA",
+      "category": "controversy",
+      "readTime": "4 min read"
+    },
+    {
+      "title": "Upset Victory at UFC Fight Night",
+      "description": "Underdog fighter pulls off stunning upset in main event, shocking the MMA world.",
+      "content": "In a stunning turn of events, the underdog fighter delivered a spectacular performance, defeating the heavily favored opponent with a second-round knockout. The victory has sent shockwaves through the MMA community.",
+      "url": "https://example.com/upset-victory",
+      "image": "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=400&h=300&fit=crop",
+      "publishedAt": "2025-09-14T01:32:41.765Z",
+      "source": "MMA Fighting",
+      "category": "fights",
+      "readTime": "5 min read"
+    },
+    {
+      "title": "Fighter Announces Retirement",
+      "description": "Veteran UFC fighter announces retirement after 15-year career in mixed martial arts.",
+      "content": "A beloved veteran of the sport has announced his retirement from professional fighting. The fighter leaves behind a legacy of exciting fights and memorable moments in the octagon.",
+      "url": "https://example.com/fighter-retirement",
+      "image": "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=400&h=300&fit=crop",
+      "publishedAt": "2025-09-13T23:32:41.765Z",
+      "source": "Bloody Elbow",
+      "category": "announcements",
+      "readTime": "3 min read"
+    },
+    {
+      "title": "New UFC Signing Creates Buzz",
+      "description": "UFC announces signing of highly-touted prospect from regional circuit.",
+      "content": "The UFC has signed a promising young fighter who has been making waves in the regional circuit. The signing has generated significant buzz among MMA fans and analysts.",
+      "url": "https://example.com/new-signing",
+      "image": "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=400&h=300&fit=crop",
+      "publishedAt": "2025-09-13T21:32:41.765Z",
+      "source": "UFC.com",
+      "category": "transfers",
+      "readTime": "2 min read"
+    },
+    {
+      "title": "Fighter Injured, Fight Cancelled",
+      "description": "Upcoming fight card suffers setback as main event fighter withdraws due to injury.",
+      "content": "The upcoming fight card has been significantly impacted by the withdrawal of a main event fighter due to injury. The UFC is working to find a replacement or reschedule the bout.",
+      "url": "https://example.com/fight-cancelled",
+      "image": "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=400&h=300&fit=crop",
+      "publishedAt": "2025-09-13T17:32:41.765Z",
+      "source": "ESPN MMA",
+      "category": "injuries",
+      "readTime": "3 min read"
+    },
+    {
+      "title": "UFC Performance Institute Expands",
+      "description": "The UFC Performance Institute announces new facilities and programs for fighter development.",
+      "content": "The UFC Performance Institute has unveiled new state-of-the-art facilities designed to help fighters reach their full potential. The expansion includes new training areas and recovery facilities.",
+      "url": "https://example.com/performance-institute",
+      "image": "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=400&h=300&fit=crop",
+      "publishedAt": "2025-09-13T05:32:41.765Z",
+      "source": "UFC.com",
+      "category": "announcements",
+      "readTime": "4 min read"
+    },
+    {
+      "title": "Controversial Decision Sparks Debate",
+      "description": "Split decision victory in championship fight divides fans and experts.",
+      "content": "A controversial split decision in a recent championship fight has sparked heated debate among fans and MMA experts. The decision has been widely discussed across social media and sports forums.",
+      "url": "https://example.com/controversial-decision",
+      "image": "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=400&h=300&fit=crop",
+      "publishedAt": "2025-09-12T17:32:41.765Z",
+      "source": "MMA Fighting",
+      "category": "controversy",
+      "readTime": "6 min read"
+    }
+  ],
+  "lastUpdated": "2025-09-14T05:32:41.765Z",
+  "source": "web-search"
+}

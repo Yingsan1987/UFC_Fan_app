@@ -3,7 +3,9 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import { Menu, X } from "lucide-react";
 import React from 'react';
-import Fighters from './components/Fighters';
+import Fighters from './pages/Fighters';
+import Techniques from './pages/Techniques';
+import News from './pages/News';
 
 const API_URL = "http://localhost:5000/api";
 
@@ -35,7 +37,7 @@ function App() {
     }
   };
 
-  const menuItems = ["Home", "Fighters", "Events", "Ranking", "Prediction", "News", "Live Chat"];
+  const menuItems = ["Home", "Fighters", "Techniques", "Events", "Ranking", "Prediction", "News", "Live Chat"];
 
   return (
     <div className="flex h-screen font-sans">
@@ -91,18 +93,9 @@ function App() {
         <div className="p-6 overflow-auto flex-1">
           {activeTab === "Home" && <h2 className="text-xl">Welcome to UFC Fan App 🥊</h2>}
 
-          {activeTab === "Fighters" && (
-            <>
-              <h2 className="text-xl font-semibold mb-2">Fighters</h2>
-              <ul>
-                {fighters.map(f => (
-                  <li key={f._id}>
-                    {f.name} - {f.division} ({f.record})
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          {activeTab === "Fighters" && <Fighters />}
+
+          {activeTab === "Techniques" && <Techniques />}
 
           {activeTab === "Events" && (
             <>
@@ -150,7 +143,7 @@ function App() {
 
           {activeTab === "Ranking" && <p className="text-gray-600">🏆 Ranking page coming soon...</p>}
           {activeTab === "Prediction" && <p className="text-gray-600">🔮 Prediction page coming soon...</p>}
-          {activeTab === "News" && <p className="text-gray-600">📰 News page coming soon...</p>}
+          {activeTab === "News" && <News />}
         </div>
       </div>
     </div>
