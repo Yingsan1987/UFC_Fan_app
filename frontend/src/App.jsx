@@ -7,7 +7,7 @@ import Fighters from './pages/Fighters';
 import Techniques from './pages/Techniques';
 import News from './pages/News';
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = "ufc-fan-app-backend-git-main-kuros-projects-6fff505c.vercel.app";
 
 function App() {
   const [fighters, setFighters] = useState([]);
