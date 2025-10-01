@@ -19,7 +19,11 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'https://kurokuku.lol', // or '*' for all origins (not recommended for production)
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
