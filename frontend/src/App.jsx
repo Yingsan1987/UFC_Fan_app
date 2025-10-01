@@ -7,7 +7,7 @@ import Fighters from './pages/Fighters';
 import Techniques from './pages/Techniques';
 import News from './pages/News';
 
-const API_URL = "https://ufc-fan-app-backend.onrender.com";
+const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
 
 
 function App() {
@@ -22,8 +22,8 @@ function App() {
 
 
   useEffect(() => {
-    axios.get(`${API_URL}/backend/routes/fighters`).then(res => setFighters(res.data));
-    axios.get(`${API_URL}/backend/routes/events`).then(res => setEvents(res.data));
+    axios.get(`${API_URL}/fighters`).then(res => setFighters(res.data));
+    axios.get(`${API_URL}/events`).then(res => setEvents(res.data));
 
     socket.on("chatMessage", msg => {
       setChatMessages(prev => [msg, ...prev]);
