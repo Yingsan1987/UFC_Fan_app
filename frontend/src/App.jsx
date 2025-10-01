@@ -22,8 +22,8 @@ function App() {
 
 
   useEffect(() => {
-    axios.get(`${API_URL}/fighters`).then(res => setFighters(res.data));
-    axios.get(`${API_URL}/events`).then(res => setEvents(res.data));
+    axios.get(`${API_URL}/routes/fighters`).then(res => setFighters(res.data));
+    axios.get(`${API_URL}/routes/events`).then(res => setEvents(res.data));
 
     socket.on("chatMessage", msg => {
       setChatMessages(prev => [msg, ...prev]);
