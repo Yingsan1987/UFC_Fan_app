@@ -7,7 +7,7 @@ import Fighters from './pages/Fighters';
 import Techniques from './pages/Techniques';
 import News from './pages/News';
 
-const API_URL = "https://ufc-fan-app-backend-git-main-kuros-projects-6fff505c.vercel.app/api";
+const API_URL = "https://ufc-fan-app-backend.onrender.com";
 
 
 function App() {
@@ -18,7 +18,7 @@ function App() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Home");
 
-  const socket = io("https://ufc-fan-app-backend-git-main-kuros-projects-6fff505c.vercel.app");
+  const socket = io("https://ufc-fan-app-backend.onrender.com");
 
 
   useEffect(() => {
