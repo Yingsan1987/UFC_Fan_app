@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search, RefreshCw, ExternalLink, Calendar, Clock, TrendingUp } from "lucide-react";
 
-const API_URL = "https://ufc-fan-app-backend.onrender.com";
+const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
 
 export default function News() {
   const [news, setNews] = useState([]);

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Search, Filter, Trophy, MapPin, Target, Zap } from "lucide-react";
 
-const API_URL = "https://ufc-fan-app-backend.onrender.com";
+const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
 
 export default function Fighters() {
   const [fighters, setFighters] = useState([]);
