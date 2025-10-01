@@ -7,7 +7,7 @@ import Fighters from './pages/Fighters';
 import Techniques from './pages/Techniques';
 import News from './pages/News';
 
-const API_URL = "https://ufc-fan-app-backend.onrender.com";
+const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
 
 
 function App() {
