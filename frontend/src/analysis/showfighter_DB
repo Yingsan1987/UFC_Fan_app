@@ -1,6 +1,6 @@
 import { MongoClient } from "mongodb";
 
-const uri = "mongodb://localhost:27017"; // change if your DB is hosted elsewhere
+const uri = "https://ufc-fan-app-backend.onrender.com"; // change if your DB is hosted elsewhere
 const dbName = "ufc_db";                  // replace with your database name
 const collectionName = "fighters";        // replace with your collection name
 
