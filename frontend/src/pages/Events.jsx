@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Search, X } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
@@ -7,6 +8,8 @@ const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
 const Events = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -24,6 +27,7 @@ const Events = () => {
         });
         
         setEvents(sortedEvents);
+        setFilteredEvents(sortedEvents);
         setError(null);
       } catch (err) {
         setError('Failed to load events');
@@ -35,6 +39,24 @@ const Events = () => {
 
     fetchEvents();
   }, []);
+
+  // Filter events based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredEvents(events);
+    } else {
+      const filtered = events.filter(event =>
+        event.EVENT.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.LOCATION.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.DATE.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredEvents(filtered);
+    }
+  }, [searchTerm, events]);
+
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
 
   const formatDate = (dateString) => {
     try {
@@ -70,18 +92,60 @@ const Events = () => {
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">UFC Events</h1>
-        <p className="text-gray-600">Latest UFC events and fight cards</p>
+        <p className="text-gray-600 mb-6">Latest UFC events and fight cards</p>
+        
+        {/* Search Bar */}
+        <div className="relative max-w-md">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search events, locations, or dates..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-red-500 focus:border-red-500"
+          />
+          {searchTerm && (
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+              <button
+                onClick={clearSearch}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* Search Results Count */}
+        {searchTerm && (
+          <div className="mt-3 text-sm text-gray-600">
+            {filteredEvents.length === 0 ? (
+              <span>No events found matching "{searchTerm}"</span>
+            ) : (
+              <span>
+                {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found
+                {filteredEvents.length !== events.length && ` out of ${events.length} total`}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {events.length === 0 ? (
+      {filteredEvents.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-gray-400 text-6xl mb-4">🥊</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">No Events Available</h3>
-          <p className="text-gray-500">Check back later for upcoming UFC events!</p>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+            {searchTerm ? 'No Events Found' : 'No Events Available'}
+          </h3>
+          <p className="text-gray-500">
+            {searchTerm ? `Try a different search term` : 'Check back later for upcoming UFC events!'}
+          </p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {events.map((event) => (
+          {filteredEvents.map((event) => (
             <div
               key={event._id}
               className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden border border-gray-200"
@@ -159,10 +223,10 @@ const Events = () => {
         <div className="mt-12 bg-gray-50 rounded-lg p-6">
           <div className="text-center">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              Total Events: {events.length}
+              {searchTerm ? `Showing ${filteredEvents.length} of ${events.length} events` : `Total Events: ${events.length}`}
             </h3>
             <p className="text-gray-600 text-sm">
-              Showing all available UFC events sorted by date (latest first)
+              {searchTerm ? `Filtered by "${searchTerm}"` : 'Showing all available UFC events sorted by date (latest first)'}
             </p>
           </div>
         </div>

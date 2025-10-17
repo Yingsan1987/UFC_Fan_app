@@ -67,6 +67,19 @@ const EventDetails = () => {
     return `https://via.placeholder.com/80x80/ef4444/ffffff?text=${fighterName ? fighterName.charAt(0) : '?'}`;
   };
 
+  const parseBout = (boutString) => {
+    if (!boutString) return { fighter1: 'TBD', fighter2: 'TBD' };
+    
+    // Split by " vs " or " vs. " (case insensitive)
+    const parts = boutString.split(/\s+vs\.?\s+/i);
+    if (parts.length === 2) {
+      return { fighter1: parts[0].trim(), fighter2: parts[1].trim() };
+    }
+    
+    // If no "vs" found, return as single fighter
+    return { fighter1: boutString, fighter2: 'TBD' };
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -148,101 +161,77 @@ const EventDetails = () => {
           </div>
         ) : (
           <div className="grid gap-4">
-            {fightDetails.map((fight, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden"
-              >
-                <div className="p-6">
-                  {/* Fight Type/Weight Class */}
-                  {fight.WEIGHT_CLASS && (
+            {fightDetails.map((fight, index) => {
+              const { fighter1, fighter2 } = parseBout(fight.BOUT);
+              
+              return (
+                <div
+                  key={index}
+                  className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden"
+                >
+                  <div className="p-6">
+                    {/* Fight Header */}
                     <div className="text-center mb-4">
-                      <span className="inline-block bg-red-100 text-red-800 text-sm font-semibold px-3 py-1 rounded-full">
-                        {fight.WEIGHT_CLASS}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {/* Fighters */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Fighter 1 */}
-                    <div className="text-center">
-                      <div className="mb-3">
-                        <img
-                          src={getFighterImage(fight.FIGHTER_1)}
-                          alt={fight.FIGHTER_1}
-                          className="w-20 h-20 rounded-full mx-auto border-4 border-gray-200"
-                        />
-                      </div>
-                      <h3 className="font-bold text-lg text-gray-900 mb-1">
-                        {fight.FIGHTER_1 || 'TBD'}
+                      <h3 className="text-lg font-bold text-gray-900 mb-2">
+                        {fight.BOUT || 'TBD vs TBD'}
                       </h3>
-                      <div className="space-y-1 text-sm text-gray-600">
-                        {fight.FIGHTER_1_RECORD && (
-                          <p>Record: {fight.FIGHTER_1_RECORD}</p>
-                        )}
-                        {fight.FIGHTER_1_AGE && (
-                          <p>Age: {fight.FIGHTER_1_AGE}</p>
-                        )}
-                        {fight.FIGHTER_1_HEIGHT && (
-                          <p>Height: {fight.FIGHTER_1_HEIGHT}</p>
-                        )}
-                        {fight.FIGHTER_1_WEIGHT && (
-                          <p>Weight: {fight.FIGHTER_1_WEIGHT}</p>
-                        )}
-                      </div>
+                      {fight.URL && (
+                        <a
+                          href={fight.URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                        >
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          View Fight Details
+                        </a>
+                      )}
                     </div>
                     
-                    {/* VS */}
-                    <div className="flex items-center justify-center">
+                    {/* Fighters */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Fighter 1 */}
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600 mb-2">VS</div>
-                        {fight.ROUNDS && (
-                          <p className="text-sm text-gray-600">{fight.ROUNDS}</p>
-                        )}
+                        <div className="mb-3">
+                          <img
+                            src={getFighterImage(fighter1)}
+                            alt={fighter1}
+                            className="w-16 h-16 rounded-full mx-auto border-4 border-gray-200"
+                          />
+                        </div>
+                        <h4 className="font-bold text-base text-gray-900 mb-1">
+                          {fighter1}
+                        </h4>
+                        <p className="text-xs text-gray-500">Fighter</p>
                       </div>
-                    </div>
-                    
-                    {/* Fighter 2 */}
-                    <div className="text-center">
-                      <div className="mb-3">
-                        <img
-                          src={getFighterImage(fight.FIGHTER_2)}
-                          alt={fight.FIGHTER_2}
-                          className="w-20 h-20 rounded-full mx-auto border-4 border-gray-200"
-                        />
+                      
+                      {/* VS */}
+                      <div className="flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-xl font-bold text-red-600 mb-1">VS</div>
+                          <p className="text-xs text-gray-500">Bout</p>
+                        </div>
                       </div>
-                      <h3 className="font-bold text-lg text-gray-900 mb-1">
-                        {fight.FIGHTER_2 || 'TBD'}
-                      </h3>
-                      <div className="space-y-1 text-sm text-gray-600">
-                        {fight.FIGHTER_2_RECORD && (
-                          <p>Record: {fight.FIGHTER_2_RECORD}</p>
-                        )}
-                        {fight.FIGHTER_2_AGE && (
-                          <p>Age: {fight.FIGHTER_2_AGE}</p>
-                        )}
-                        {fight.FIGHTER_2_HEIGHT && (
-                          <p>Height: {fight.FIGHTER_2_HEIGHT}</p>
-                        )}
-                        {fight.FIGHTER_2_WEIGHT && (
-                          <p>Weight: {fight.FIGHTER_2_WEIGHT}</p>
-                        )}
+                      
+                      {/* Fighter 2 */}
+                      <div className="text-center">
+                        <div className="mb-3">
+                          <img
+                            src={getFighterImage(fighter2)}
+                            alt={fighter2}
+                            className="w-16 h-16 rounded-full mx-auto border-4 border-gray-200"
+                          />
+                        </div>
+                        <h4 className="font-bold text-base text-gray-900 mb-1">
+                          {fighter2}
+                        </h4>
+                        <p className="text-xs text-gray-500">Fighter</p>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Fight Result */}
-                  {fight.RESULT && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 text-center">
-                      <span className="inline-block bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">
-                        {fight.RESULT}
-                      </span>
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
