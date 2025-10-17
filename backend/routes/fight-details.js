@@ -1,5 +1,5 @@
 const express = require('express');
-const FightDetails = require('../models/FightDetails');
+const FightResults = require('../models/FightDetails');
 const router = express.Router();
 
 // Get fight details by event name
@@ -9,7 +9,7 @@ router.get('/:eventName', async (req, res) => {
     console.log(`🥊 Fetching fight details for event: ${eventName}`);
     
     // Search for fights that match the event name (case insensitive)
-    const fightDetails = await FightDetails.find({
+    const fightDetails = await FightResults.find({
       EVENT: { $regex: eventName, $options: 'i' }
     }).sort({ createdAt: -1 });
     
@@ -33,7 +33,7 @@ router.get('/:eventName', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     console.log('🥊 Fetching all fight details...');
-    const fightDetails = await FightDetails.find().sort({ createdAt: -1 });
+    const fightDetails = await FightResults.find().sort({ createdAt: -1 });
     console.log(`✅ Found ${fightDetails.length} total fights`);
     res.json(fightDetails);
   } catch (error) {
@@ -45,7 +45,7 @@ router.get('/', async (req, res) => {
 // Create new fight detail
 router.post('/', async (req, res) => {
   try {
-    const fightDetail = new FightDetails(req.body);
+    const fightDetail = new FightResults(req.body);
     await fightDetail.save();
     console.log(`✅ Created new fight detail: ${fightDetail.EVENT}`);
     res.status(201).json(fightDetail);
@@ -69,13 +69,13 @@ router.get('/debug/collections', async (req, res) => {
       3: 'disconnecting'
     };
     
-    const count = await FightDetails.countDocuments();
-    const sample = await FightDetails.findOne();
+    const count = await FightResults.countDocuments();
+    const sample = await FightResults.findOne();
     
     res.json({
       connectionState: states[connectionState],
       databaseName: mongoose.connection.name,
-      collectionName: FightDetails.collection.name,
+      collectionName: FightResults.collection.name,
       documentCount: count,
       sampleDocument: sample,
       message: 'Fight details debug information retrieved successfully'

@@ -80,6 +80,35 @@ const EventDetails = () => {
     return { fighter1: boutString, fighter2: 'TBD' };
   };
 
+  const getFighterBorderColor = (outcome, isFirstFighter) => {
+    if (!outcome) return 'border-gray-200';
+    
+    // OUTCOME format is typically "W/L" where first letter is first fighter's result
+    const firstResult = outcome.charAt(0);
+    
+    if (isFirstFighter && firstResult === 'W') {
+      return 'border-green-500'; // Winner gets green border
+    } else if (!isFirstFighter && outcome.length > 2 && outcome.charAt(2) === 'W') {
+      return 'border-green-500'; // Winner gets green border
+    }
+    
+    return 'border-gray-200'; // Default gray border
+  };
+
+  const getFighterBorderWidth = (outcome, isFirstFighter) => {
+    if (!outcome) return 'border-2';
+    
+    const firstResult = outcome.charAt(0);
+    
+    if (isFirstFighter && firstResult === 'W') {
+      return 'border-3'; // Thicker border for winner
+    } else if (!isFirstFighter && outcome.length > 2 && outcome.charAt(2) === 'W') {
+      return 'border-3'; // Thicker border for winner
+    }
+    
+    return 'border-2'; // Default border width
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -160,7 +189,7 @@ const EventDetails = () => {
             <p className="text-gray-600">No fight details available for this event</p>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {fightDetails.map((fight, index) => {
               const { fighter1, fighter2 } = parseBout(fight.BOUT);
               
@@ -169,18 +198,38 @@ const EventDetails = () => {
                   key={index}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
                 >
-                  <div className="p-4">
+                  <div className="p-3">
                     {/* Fight Header */}
-                    <div className="text-center mb-3">
-                      <h3 className="text-sm font-bold text-gray-900 mb-1">
+                    <div className="text-center mb-2">
+                      <h3 className="text-xs font-bold text-gray-900 mb-1">
                         {fight.BOUT || 'TBD vs TBD'}
                       </h3>
+                      {fight.WEIGHTCLASS && (
+                        <p className="text-xs text-gray-600 mb-1">{fight.WEIGHTCLASS}</p>
+                      )}
+                      {fight.OUTCOME && (
+                        <div className="flex justify-center space-x-2 text-xs">
+                          <span className="bg-gray-100 px-2 py-1 rounded">
+                            {fight.OUTCOME}
+                          </span>
+                          {fight.METHOD && (
+                            <span className="bg-red-100 text-red-800 px-2 py-1 rounded">
+                              {fight.METHOD}
+                            </span>
+                          )}
+                          {fight.ROUND && fight.TIME && (
+                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              R{fight.ROUND} - {fight.TIME}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       {fight.URL && (
                         <a
                           href={fight.URL}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center text-xs text-red-600 hover:text-red-800"
+                          className="inline-flex items-center text-xs text-red-600 hover:text-red-800 mt-1"
                         >
                           <ExternalLink className="w-3 h-3 mr-1" />
                           View Details
@@ -195,34 +244,51 @@ const EventDetails = () => {
                         <img
                           src={getFighterImage(fighter1)}
                           alt={fighter1}
-                          className="w-10 h-10 rounded-full border-2 border-gray-200 flex-shrink-0"
+                          className={`w-8 h-8 rounded-full ${getFighterBorderWidth(fight.OUTCOME, true)} ${getFighterBorderColor(fight.OUTCOME, true)} flex-shrink-0`}
                         />
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-bold text-sm text-gray-900 truncate">
+                          <h4 className="font-bold text-xs text-gray-900 truncate">
                             {fighter1}
                           </h4>
                         </div>
                       </div>
                       
                       {/* VS */}
-                      <div className="px-3 flex-shrink-0">
-                        <span className="text-sm font-bold text-red-600">VS</span>
+                      <div className="px-2 flex-shrink-0">
+                        <span className="text-xs font-bold text-red-600">VS</span>
                       </div>
                       
                       {/* Fighter 2 */}
                       <div className="flex items-center space-x-2 flex-1">
                         <div className="min-w-0 flex-1 text-right">
-                          <h4 className="font-bold text-sm text-gray-900 truncate">
+                          <h4 className="font-bold text-xs text-gray-900 truncate">
                             {fighter2}
                           </h4>
                         </div>
                         <img
                           src={getFighterImage(fighter2)}
                           alt={fighter2}
-                          className="w-10 h-10 rounded-full border-2 border-gray-200 flex-shrink-0"
+                          className={`w-8 h-8 rounded-full ${getFighterBorderWidth(fight.OUTCOME, false)} ${getFighterBorderColor(fight.OUTCOME, false)} flex-shrink-0`}
                         />
                       </div>
                     </div>
+                    
+                    {/* Additional Fight Details */}
+                    {(fight.DETAILS || fight.REFEREE || fight.TIME_FORMAT) && (
+                      <div className="mt-2 pt-2 border-t border-gray-100">
+                        <div className="text-xs text-gray-600 space-y-1">
+                          {fight.DETAILS && (
+                            <p><span className="font-medium">Details:</span> {fight.DETAILS}</p>
+                          )}
+                          {fight.REFEREE && (
+                            <p><span className="font-medium">Referee:</span> {fight.REFEREE}</p>
+                          )}
+                          {fight.TIME_FORMAT && (
+                            <p><span className="font-medium">Format:</span> {fight.TIME_FORMAT}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
