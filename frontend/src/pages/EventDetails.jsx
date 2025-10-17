@@ -167,12 +167,12 @@ const EventDetails = () => {
               return (
                 <div
                   key={index}
-                  className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden"
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
                 >
-                  <div className="p-6">
+                  <div className="p-4">
                     {/* Fight Header */}
-                    <div className="text-center mb-4">
-                      <h3 className="text-lg font-bold text-gray-900 mb-2">
+                    <div className="text-center mb-3">
+                      <h3 className="text-sm font-bold text-gray-900 mb-1">
                         {fight.BOUT || 'TBD vs TBD'}
                       </h3>
                       {fight.URL && (
@@ -180,52 +180,47 @@ const EventDetails = () => {
                           href={fight.URL}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                          className="inline-flex items-center text-xs text-red-600 hover:text-red-800"
                         >
-                          <ExternalLink className="w-4 h-4 mr-1" />
-                          View Fight Details
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          View Details
                         </a>
                       )}
                     </div>
                     
-                    {/* Fighters */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Fighters - Compact Layout */}
+                    <div className="flex items-center justify-between">
                       {/* Fighter 1 */}
-                      <div className="text-center">
-                        <div className="mb-3">
-                          <img
-                            src={getFighterImage(fighter1)}
-                            alt={fighter1}
-                            className="w-16 h-16 rounded-full mx-auto border-4 border-gray-200"
-                          />
+                      <div className="flex items-center space-x-2 flex-1">
+                        <img
+                          src={getFighterImage(fighter1)}
+                          alt={fighter1}
+                          className="w-10 h-10 rounded-full border-2 border-gray-200 flex-shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-bold text-sm text-gray-900 truncate">
+                            {fighter1}
+                          </h4>
                         </div>
-                        <h4 className="font-bold text-base text-gray-900 mb-1">
-                          {fighter1}
-                        </h4>
-                        <p className="text-xs text-gray-500">Fighter</p>
                       </div>
                       
                       {/* VS */}
-                      <div className="flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-xl font-bold text-red-600 mb-1">VS</div>
-                          <p className="text-xs text-gray-500">Bout</p>
-                        </div>
+                      <div className="px-3 flex-shrink-0">
+                        <span className="text-sm font-bold text-red-600">VS</span>
                       </div>
                       
                       {/* Fighter 2 */}
-                      <div className="text-center">
-                        <div className="mb-3">
-                          <img
-                            src={getFighterImage(fighter2)}
-                            alt={fighter2}
-                            className="w-16 h-16 rounded-full mx-auto border-4 border-gray-200"
-                          />
+                      <div className="flex items-center space-x-2 flex-1">
+                        <div className="min-w-0 flex-1 text-right">
+                          <h4 className="font-bold text-sm text-gray-900 truncate">
+                            {fighter2}
+                          </h4>
                         </div>
-                        <h4 className="font-bold text-base text-gray-900 mb-1">
-                          {fighter2}
-                        </h4>
-                        <p className="text-xs text-gray-500">Fighter</p>
+                        <img
+                          src={getFighterImage(fighter2)}
+                          alt={fighter2}
+                          className="w-10 h-10 rounded-full border-2 border-gray-200 flex-shrink-0"
+                        />
                       </div>
                     </div>
                   </div>

@@ -22,6 +22,15 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Update activeTab based on current route
+  useEffect(() => {
+    if (location.pathname === '/events') {
+      setActiveTab('Events');
+    } else if (location.pathname === '/') {
+      setActiveTab('Home');
+    }
+  }, [location.pathname]);
+
   const socket = io("https://ufc-fan-app-backend.onrender.com");
 
 
