@@ -29,6 +29,7 @@ app.use(express.json());
 // Routes
 app.use('/api/fighters', require('./routes/fighters'));
 app.use('/api/events', require('./routes/events'));
+app.use('/api/fight-details', require('./routes/fight-details'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/news', require('./routes/news'));
 

@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { io } from "socket.io-client";
 import { Menu, X } from "lucide-react";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import React from 'react';
 import Fighters from './pages/Fighters';
 import Techniques from './pages/Techniques';
 import News from './pages/News';
 import Events from './pages/Events';
+import EventDetails from './pages/EventDetails';
 
 const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
 
@@ -17,6 +19,8 @@ function App() {
   const [message, setMessage] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Home");
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const socket = io("https://ufc-fan-app-backend.onrender.com");
 
@@ -64,6 +68,14 @@ function App() {
               onClick={() => {
                 setActiveTab(item);
                 setIsOpen(false);
+                // Navigate to the appropriate route
+                if (item === "Events") {
+                  navigate("/events");
+                } else if (item === "Home") {
+                  navigate("/");
+                } else {
+                  navigate("/");
+                }
               }}
             >
               {item}
@@ -92,44 +104,46 @@ function App() {
 
         {/* Page Content */}
         <div className="p-6 overflow-auto flex-1">
-          {activeTab === "Home" && <h2 className="text-xl">Welcome to UFC Fan App 🥊</h2>}
-
-          {activeTab === "Fighters" && <Fighters />}
-
-          {activeTab === "Techniques" && <Techniques />}
-
-          {activeTab === "Events" && <Events />}
-
-          {activeTab === "Live Chat" && (
-            <>
-              <h2 className="text-xl font-semibold mb-2">Live Chat</h2>
-              <div className="border border-gray-300 p-2 h-64 overflow-y-scroll mb-2 bg-white">
-                {chatMessages.map((m, idx) => (
-                  <p key={idx}>
-                    <b>{m.user}:</b> {m.text}
-                  </p>
-                ))}
-              </div>
-              <div className="flex space-x-2">
-                <input
-                  className="flex-1 border p-2"
-                  value={message}
-                  onChange={e => setMessage(e.target.value)}
-                  placeholder="Type a message..."
-                />
-                <button
-                  onClick={sendMessage}
-                  className="bg-red-500 text-white px-4 rounded"
-                >
-                  Send
-                </button>
-              </div>
-            </>
-          )}
-
-          {activeTab === "Ranking" && <p className="text-gray-600">🏆 Ranking page coming soon...</p>}
-          {activeTab === "Prediction" && <p className="text-gray-600">🔮 Prediction page coming soon...</p>}
-          {activeTab === "News" && <News />}
+          <Routes>
+            <Route path="/" element={
+              <>
+                {activeTab === "Home" && <h2 className="text-xl">Welcome to UFC Fan App 🥊</h2>}
+                {activeTab === "Fighters" && <Fighters />}
+                {activeTab === "Techniques" && <Techniques />}
+                {activeTab === "Live Chat" && (
+                  <>
+                    <h2 className="text-xl font-semibold mb-2">Live Chat</h2>
+                    <div className="border border-gray-300 p-2 h-64 overflow-y-scroll mb-2 bg-white">
+                      {chatMessages.map((m, idx) => (
+                        <p key={idx}>
+                          <b>{m.user}:</b> {m.text}
+                        </p>
+                      ))}
+                    </div>
+                    <div className="flex space-x-2">
+                      <input
+                        className="flex-1 border p-2"
+                        value={message}
+                        onChange={e => setMessage(e.target.value)}
+                        placeholder="Type a message..."
+                      />
+                      <button
+                        onClick={sendMessage}
+                        className="bg-red-500 text-white px-4 rounded"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </>
+                )}
+                {activeTab === "Ranking" && <p className="text-gray-600">🏆 Ranking page coming soon...</p>}
+                {activeTab === "Prediction" && <p className="text-gray-600">🔮 Prediction page coming soon...</p>}
+                {activeTab === "News" && <News />}
+              </>
+            } />
+            <Route path="/events" element={<Events />} />
+            <Route path="/event-details/:eventName" element={<EventDetails />} />
+          </Routes>
         </div>
       </div>
     </div>
