@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Calendar, MapPin, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, ExternalLink, CheckCircle } from 'lucide-react';
 
 const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
 
@@ -109,6 +109,34 @@ const EventDetails = () => {
     return 'border-2'; // Default border width
   };
 
+  const isFighterWinner = (outcome, isFirstFighter) => {
+    if (!outcome) return false;
+    
+    const firstResult = outcome.charAt(0);
+    
+    if (isFirstFighter && firstResult === 'W') {
+      return true;
+    } else if (!isFirstFighter && outcome.length > 2 && outcome.charAt(2) === 'W') {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Filter out duplicate fights (keep only unique bouts)
+  const getUniqueFights = (fights) => {
+    const seenBouts = new Set();
+    return fights.filter(fight => {
+      if (!fight.BOUT) return false;
+      const boutKey = fight.BOUT.toLowerCase().trim();
+      if (seenBouts.has(boutKey)) {
+        return false; // Skip duplicate
+      }
+      seenBouts.add(boutKey);
+      return true;
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -190,7 +218,7 @@ const EventDetails = () => {
           </div>
         ) : (
           <div className="grid gap-3">
-            {fightDetails.map((fight, index) => {
+            {getUniqueFights(fightDetails).map((fight, index) => {
               const { fighter1, fighter2 } = parseBout(fight.BOUT);
               
               return (
@@ -247,9 +275,14 @@ const EventDetails = () => {
                           className={`w-8 h-8 rounded-full ${getFighterBorderWidth(fight.OUTCOME, true)} ${getFighterBorderColor(fight.OUTCOME, true)} flex-shrink-0`}
                         />
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-bold text-xs text-gray-900 truncate">
-                            {fighter1}
-                          </h4>
+                          <div className="flex items-center space-x-1">
+                            <h4 className="font-bold text-xs text-gray-900 truncate">
+                              {fighter1}
+                            </h4>
+                            {isFighterWinner(fight.OUTCOME, true) && (
+                              <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+                            )}
+                          </div>
                         </div>
                       </div>
                       
@@ -261,9 +294,14 @@ const EventDetails = () => {
                       {/* Fighter 2 */}
                       <div className="flex items-center space-x-2 flex-1">
                         <div className="min-w-0 flex-1 text-right">
-                          <h4 className="font-bold text-xs text-gray-900 truncate">
-                            {fighter2}
-                          </h4>
+                          <div className="flex items-center justify-end space-x-1">
+                            <h4 className="font-bold text-xs text-gray-900 truncate">
+                              {fighter2}
+                            </h4>
+                            {isFighterWinner(fight.OUTCOME, false) && (
+                              <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+                            )}
+                          </div>
                         </div>
                         <img
                           src={getFighterImage(fighter2)}
