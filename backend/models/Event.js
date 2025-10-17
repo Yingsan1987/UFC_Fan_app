@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
 const eventSchema = new mongoose.Schema({
-  title: String,
-  date: Date,
-  location: String,
-  fighters: [String],
+  EVENT: String,
+  URL: String,
+  DATE: String,
+  LOCATION: String,
   createdAt: { type: Date, default: Date.now }
 });
 

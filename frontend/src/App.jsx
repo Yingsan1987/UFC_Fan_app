@@ -6,13 +6,13 @@ import React from 'react';
 import Fighters from './pages/Fighters';
 import Techniques from './pages/Techniques';
 import News from './pages/News';
+import Events from './pages/Events';
 
 const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
 
 
 function App() {
   const [fighters, setFighters] = useState([]);
-  const [events, setEvents] = useState([]);
   const [chatMessages, setChatMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -23,7 +23,6 @@ function App() {
 
   useEffect(() => {
     axios.get(`${API_URL}/fighters`).then(res => setFighters(res.data));
-    axios.get(`${API_URL}/events`).then(res => setEvents(res.data));
 
     socket.on("chatMessage", msg => {
       setChatMessages(prev => [msg, ...prev]);
@@ -99,22 +98,7 @@ function App() {
 
           {activeTab === "Techniques" && <Techniques />}
 
-          {activeTab === "Events" && (
-            <>
-              <h2 className="text-xl font-semibold mb-2">Events</h2>
-              {events.length === 0 ? (
-                <p>No events yet</p>
-              ) : (
-                <ul>
-                  {events.map(e => (
-                    <li key={e._id}>
-                      {e.title} - {new Date(e.date).toLocaleDateString()} @ {e.location}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
+          {activeTab === "Events" && <Events />}
 
           {activeTab === "Live Chat" && (
             <>
