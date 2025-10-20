@@ -1,25 +1,233 @@
 import { useState } from 'react';
 import { Coffee, Crown, CreditCard, Heart, CheckCircle } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import axios from 'axios';
+
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+
+const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
+
+// Payment Form Component using Stripe Elements
+const PaymentForm = ({ paymentType, selectedCoffee, subscriptionPlan, onSuccess, onCancel }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [paymentData, setPaymentData] = useState({
+    name: '',
+    email: ''
+  });
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const cardElement = elements.getElement(CardElement);
+
+    try {
+      if (paymentType === 'coffee') {
+        // Handle one-time payment for coffee
+        const response = await axios.post(`${API_URL}/stripe/create-payment-intent`, {
+          amount: selectedCoffee.price,
+          currency: 'usd',
+          metadata: {
+            type: 'coffee_purchase',
+            coffee_type: selectedCoffee.id,
+            customer_name: paymentData.name,
+            customer_email: paymentData.email
+          }
+        });
+
+        const { clientSecret } = response.data;
+
+        const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: paymentData.name,
+              email: paymentData.email,
+            },
+          },
+        });
+
+        if (stripeError) {
+          setError(stripeError.message);
+        } else if (paymentIntent.status === 'succeeded') {
+          onSuccess(`Thank you for buying me a ${selectedCoffee.name}! Your payment was successful.`);
+        }
+      } else if (paymentType === 'subscription') {
+        // Handle subscription payment
+        const response = await axios.post(`${API_URL}/stripe/create-subscription`, {
+          priceId: process.env.REACT_APP_STRIPE_PRICE_ID, // You'll need to set this
+          customerEmail: paymentData.email,
+          customerName: paymentData.name,
+          metadata: {
+            type: 'premium_subscription',
+            customer_name: paymentData.name,
+            customer_email: paymentData.email
+          }
+        });
+
+        const { clientSecret } = response.data;
+
+        const { error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: paymentData.name,
+              email: paymentData.email,
+            },
+          },
+        });
+
+        if (stripeError) {
+          setError(stripeError.message);
+        } else {
+          onSuccess('Welcome to UFC Fan App Premium! Your subscription is now active.');
+        }
+      }
+    } catch (err) {
+      setError('Payment failed. Please try again.');
+      console.error('Payment error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setPaymentData({
+      ...paymentData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const cardElementOptions = {
+    style: {
+      base: {
+        fontSize: '16px',
+        color: '#424770',
+        '::placeholder': {
+          color: '#aab7c4',
+        },
+      },
+      invalid: {
+        color: '#9e2146',
+      },
+    },
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Complete Your Payment</h2>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            {paymentType === 'coffee' ? (
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">{selectedCoffee.icon}</span>
+                <div>
+                  <h3 className="font-semibold text-gray-900">{selectedCoffee.name}</h3>
+                  <p className="text-gray-600">{selectedCoffee.description}</p>
+                </div>
+                <div className="ml-auto">
+                  <span className="text-xl font-bold text-green-600">${selectedCoffee.price}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <Crown className="w-8 h-8 text-yellow-500" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">{subscriptionPlan.name}</h3>
+                  <p className="text-gray-600">Monthly subscription</p>
+                </div>
+                <div className="ml-auto">
+                  <span className="text-xl font-bold text-green-600">${subscriptionPlan.price}/month</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <input
+                type="text"
+                name="name"
+                value={paymentData.name}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                name="email"
+                value={paymentData.email}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Card Details</label>
+            <div className="px-3 py-2 border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-red-500">
+              <CardElement options={cardElementOptions} />
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+              {error}
+            </div>
+          )}
+
+          <div className="flex space-x-4 pt-4">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!stripe || loading}
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>{loading ? 'Processing...' : 'Complete Payment'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 const Support = () => {
   const [selectedCoffee, setSelectedCoffee] = useState(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentType, setPaymentType] = useState(null); // 'coffee' or 'subscription'
-  const [paymentData, setPaymentData] = useState({
-    name: '',
-    email: '',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    zipCode: ''
-  });
 
   const coffeeOptions = [
     {
       id: 'timhortons',
       name: 'Tim Hortons Coffee',
       price: 1.99,
-      description: 'Buy me a Tim Hortons coffee to show your support!',
+      description: 'Buy me a Timmy coffee to show your support!',
       icon: '☕',
       color: 'bg-red-600'
     },
@@ -57,183 +265,30 @@ const Support = () => {
     setShowPaymentForm(true);
   };
 
-  const handleInputChange = (e) => {
-    setPaymentData({
-      ...paymentData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const formatCardNumber = (value) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = matches && matches[0] || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return v;
-    }
-  };
-
-  const formatExpiryDate = (value) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    if (v.length >= 2) {
-      return v.substring(0, 2) + '/' + v.substring(2, 4);
-    }
-    return v;
-  };
-
-  const handlePaymentSubmit = (e) => {
-    e.preventDefault();
-    // Here you would integrate with your payment processor
-    // For now, we'll just show a success message
-    alert(`Thank you for your support! Payment processed for ${paymentType === 'coffee' ? selectedCoffee.name : subscriptionPlan.name}`);
+  const handlePaymentSuccess = (message) => {
+    alert(message);
     setShowPaymentForm(false);
     setSelectedCoffee(null);
     setPaymentType(null);
-    setPaymentData({
-      name: '',
-      email: '',
-      cardNumber: '',
-      expiryDate: '',
-      cvv: '',
-      zipCode: ''
-    });
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentForm(false);
+    setSelectedCoffee(null);
+    setPaymentType(null);
   };
 
   if (showPaymentForm) {
     return (
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Complete Your Payment</h2>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              {paymentType === 'coffee' ? (
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">{selectedCoffee.icon}</span>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{selectedCoffee.name}</h3>
-                    <p className="text-gray-600">{selectedCoffee.description}</p>
-                  </div>
-                  <div className="ml-auto">
-                    <span className="text-xl font-bold text-green-600">${selectedCoffee.price}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-3">
-                  <Crown className="w-8 h-8 text-yellow-500" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{subscriptionPlan.name}</h3>
-                    <p className="text-gray-600">Monthly subscription</p>
-                  </div>
-                  <div className="ml-auto">
-                    <span className="text-xl font-bold text-green-600">${subscriptionPlan.price}/month</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <form onSubmit={handlePaymentSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={paymentData.name}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={paymentData.email}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
-              <input
-                type="text"
-                name="cardNumber"
-                value={paymentData.cardNumber}
-                onChange={(e) => setPaymentData({...paymentData, cardNumber: formatCardNumber(e.target.value)})}
-                placeholder="1234 5678 9012 3456"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-                <input
-                  type="text"
-                  name="expiryDate"
-                  value={paymentData.expiryDate}
-                  onChange={(e) => setPaymentData({...paymentData, expiryDate: formatExpiryDate(e.target.value)})}
-                  placeholder="MM/YY"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">CVV</label>
-                <input
-                  type="text"
-                  name="cvv"
-                  value={paymentData.cvv}
-                  onChange={handleInputChange}
-                  placeholder="123"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-                <input
-                  type="text"
-                  name="zipCode"
-                  value={paymentData.zipCode}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex space-x-4 pt-4">
-              <button
-                type="button"
-                onClick={() => setShowPaymentForm(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
-              >
-                <CreditCard className="w-4 h-4" />
-                <span>Complete Payment</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+      <Elements stripe={stripePromise}>
+        <PaymentForm
+          paymentType={paymentType}
+          selectedCoffee={selectedCoffee}
+          subscriptionPlan={subscriptionPlan}
+          onSuccess={handlePaymentSuccess}
+          onCancel={handlePaymentCancel}
+        />
+      </Elements>
     );
   }
 

@@ -32,6 +32,7 @@ app.use('/api/events', require('./routes/events'));
 app.use('/api/fight-details', require('./routes/fight-details'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/news', require('./routes/news'));
+app.use('/api/stripe', require('./routes/stripe'));
 
 // Chat socket
 chatSocket(io);

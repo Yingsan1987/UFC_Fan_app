@@ -11,7 +11,7 @@ import Events from './pages/Events';
 import EventDetails from './pages/EventDetails';
 import Support from './pages/Support';
 
-const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
+const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
 
 
 function App() {
@@ -34,7 +34,7 @@ function App() {
     }
   }, [location.pathname]);
 
-  const socket = io("https://ufc-fan-app-backend.onrender.com");
+  const socket = io(process.env.REACT_APP_API_URL?.replace('/api', '') || "https://ufc-fan-app-backend.onrender.com");
 
 
   useEffect(() => {
