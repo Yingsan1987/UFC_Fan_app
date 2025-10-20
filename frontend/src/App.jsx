@@ -9,6 +9,7 @@ import Techniques from './pages/Techniques';
 import News from './pages/News';
 import Events from './pages/Events';
 import EventDetails from './pages/EventDetails';
+import Support from './pages/Support';
 
 const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
 
@@ -26,6 +27,8 @@ function App() {
   useEffect(() => {
     if (location.pathname === '/events') {
       setActiveTab('Events');
+    } else if (location.pathname === '/support') {
+      setActiveTab('Support');
     } else if (location.pathname === '/') {
       setActiveTab('Home');
     }
@@ -51,7 +54,7 @@ function App() {
     }
   };
 
-  const menuItems = ["Home", "Fighters", "Techniques", "Events", "Ranking", "Prediction", "News", "Live Chat"];
+  const menuItems = ["Home", "Fighters", "Techniques", "Events", "Ranking", "Prediction", "News", "Live Chat", "Support"];
 
   return (
     <div className="flex h-screen font-sans">
@@ -80,6 +83,8 @@ function App() {
                 // Navigate to the appropriate route
                 if (item === "Events") {
                   navigate("/events");
+                } else if (item === "Support") {
+                  navigate("/support");
                 } else if (item === "Home") {
                   navigate("/");
                 } else {
@@ -152,6 +157,7 @@ function App() {
             } />
             <Route path="/events" element={<Events />} />
             <Route path="/event-details/:eventName" element={<EventDetails />} />
+            <Route path="/support" element={<Support />} />
             <Route path="*" element={
               <div className="text-center py-12">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Page Not Found</h2>
