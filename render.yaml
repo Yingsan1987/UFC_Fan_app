@@ -32,3 +32,4 @@ services:
         sync: false  # This will be set in Render dashboard
       - key: REACT_APP_API_URL
         value: https://ufc-fan-app-backend.onrender.com
+

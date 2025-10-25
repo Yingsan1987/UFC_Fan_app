@@ -1,6 +1,8 @@
 const express = require('express');
 const axios = require('axios');
 const Fighter = require('../models/Fighter');
+const FighterDetails = require('../models/FighterDetails');
+const FighterTott = require('../models/FighterTott');
 const router = express.Router();
 
 // Rate limiting for API calls (3 calls per day)
@@ -117,6 +119,127 @@ async function fetchFighterHistory(firstName, lastName) {
   }
 }
 
+// Function to combine fighter data from both collections
+function combineFighterData(fighterDetails, fighterTott) {
+  const fighterMap = new Map();
+  
+  // Process fighter details first
+  fighterDetails.forEach(fighter => {
+    const key = fighter.name?.toLowerCase() || '';
+    if (key) {
+      fighterMap.set(key, {
+        _id: fighter._id,
+        name: fighter.name,
+        nickname: fighter.nickname,
+        division: fighter.division || fighter.weight_class,
+        height: fighter.height,
+        weight: fighter.weight,
+        reach: fighter.reach,
+        age: fighter.age,
+        wins: fighter.wins || 0,
+        losses: fighter.losses || 0,
+        draws: fighter.draws || 0,
+        record: fighter.record,
+        status: fighter.status || 'active',
+        ranking: fighter.ranking,
+        champion: fighter.champion || false,
+        nationality: fighter.nationality || fighter.country,
+        hometown: fighter.hometown,
+        fightingStyle: fighter.fighting_style,
+        camp: fighter.camp,
+        imageUrl: fighter.image_url,
+        profileUrl: fighter.profile_url,
+        strikingAccuracy: fighter.striking_accuracy,
+        grappling: fighter.grappling,
+        knockouts: fighter.knockouts || 0,
+        submissions: fighter.submissions || 0,
+        lastFight: fighter.last_fight,
+        nextFight: fighter.next_fight,
+        createdAt: fighter.createdAt,
+        updatedAt: fighter.updatedAt,
+        source: 'fighter_details'
+      });
+    }
+  });
+  
+  // Process fighter tott data and merge with existing data
+  fighterTott.forEach(fighter => {
+    const key = fighter.name?.toLowerCase() || '';
+    if (key) {
+      if (fighterMap.has(key)) {
+        // Merge with existing data, preferring tott data for certain fields
+        const existing = fighterMap.get(key);
+        fighterMap.set(key, {
+          ...existing,
+          // Update with tott data where available
+          nickname: fighter.nickname || existing.nickname,
+          division: fighter.division || fighter.weight_class || existing.division,
+          height: fighter.height || existing.height,
+          weight: fighter.weight || existing.weight,
+          reach: fighter.reach || existing.reach,
+          age: fighter.age || existing.age,
+          wins: fighter.wins || existing.wins,
+          losses: fighter.losses || existing.losses,
+          draws: fighter.draws || existing.draws,
+          record: fighter.record || existing.record,
+          status: fighter.status || existing.status,
+          ranking: fighter.ranking || existing.ranking,
+          champion: fighter.champion !== undefined ? fighter.champion : existing.champion,
+          nationality: fighter.nationality || fighter.country || existing.nationality,
+          hometown: fighter.hometown || existing.hometown,
+          fightingStyle: fighter.fighting_style || existing.fightingStyle,
+          camp: fighter.camp || existing.camp,
+          imageUrl: fighter.image_url || existing.imageUrl,
+          profileUrl: fighter.profile_url || existing.profileUrl,
+          strikingAccuracy: fighter.striking_accuracy || existing.strikingAccuracy,
+          grappling: fighter.grappling || existing.grappling,
+          knockouts: fighter.knockouts || existing.knockouts,
+          submissions: fighter.submissions || existing.submissions,
+          lastFight: fighter.last_fight || existing.lastFight,
+          nextFight: fighter.next_fight || existing.nextFight,
+          source: 'combined'
+        });
+      } else {
+        // Add new fighter from tott collection
+        fighterMap.set(key, {
+          _id: fighter._id,
+          name: fighter.name,
+          nickname: fighter.nickname,
+          division: fighter.division || fighter.weight_class,
+          height: fighter.height,
+          weight: fighter.weight,
+          reach: fighter.reach,
+          age: fighter.age,
+          wins: fighter.wins || 0,
+          losses: fighter.losses || 0,
+          draws: fighter.draws || 0,
+          record: fighter.record,
+          status: fighter.status || 'active',
+          ranking: fighter.ranking,
+          champion: fighter.champion || false,
+          nationality: fighter.nationality || fighter.country,
+          hometown: fighter.hometown,
+          fightingStyle: fighter.fighting_style,
+          camp: fighter.camp,
+          imageUrl: fighter.image_url,
+          profileUrl: fighter.profile_url,
+          strikingAccuracy: fighter.striking_accuracy,
+          grappling: fighter.grappling,
+          knockouts: fighter.knockouts || 0,
+          submissions: fighter.submissions || 0,
+          lastFight: fighter.last_fight,
+          nextFight: fighter.next_fight,
+          createdAt: fighter.createdAt,
+          updatedAt: fighter.updatedAt,
+          source: 'fighter_tott'
+        });
+      }
+    }
+  });
+  
+  return Array.from(fighterMap.values());
+}
+
 // Function to map UFC API data to Fighter model with enhanced data
 async function mapAPIDataToFighter(apiFighter, enhancedData = null, fightHistory = null) {
   // Extract first and last name for enhanced data lookup
@@ -168,15 +291,33 @@ async function mapAPIDataToFighter(apiFighter, enhancedData = null, fightHistory
   };
 }
 
-// ✅ Get fighters from MongoDB
+// ✅ Get fighters from MongoDB - now combines data from ufc-fighter_details and ufc-fighter_tott
 router.get('/', async (req, res) => {
   try {
-    const fighters = await Fighter.find();
-    res.json(fighters);
+    // Get data from both collections
+    const [fighterDetails, fighterTott] = await Promise.all([
+      FighterDetails.find(),
+      FighterTott.find()
+    ]);
+    
+    console.log(`📊 Found ${fighterDetails.length} fighters from ufc-fighter_details`);
+    console.log(`📊 Found ${fighterTott.length} fighters from ufc-fighter_tott`);
+    
+    // Combine and merge the data
+    const combinedFighters = combineFighterData(fighterDetails, fighterTott);
+    
+    console.log(`📊 Combined into ${combinedFighters.length} unique fighters`);
+    res.json(combinedFighters);
   } catch (err) {
     console.error('Database error:', err.message);
-    // Return empty array if database is not available
-    res.json([]);
+    // Fallback to original Fighter collection if new collections don't exist
+    try {
+      const fighters = await Fighter.find();
+      res.json(fighters);
+    } catch (fallbackErr) {
+      console.error('Fallback error:', fallbackErr.message);
+      res.json([]);
+    }
   }
 });
 
@@ -188,6 +329,36 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.error('Database error:', error.message);
     res.status(500).json({ error: 'Failed to create fighter', message: error.message });
+  }
+});
+
+// Debug endpoint to check combined fighter data
+router.get('/debug/combined', async (req, res) => {
+  try {
+    console.log('🔍 Debug: Checking combined fighter data...');
+    
+    const [fighterDetails, fighterTott] = await Promise.all([
+      FighterDetails.find().limit(5),
+      FighterTott.find().limit(5)
+    ]);
+    
+    const combinedFighters = combineFighterData(fighterDetails, fighterTott);
+    
+    res.json({
+      message: 'Combined fighter data debug information',
+      fighterDetailsCount: fighterDetails.length,
+      fighterTottCount: fighterTott.length,
+      combinedCount: combinedFighters.length,
+      sampleFighterDetails: fighterDetails[0] || null,
+      sampleFighterTott: fighterTott[0] || null,
+      sampleCombined: combinedFighters[0] || null
+    });
+  } catch (error) {
+    console.error('❌ Debug error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      message: 'Debug failed'
+    });
   }
 });
 

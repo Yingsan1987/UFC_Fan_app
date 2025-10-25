@@ -27,10 +27,9 @@ export default function Fighters() {
     const fetchFighters = async () => {
       try {
         const response = await axios.get(`${API_URL}/fighters`);
-        // Filter to show only champions from API (champion: true)
-        const apiChampions = response.data.filter(fighter => fighter.champion === true);
-        setFighters(apiChampions);
-        setFilteredFighters(apiChampions);
+        // Show all fighters from combined MongoDB data
+        setFighters(response.data);
+        setFilteredFighters(response.data);
       } catch (err) {
         setError("Failed to fetch UFC fighters");
         console.error(err);
@@ -100,11 +99,10 @@ export default function Fighters() {
         
         setSyncMessage(`✅ Sync completed! ${stats.newFighters || 0} new fighters, ${stats.updatedFighters || 0} updated. Remaining API calls: ${apiUsage.remaining || 'Unknown'}`);
         
-        // Refresh fighters list (filter to show only champions)
+        // Refresh fighters list (show all fighters from combined data)
         const fightersResponse = await axios.get(`${API_URL}/fighters`);
-        const apiChampions = fightersResponse.data.filter(fighter => fighter.champion === true);
-        setFighters(apiChampions);
-        setFilteredFighters(apiChampions);
+        setFighters(fightersResponse.data);
+        setFilteredFighters(fightersResponse.data);
         
         // Refresh API status
         const statusResponse = await axios.get(`${API_URL}/fighters/api-status`);
