@@ -1,30 +1,17 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { Search, Filter, Trophy, MapPin, Target, Zap } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { Search, X, Trophy, MapPin, Target } from 'lucide-react';
+import axios from 'axios';
 
 const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
 
-export default function Fighters() {
+const Fighters = () => {
   const [fighters, setFighters] = useState([]);
   const [filteredFighters, setFilteredFighters] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDivision, setSelectedDivision] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDivision, setSelectedDivision] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [syncing, setSyncing] = useState(false);
-  const [apiStatus, setApiStatus] = useState(null);
-  const [syncMessage, setSyncMessage] = useState("");
-  const [enhancedData, setEnhancedData] = useState(false);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 0,
-    totalFighters: 0,
-    hasNextPage: false,
-    hasPrevPage: false,
-    limit: 10
-  });
 
   const divisions = [
     "Heavyweight", "Light Heavyweight", "Middleweight", "Welterweight", 
@@ -33,148 +20,56 @@ export default function Fighters() {
   ];
 
   useEffect(() => {
-    const fetchFighters = async (page = 1, append = false) => {
+    const fetchFighters = async () => {
       try {
-        const response = await axios.get(`${API_URL}/fighters?page=${page}&limit=10`);
+        setLoading(true);
+        const response = await axios.get(`${API_URL}/fighters`);
         
         // Handle both old format (array) and new format (object with fighters and pagination)
-        let newFighters, paginationData;
-        
+        let fightersData;
         if (Array.isArray(response.data)) {
           // Old format - just an array of fighters
-          newFighters = response.data;
-          paginationData = {
-            currentPage: 1,
-            totalPages: 1,
-            totalFighters: response.data.length,
-            hasNextPage: false,
-            hasPrevPage: false,
-            limit: 10
-          };
+          fightersData = response.data;
         } else {
           // New format - object with fighters and pagination
-          newFighters = response.data.fighters || [];
-          paginationData = response.data.pagination || {
-            currentPage: 1,
-            totalPages: 1,
-            totalFighters: newFighters.length,
-            hasNextPage: false,
-            hasPrevPage: false,
-            limit: 10
-          };
+          fightersData = response.data.fighters || [];
         }
         
-        if (append) {
-          // Append new fighters to existing list
-          setFighters(prev => [...prev, ...newFighters]);
-          setFilteredFighters(prev => [...prev, ...newFighters]);
-        } else {
-          // Replace fighters list
-          setFighters(newFighters);
-          setFilteredFighters(newFighters);
-        }
-        
-        setPagination(paginationData);
+        setFighters(fightersData);
+        setFilteredFighters(fightersData);
+        setError(null);
       } catch (err) {
-        setError("Failed to fetch UFC fighters");
-        console.error(err);
+        setError('Failed to load fighters');
+        console.error('Error fetching fighters:', err);
       } finally {
         setLoading(false);
-        setLoadingMore(false);
-      }
-    };
-
-    const fetchApiStatus = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/fighters/api-status`);
-        setApiStatus(response.data);
-      } catch (err) {
-        console.error("Failed to fetch API status:", err);
       }
     };
 
     fetchFighters();
-    fetchApiStatus();
   }, []);
 
-  // Load more fighters function
-  const loadMoreFighters = async () => {
-    if (loadingMore || !pagination.hasNextPage) return;
-    
-    setLoadingMore(true);
-    try {
-      const nextPage = pagination.currentPage + 1;
-      const response = await axios.get(`${API_URL}/fighters?page=${nextPage}&limit=10`);
-      
-      // Handle both old format (array) and new format (object with fighters and pagination)
-      let newFighters, paginationData;
-      
-      if (Array.isArray(response.data)) {
-        // Old format - just an array of fighters
-        newFighters = response.data;
-        paginationData = {
-          currentPage: nextPage,
-          totalPages: 1,
-          totalFighters: response.data.length,
-          hasNextPage: false,
-          hasPrevPage: nextPage > 1,
-          limit: 10
-        };
-      } else {
-        // New format - object with fighters and pagination
-        newFighters = response.data.fighters || [];
-        paginationData = response.data.pagination || {
-          currentPage: nextPage,
-          totalPages: 1,
-          totalFighters: newFighters.length,
-          hasNextPage: false,
-          hasPrevPage: nextPage > 1,
-          limit: 10
-        };
-      }
-      
-      setFighters(prev => [...prev, ...newFighters]);
-      setFilteredFighters(prev => [...prev, ...newFighters]);
-      setPagination(paginationData);
-    } catch (err) {
-      console.error("Failed to load more fighters:", err);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  // Infinite scroll effect
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 1000) {
-        loadMoreFighters();
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [pagination.hasNextPage, loadingMore]);
-
+  // Filter fighters based on search term, division, and status
   useEffect(() => {
     let filtered = fighters;
 
     // Filter by search term
-    if (searchTerm) {
+    if (searchTerm.trim()) {
       filtered = filtered.filter(fighter =>
-        fighter.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        fighter.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         fighter.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         fighter.nationality?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Filter by division
-    if (selectedDivision !== "all") {
+    if (selectedDivision !== 'all') {
       filtered = filtered.filter(fighter => fighter.division === selectedDivision);
     }
 
     // Filter by status
-    if (statusFilter !== "all") {
-      if (statusFilter === "champions") {
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'champions') {
         filtered = filtered.filter(fighter => fighter.champion);
       } else {
         filtered = filtered.filter(fighter => fighter.status === statusFilter);
@@ -184,81 +79,10 @@ export default function Fighters() {
     setFilteredFighters(filtered);
   }, [searchTerm, selectedDivision, statusFilter, fighters]);
 
-  const syncChampions = async () => {
-    setSyncing(true);
-    setSyncMessage("");
-    
-    try {
-      console.log('Starting sync...');
-      const url = enhancedData 
-        ? `${API_URL}/fighters/sync-champions?enhanced=true`
-        : `${API_URL}/fighters/sync-champions`;
-      const response = await axios.post(url);
-      console.log('Sync response:', response.data);
-      
-      // Check if response has the expected structure
-      if (response.data && response.data.success) {
-        const stats = response.data.stats || {};
-        const apiUsage = response.data.apiUsage || {};
-        
-        setSyncMessage(`✅ Sync completed! ${stats.newFighters || 0} new fighters, ${stats.updatedFighters || 0} updated. Remaining API calls: ${apiUsage.remaining || 'Unknown'}`);
-        
-        // Refresh fighters list (show all fighters from combined data)
-        const fightersResponse = await axios.get(`${API_URL}/fighters?page=1&limit=10`);
-        
-        // Handle both old format (array) and new format (object with fighters and pagination)
-        let newFighters, paginationData;
-        
-        if (Array.isArray(fightersResponse.data)) {
-          // Old format - just an array of fighters
-          newFighters = fightersResponse.data;
-          paginationData = {
-            currentPage: 1,
-            totalPages: 1,
-            totalFighters: fightersResponse.data.length,
-            hasNextPage: false,
-            hasPrevPage: false,
-            limit: 10
-          };
-        } else {
-          // New format - object with fighters and pagination
-          newFighters = fightersResponse.data.fighters || [];
-          paginationData = fightersResponse.data.pagination || {
-            currentPage: 1,
-            totalPages: 1,
-            totalFighters: newFighters.length,
-            hasNextPage: false,
-            hasPrevPage: false,
-            limit: 10
-          };
-        }
-        
-        setFighters(newFighters);
-        setFilteredFighters(newFighters);
-        setPagination(paginationData);
-        
-        // Refresh API status
-        const statusResponse = await axios.get(`${API_URL}/fighters/api-status`);
-        setApiStatus(statusResponse.data);
-      } else {
-        setSyncMessage(`❌ Unexpected response format: ${JSON.stringify(response.data)}`);
-      }
-      
-    } catch (err) {
-      console.error('Sync error:', err);
-      console.error('Error response:', err.response?.data);
-      
-      if (err.response?.status === 429) {
-        setSyncMessage(`❌ API limit exceeded: ${err.response.data?.message || 'Daily limit reached'}`);
-      } else if (err.response?.data) {
-        setSyncMessage(`❌ Sync failed: ${err.response.data.message || err.response.data.error || 'Unknown error'}`);
-      } else {
-        setSyncMessage(`❌ Sync failed: ${err.message}`);
-      }
-    } finally {
-      setSyncing(false);
-    }
+  const clearSearch = () => {
+    setSearchTerm('');
   };
+
 
   const getFlagEmoji = (nationality) => {
     const flags = {
@@ -290,271 +114,181 @@ export default function Fighters() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center p-8">
-        <p className="text-red-500 text-lg">{error}</p>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="mt-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-        >
-          Try Again
-        </button>
+      <div className="text-center py-8">
+        <p className="text-red-600 text-lg">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      {/* Header */}
+    <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">UFC Fighters</h1>
-        <p className="text-gray-600">Discover profiles and stats of UFC's elite fighters</p>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search fighters..."
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">UFC Fighters</h1>
+        <p className="text-gray-600 mb-6">Live fighter data from MongoDB - Discover profiles and stats of UFC's elite fighters</p>
+        
+        {/* Search Bar */}
+        <div className="relative max-w-md mb-4">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-gray-400" />
           </div>
+          <input
+            type="text"
+            placeholder="Search fighters, nicknames, or nationality..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-red-500 focus:border-red-500"
+          />
+          {searchTerm && (
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+              <button
+                onClick={clearSearch}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </div>
 
-          {/* Division Filter */}
-          <div className="relative">
-            <Filter className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <select
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent appearance-none"
-              value={selectedDivision}
-              onChange={(e) => setSelectedDivision(e.target.value)}
-            >
-              <option value="all">All Divisions</option>
-              {divisions.map(division => (
-                <option key={division} value={division}>{division}</option>
-              ))}
-            </select>
-          </div>
+        {/* Filters */}
+        <div className="flex flex-wrap gap-4 mb-4">
+          <select
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500 focus:border-red-500"
+            value={selectedDivision}
+            onChange={(e) => setSelectedDivision(e.target.value)}
+          >
+            <option value="all">All Divisions</option>
+            {divisions.map(division => (
+              <option key={division} value={division}>{division}</option>
+            ))}
+          </select>
 
-          {/* Status Filter */}
-          <div>
-            <select
-              className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Fighters</option>
-              <option value="champions">Champions Only</option>
-              <option value="active">Active</option>
-              <option value="retired">Retired</option>
-            </select>
-          </div>
-
-          {/* Results Count */}
-          <div className="flex items-center justify-center bg-gray-100 rounded-lg">
-            <span className="text-gray-700 font-medium">
-              {filteredFighters.length} fighters loaded
-              {pagination.totalFighters > 0 && ` of ${pagination.totalFighters}`}
-            </span>
-          </div>
+          <select
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500 focus:border-red-500"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All Fighters</option>
+            <option value="champions">Champions Only</option>
+            <option value="active">Active</option>
+            <option value="retired">Retired</option>
+          </select>
         </div>
         
-        {/* API Status and Sync Button */}
-        <div className="mt-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="flex items-center gap-4">
-            {apiStatus && (
-              <div className="text-sm text-gray-600">
-                <span className="font-medium">API Calls:</span> {apiStatus.used}/{apiStatus.limit} 
-                <span className="ml-2 text-green-600">({apiStatus.remaining} remaining)</span>
-              </div>
+        {/* Search Results Count */}
+        {searchTerm && (
+          <div className="text-sm text-gray-600">
+            {filteredFighters.length === 0 ? (
+              <span>No fighters found matching "{searchTerm}"</span>
+            ) : (
+              <span>
+                {filteredFighters.length} fighter{filteredFighters.length !== 1 ? 's' : ''} found
+                {filteredFighters.length !== fighters.length && ` out of ${fighters.length} total`}
+              </span>
             )}
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={enhancedData}
-                onChange={(e) => setEnhancedData(e.target.checked)}
-                className="rounded border-gray-300 text-red-500 focus:ring-red-500"
-              />
-              <span>Enhanced Data (uses more API calls)</span>
-            </label>
-            
-            <button
-              onClick={syncChampions}
-              disabled={syncing || (apiStatus && !apiStatus.canMakeCall)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                syncing || (apiStatus && !apiStatus.canMakeCall)
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-red-500 text-white hover:bg-red-600'
-              }`}
-            >
-              {syncing ? '🔄 Syncing...' : '🏆 Sync Champions from UFC API'}
-            </button>
-          </div>
-        </div>
-        
-        {/* Sync Message */}
-        {syncMessage && (
-          <div className={`mt-3 p-3 rounded-lg text-sm ${
-            syncMessage.includes('✅') 
-              ? 'bg-green-100 text-green-800 border border-green-200' 
-              : 'bg-red-100 text-red-800 border border-red-200'
-          }`}>
-            {syncMessage}
           </div>
         )}
       </div>
 
-      {/* Fighters Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredFighters.map(fighter => (
-          <div key={fighter._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-            {/* Fighter Image */}
-            <div className="h-48 bg-gradient-to-br from-red-500 to-red-600 relative">
-              {fighter.imageUrl ? (
-                <img 
-                  src={fighter.imageUrl} 
-                  alt={fighter.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-              ) : null}
-              <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white text-6xl font-bold" style={{display: fighter.imageUrl ? 'none' : 'flex'}}>
-                {fighter.name.split(' ').map(n => n[0]).join('')}
-              </div>
-              <div className="absolute top-2 right-2">
-                {getStatusBadge(fighter)}
-              </div>
-            </div>
-
-            {/* Fighter Info */}
-            <div className="p-6">
-              {/* Name and Nickname */}
-              <div className="mb-3">
-                <h3 className="text-xl font-bold text-gray-900">{fighter.name}</h3>
-                {fighter.nickname && (
-                  <p className="text-red-500 font-medium">"{fighter.nickname}"</p>
-                )}
-              </div>
-
-              {/* Division and Record */}
-              <div className="mb-4">
-                <p className="text-gray-700 font-semibold">{fighter.division}</p>
-                <p className="text-gray-600">Record: <span className="font-mono font-bold">{fighter.record}</span></p>
-              </div>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-                <div className="flex items-center">
-                  <MapPin className="w-4 h-4 text-gray-400 mr-1" />
-                  <span className="text-gray-600">{getFlagEmoji(fighter.nationality)} {fighter.nationality}</span>
-                </div>
-                <div className="flex items-center">
-                  <Target className="w-4 h-4 text-gray-400 mr-1" />
-                  <span className="text-gray-600">{fighter.strikingAccuracy}% accuracy</span>
-                </div>
-                <div className="text-gray-600">
-                  Height: {fighter.height}
-                </div>
-                <div className="text-gray-600">
-                  Weight: {fighter.weight}
-                </div>
-              </div>
-
-              {/* Fighting Style */}
-              <div className="mb-4">
-                <p className="text-sm text-gray-500">Fighting Style</p>
-                <p className="font-medium text-gray-700">{fighter.fightingStyle}</p>
-              </div>
-
-              {/* Last Fight */}
-              {fighter.lastFight && (
-                <div className="border-t pt-3">
-                  <p className="text-sm text-gray-500 mb-1">Last Fight</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">vs {fighter.lastFight.opponent}</span>
-                    <span className={`text-sm font-bold ${
-                      fighter.lastFight.result === 'Win' ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {fighter.lastFight.result}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500">{fighter.lastFight.method}</p>
-                </div>
-              )}
-
-              {/* Performance Stats */}
-              <div className="flex justify-between mt-4 pt-3 border-t text-sm">
-                <div className="text-center">
-                  <p className="font-bold text-lg text-red-600">{fighter.knockouts}</p>
-                  <p className="text-gray-500">KOs</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-lg text-blue-600">{fighter.submissions}</p>
-                  <p className="text-gray-500">Subs</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-lg text-green-600">{fighter.wins}</p>
-                  <p className="text-gray-500">Wins</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Loading More Indicator */}
-      {loadingMore && (
-        <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-          <span className="ml-3 text-gray-600">Loading more fighters...</span>
-        </div>
-      )}
-
-      {/* Load More Button (fallback if infinite scroll doesn't work) */}
-      {!loadingMore && pagination.hasNextPage && (
-        <div className="text-center py-8">
-          <button 
-            onClick={loadMoreFighters}
-            className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors"
-          >
-            Load More Fighters
-          </button>
-        </div>
-      )}
-
-      {/* No Results */}
-      {filteredFighters.length === 0 && !loading && (
+      {filteredFighters.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No fighters found matching your criteria</p>
-          <button 
-            onClick={() => {
-              setSearchTerm("");
-              setSelectedDivision("all");
-              setStatusFilter("all");
-            }}
-            className="mt-4 bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600"
-          >
-            Clear Filters
-          </button>
+          <div className="text-gray-400 text-6xl mb-4">🥊</div>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+            {searchTerm ? 'No Fighters Found' : 'No Fighters Available'}
+          </h3>
+          <p className="text-gray-500">
+            {searchTerm ? `Try a different search term` : 'Check back later for UFC fighter data!'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredFighters.map((fighter) => (
+            <div
+              key={fighter._id}
+              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden border border-gray-200"
+            >
+              {/* Fighter Header */}
+              <div className="h-24 bg-gradient-to-r from-red-600 to-red-800 flex items-center justify-center relative">
+                <div className="text-white text-center">
+                  <div className="text-2xl mb-1">🥊</div>
+                  <p className="text-xs font-semibold">UFC Fighter</p>
+                </div>
+                <div className="absolute top-2 right-2">
+                  {getStatusBadge(fighter)}
+                </div>
+              </div>
+
+              {/* Fighter Content */}
+              <div className="p-4">
+                <h3 className="text-sm font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
+                  {fighter.name}
+                </h3>
+                {fighter.nickname && (
+                  <p className="text-xs text-red-600 font-medium mb-2">"{fighter.nickname}"</p>
+                )}
+                
+                <div className="space-y-2">
+                  <div className="flex items-center text-gray-600">
+                    <svg className="w-4 h-4 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="text-xs font-medium truncate">{fighter.division}</span>
+                  </div>
+                  
+                  <div className="flex items-center text-gray-600">
+                    <MapPin className="w-4 h-4 mr-2 text-red-600 flex-shrink-0" />
+                    <span className="text-xs font-medium truncate">{getFlagEmoji(fighter.nationality)} {fighter.nationality}</span>
+                  </div>
+
+                  <div className="flex items-center text-gray-600">
+                    <Target className="w-4 h-4 mr-2 text-red-600 flex-shrink-0" />
+                    <span className="text-xs font-medium truncate">Record: {fighter.record}</span>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="mt-3 flex justify-between text-center">
+                  <div>
+                    <p className="text-lg font-bold text-red-600">{fighter.knockouts || 0}</p>
+                    <p className="text-xs text-gray-500">KOs</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-blue-600">{fighter.submissions || 0}</p>
+                    <p className="text-xs text-gray-500">Subs</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-green-600">{fighter.wins || 0}</p>
+                    <p className="text-xs text-gray-500">Wins</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Footer Stats */}
+      {fighters.length > 0 && (
+        <div className="mt-12 bg-gray-50 rounded-lg p-6">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              {searchTerm ? `Showing ${filteredFighters.length} of ${fighters.length} fighters` : `Total Fighters: ${fighters.length}`}
+            </h3>
+            <p className="text-gray-600 text-sm">
+              {searchTerm ? `Filtered by "${searchTerm}"` : 'Showing all available UFC fighters from MongoDB'}
+            </p>
+          </div>
         </div>
       )}
     </div>
   );
-}
+};
+
+export default Fighters;
