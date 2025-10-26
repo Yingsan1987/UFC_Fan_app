@@ -291,13 +291,19 @@ async function mapAPIDataToFighter(apiFighter, enhancedData = null, fightHistory
   };
 }
 
-// ✅ Get fighters from MongoDB - now combines data from ufc-fighter_details and ufc-fighter_tott
+// ✅ Get fighters from MongoDB - now combines data from ufc-fighter_details and ufc-fighter_tott with pagination
 router.get('/', async (req, res) => {
   try {
-    // Get data from both collections
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    console.log(`📊 Fetching fighters - Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
+    
+    // Get data from both collections with pagination
     const [fighterDetails, fighterTott] = await Promise.all([
-      FighterDetails.find(),
-      FighterTott.find()
+      FighterDetails.find().skip(skip).limit(limit).catch(() => []),
+      FighterTott.find().skip(skip).limit(limit).catch(() => [])
     ]);
     
     console.log(`📊 Found ${fighterDetails.length} fighters from ufc-fighter_details`);
@@ -306,17 +312,91 @@ router.get('/', async (req, res) => {
     // Combine and merge the data
     const combinedFighters = combineFighterData(fighterDetails, fighterTott);
     
+    // Get total count for pagination info
+    const [totalDetails, totalTott] = await Promise.all([
+      FighterDetails.countDocuments().catch(() => 0),
+      FighterTott.countDocuments().catch(() => 0)
+    ]);
+    
+    const totalFighters = Math.max(totalDetails, totalTott);
+    const totalPages = Math.ceil(totalFighters / limit);
+    
     console.log(`📊 Combined into ${combinedFighters.length} unique fighters`);
-    res.json(combinedFighters);
+    console.log(`📊 Total fighters: ${totalFighters}, Total pages: ${totalPages}`);
+    
+    // If no data from new collections, fall back to original collection
+    if (combinedFighters.length === 0 && totalFighters === 0) {
+      console.log('📊 No data in new collections, falling back to original fighters collection');
+      const fighters = await Fighter.find().skip(skip).limit(limit);
+      const totalFightersFallback = await Fighter.countDocuments();
+      const totalPagesFallback = Math.ceil(totalFightersFallback / limit);
+      
+      console.log(`📊 Fallback: Found ${fighters.length} fighters from original collection`);
+      console.log(`📊 Fallback: Total fighters: ${totalFightersFallback}, Total pages: ${totalPagesFallback}`);
+      
+      return res.json({
+        fighters: fighters,
+        pagination: {
+          currentPage: page,
+          totalPages: totalPagesFallback,
+          totalFighters: totalFightersFallback,
+          hasNextPage: page < totalPagesFallback,
+          hasPrevPage: page > 1,
+          limit: limit
+        }
+      });
+    }
+    
+    res.json({
+      fighters: combinedFighters,
+      pagination: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalFighters: totalFighters,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+        limit: limit
+      }
+    });
   } catch (err) {
     console.error('Database error:', err.message);
     // Fallback to original Fighter collection if new collections don't exist
     try {
-      const fighters = await Fighter.find();
-      res.json(fighters);
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+      
+      const fighters = await Fighter.find().skip(skip).limit(limit);
+      const totalFighters = await Fighter.countDocuments();
+      const totalPages = Math.ceil(totalFighters / limit);
+      
+      console.log(`📊 Fallback: Found ${fighters.length} fighters from original collection`);
+      console.log(`📊 Fallback: Total fighters: ${totalFighters}, Total pages: ${totalPages}`);
+      
+      res.json({
+        fighters: fighters,
+        pagination: {
+          currentPage: page,
+          totalPages: totalPages,
+          totalFighters: totalFighters,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+          limit: limit
+        }
+      });
     } catch (fallbackErr) {
       console.error('Fallback error:', fallbackErr.message);
-      res.json([]);
+      res.json({
+        fighters: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalFighters: 0,
+          hasNextPage: false,
+          hasPrevPage: false,
+          limit: 10
+        }
+      });
     }
   }
 });
@@ -329,6 +409,232 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.error('Database error:', error.message);
     res.status(500).json({ error: 'Failed to create fighter', message: error.message });
+  }
+});
+
+// Endpoint to create sample fighters for testing
+router.post('/create-sample', async (req, res) => {
+  try {
+    const sampleFighters = [
+      {
+        name: "Jon Jones",
+        nickname: "Bones",
+        division: "Light Heavyweight",
+        height: "6'4\"",
+        weight: "205 lbs",
+        wins: 27,
+        losses: 1,
+        draws: 0,
+        record: "27-1-0",
+        status: "active",
+        champion: true,
+        nationality: "American",
+        fightingStyle: "Wrestling, Boxing",
+        knockouts: 10,
+        submissions: 6
+      },
+      {
+        name: "Amanda Nunes",
+        nickname: "Lioness",
+        division: "Women's Bantamweight",
+        height: "5'8\"",
+        weight: "135 lbs",
+        wins: 22,
+        losses: 5,
+        draws: 0,
+        record: "22-5-0",
+        status: "retired",
+        champion: false,
+        nationality: "Brazilian",
+        fightingStyle: "Boxing, BJJ",
+        knockouts: 13,
+        submissions: 4
+      },
+      {
+        name: "Khabib Nurmagomedov",
+        nickname: "The Eagle",
+        division: "Lightweight",
+        height: "5'10\"",
+        weight: "155 lbs",
+        wins: 29,
+        losses: 0,
+        draws: 0,
+        record: "29-0-0",
+        status: "retired",
+        champion: false,
+        nationality: "Russian",
+        fightingStyle: "Sambo, Wrestling",
+        knockouts: 8,
+        submissions: 11
+      },
+      {
+        name: "Conor McGregor",
+        nickname: "The Notorious",
+        division: "Lightweight",
+        height: "5'9\"",
+        weight: "155 lbs",
+        wins: 22,
+        losses: 6,
+        draws: 0,
+        record: "22-6-0",
+        status: "active",
+        champion: false,
+        nationality: "Irish",
+        fightingStyle: "Boxing, Karate",
+        knockouts: 19,
+        submissions: 1
+      },
+      {
+        name: "Daniel Cormier",
+        nickname: "DC",
+        division: "Heavyweight",
+        height: "5'11\"",
+        weight: "240 lbs",
+        wins: 22,
+        losses: 3,
+        draws: 0,
+        record: "22-3-0",
+        status: "retired",
+        champion: false,
+        nationality: "American",
+        fightingStyle: "Wrestling, Boxing",
+        knockouts: 6,
+        submissions: 5
+      },
+      {
+        name: "Ronda Rousey",
+        nickname: "Rowdy",
+        division: "Women's Bantamweight",
+        height: "5'7\"",
+        weight: "135 lbs",
+        wins: 12,
+        losses: 2,
+        draws: 0,
+        record: "12-2-0",
+        status: "retired",
+        champion: false,
+        nationality: "American",
+        fightingStyle: "Judo, Boxing",
+        knockouts: 3,
+        submissions: 9
+      },
+      {
+        name: "Anderson Silva",
+        nickname: "The Spider",
+        division: "Middleweight",
+        height: "6'2\"",
+        weight: "185 lbs",
+        wins: 34,
+        losses: 11,
+        draws: 0,
+        record: "34-11-0",
+        status: "retired",
+        champion: false,
+        nationality: "Brazilian",
+        fightingStyle: "Muay Thai, BJJ",
+        knockouts: 23,
+        submissions: 3
+      },
+      {
+        name: "Georges St-Pierre",
+        nickname: "GSP",
+        division: "Welterweight",
+        height: "5'10\"",
+        weight: "170 lbs",
+        wins: 26,
+        losses: 2,
+        draws: 0,
+        record: "26-2-0",
+        status: "retired",
+        champion: false,
+        nationality: "Canadian",
+        fightingStyle: "Wrestling, Boxing",
+        knockouts: 8,
+        submissions: 6
+      },
+      {
+        name: "Fedor Emelianenko",
+        nickname: "The Last Emperor",
+        division: "Heavyweight",
+        height: "6'0\"",
+        weight: "235 lbs",
+        wins: 40,
+        losses: 6,
+        draws: 1,
+        record: "40-6-1",
+        status: "retired",
+        champion: false,
+        nationality: "Russian",
+        fightingStyle: "Sambo, Boxing",
+        knockouts: 16,
+        submissions: 15
+      },
+      {
+        name: "Cris Cyborg",
+        nickname: "Cyborg",
+        division: "Women's Featherweight",
+        height: "5'8\"",
+        weight: "145 lbs",
+        wins: 26,
+        losses: 2,
+        draws: 0,
+        record: "26-2-0",
+        status: "active",
+        champion: false,
+        nationality: "Brazilian",
+        fightingStyle: "Muay Thai, BJJ",
+        knockouts: 20,
+        submissions: 1
+      },
+      {
+        name: "Jose Aldo",
+        nickname: "Junior",
+        division: "Featherweight",
+        height: "5'7\"",
+        weight: "145 lbs",
+        wins: 31,
+        losses: 8,
+        draws: 0,
+        record: "31-8-0",
+        status: "active",
+        champion: false,
+        nationality: "Brazilian",
+        fightingStyle: "Muay Thai, BJJ",
+        knockouts: 17,
+        submissions: 1
+      },
+      {
+        name: "Dominick Cruz",
+        nickname: "The Dominator",
+        division: "Bantamweight",
+        height: "5'8\"",
+        weight: "135 lbs",
+        wins: 24,
+        losses: 4,
+        draws: 0,
+        record: "24-4-0",
+        status: "retired",
+        champion: false,
+        nationality: "American",
+        fightingStyle: "Boxing, Wrestling",
+        knockouts: 7,
+        submissions: 1
+      }
+    ];
+
+    // Clear existing fighters first
+    await Fighter.deleteMany({});
+    
+    // Insert sample fighters
+    const createdFighters = await Fighter.insertMany(sampleFighters);
+    
+    res.json({
+      message: `Created ${createdFighters.length} sample fighters`,
+      fighters: createdFighters
+    });
+  } catch (error) {
+    console.error('Database error:', error.message);
+    res.status(500).json({ error: 'Failed to create sample fighters', message: error.message });
   }
 });
 
@@ -352,6 +658,46 @@ router.get('/debug/combined', async (req, res) => {
       sampleFighterDetails: fighterDetails[0] || null,
       sampleFighterTott: fighterTott[0] || null,
       sampleCombined: combinedFighters[0] || null
+    });
+  } catch (error) {
+    console.error('❌ Debug error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      message: 'Debug failed'
+    });
+  }
+});
+
+// Endpoint to check if collections exist and have data
+router.get('/debug/collections', async (req, res) => {
+  try {
+    console.log('🔍 Debug: Checking collection existence...');
+    
+    const [fighterDetailsCount, fighterTottCount, originalFightersCount] = await Promise.all([
+      FighterDetails.countDocuments().catch(() => 0),
+      FighterTott.countDocuments().catch(() => 0),
+      Fighter.countDocuments().catch(() => 0)
+    ]);
+    
+    res.json({
+      message: 'Collection status check',
+      collections: {
+        'ufc-fighter_details': {
+          exists: fighterDetailsCount > 0,
+          count: fighterDetailsCount
+        },
+        'ufc-fighter_tott': {
+          exists: fighterTottCount > 0,
+          count: fighterTottCount
+        },
+        'fighters': {
+          exists: originalFightersCount > 0,
+          count: originalFightersCount
+        }
+      },
+      recommendation: fighterDetailsCount > 0 || fighterTottCount > 0 
+        ? 'Use combined data from new collections' 
+        : 'Use original fighters collection'
     });
   } catch (error) {
     console.error('❌ Debug error:', error);

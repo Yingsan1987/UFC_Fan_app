@@ -8,6 +8,7 @@ export default function Fighters() {
   const [fighters, setFighters] = useState([]);
   const [filteredFighters, setFilteredFighters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDivision, setSelectedDivision] = useState("all");
@@ -16,6 +17,14 @@ export default function Fighters() {
   const [apiStatus, setApiStatus] = useState(null);
   const [syncMessage, setSyncMessage] = useState("");
   const [enhancedData, setEnhancedData] = useState(false);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 0,
+    totalFighters: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 10
+  });
 
   const divisions = [
     "Heavyweight", "Light Heavyweight", "Middleweight", "Welterweight", 
@@ -24,17 +33,54 @@ export default function Fighters() {
   ];
 
   useEffect(() => {
-    const fetchFighters = async () => {
+    const fetchFighters = async (page = 1, append = false) => {
       try {
-        const response = await axios.get(`${API_URL}/fighters`);
-        // Show all fighters from combined MongoDB data
-        setFighters(response.data);
-        setFilteredFighters(response.data);
+        const response = await axios.get(`${API_URL}/fighters?page=${page}&limit=10`);
+        
+        // Handle both old format (array) and new format (object with fighters and pagination)
+        let newFighters, paginationData;
+        
+        if (Array.isArray(response.data)) {
+          // Old format - just an array of fighters
+          newFighters = response.data;
+          paginationData = {
+            currentPage: 1,
+            totalPages: 1,
+            totalFighters: response.data.length,
+            hasNextPage: false,
+            hasPrevPage: false,
+            limit: 10
+          };
+        } else {
+          // New format - object with fighters and pagination
+          newFighters = response.data.fighters || [];
+          paginationData = response.data.pagination || {
+            currentPage: 1,
+            totalPages: 1,
+            totalFighters: newFighters.length,
+            hasNextPage: false,
+            hasPrevPage: false,
+            limit: 10
+          };
+        }
+        
+        if (append) {
+          // Append new fighters to existing list
+          setFighters(prev => [...prev, ...newFighters]);
+          setFilteredFighters(prev => [...prev, ...newFighters]);
+        } else {
+          // Replace fighters list
+          setFighters(newFighters);
+          setFilteredFighters(newFighters);
+        }
+        
+        setPagination(paginationData);
       } catch (err) {
         setError("Failed to fetch UFC fighters");
         console.error(err);
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     };
 
@@ -50,6 +96,64 @@ export default function Fighters() {
     fetchFighters();
     fetchApiStatus();
   }, []);
+
+  // Load more fighters function
+  const loadMoreFighters = async () => {
+    if (loadingMore || !pagination.hasNextPage) return;
+    
+    setLoadingMore(true);
+    try {
+      const nextPage = pagination.currentPage + 1;
+      const response = await axios.get(`${API_URL}/fighters?page=${nextPage}&limit=10`);
+      
+      // Handle both old format (array) and new format (object with fighters and pagination)
+      let newFighters, paginationData;
+      
+      if (Array.isArray(response.data)) {
+        // Old format - just an array of fighters
+        newFighters = response.data;
+        paginationData = {
+          currentPage: nextPage,
+          totalPages: 1,
+          totalFighters: response.data.length,
+          hasNextPage: false,
+          hasPrevPage: nextPage > 1,
+          limit: 10
+        };
+      } else {
+        // New format - object with fighters and pagination
+        newFighters = response.data.fighters || [];
+        paginationData = response.data.pagination || {
+          currentPage: nextPage,
+          totalPages: 1,
+          totalFighters: newFighters.length,
+          hasNextPage: false,
+          hasPrevPage: nextPage > 1,
+          limit: 10
+        };
+      }
+      
+      setFighters(prev => [...prev, ...newFighters]);
+      setFilteredFighters(prev => [...prev, ...newFighters]);
+      setPagination(paginationData);
+    } catch (err) {
+      console.error("Failed to load more fighters:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Infinite scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 1000) {
+        loadMoreFighters();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [pagination.hasNextPage, loadingMore]);
 
   useEffect(() => {
     let filtered = fighters;
@@ -100,9 +204,38 @@ export default function Fighters() {
         setSyncMessage(`✅ Sync completed! ${stats.newFighters || 0} new fighters, ${stats.updatedFighters || 0} updated. Remaining API calls: ${apiUsage.remaining || 'Unknown'}`);
         
         // Refresh fighters list (show all fighters from combined data)
-        const fightersResponse = await axios.get(`${API_URL}/fighters`);
-        setFighters(fightersResponse.data);
-        setFilteredFighters(fightersResponse.data);
+        const fightersResponse = await axios.get(`${API_URL}/fighters?page=1&limit=10`);
+        
+        // Handle both old format (array) and new format (object with fighters and pagination)
+        let newFighters, paginationData;
+        
+        if (Array.isArray(fightersResponse.data)) {
+          // Old format - just an array of fighters
+          newFighters = fightersResponse.data;
+          paginationData = {
+            currentPage: 1,
+            totalPages: 1,
+            totalFighters: fightersResponse.data.length,
+            hasNextPage: false,
+            hasPrevPage: false,
+            limit: 10
+          };
+        } else {
+          // New format - object with fighters and pagination
+          newFighters = fightersResponse.data.fighters || [];
+          paginationData = fightersResponse.data.pagination || {
+            currentPage: 1,
+            totalPages: 1,
+            totalFighters: newFighters.length,
+            hasNextPage: false,
+            hasPrevPage: false,
+            limit: 10
+          };
+        }
+        
+        setFighters(newFighters);
+        setFilteredFighters(newFighters);
+        setPagination(paginationData);
         
         // Refresh API status
         const statusResponse = await axios.get(`${API_URL}/fighters/api-status`);
@@ -230,7 +363,10 @@ export default function Fighters() {
 
           {/* Results Count */}
           <div className="flex items-center justify-center bg-gray-100 rounded-lg">
-            <span className="text-gray-700 font-medium">{filteredFighters.length} fighters</span>
+            <span className="text-gray-700 font-medium">
+              {filteredFighters.length} fighters loaded
+              {pagination.totalFighters > 0 && ` of ${pagination.totalFighters}`}
+            </span>
           </div>
         </div>
         
@@ -383,8 +519,28 @@ export default function Fighters() {
         ))}
       </div>
 
+      {/* Loading More Indicator */}
+      {loadingMore && (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+          <span className="ml-3 text-gray-600">Loading more fighters...</span>
+        </div>
+      )}
+
+      {/* Load More Button (fallback if infinite scroll doesn't work) */}
+      {!loadingMore && pagination.hasNextPage && (
+        <div className="text-center py-8">
+          <button 
+            onClick={loadMoreFighters}
+            className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors"
+          >
+            Load More Fighters
+          </button>
+        </div>
+      )}
+
       {/* No Results */}
-      {filteredFighters.length === 0 && (
+      {filteredFighters.length === 0 && !loading && (
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg">No fighters found matching your criteria</p>
           <button 
