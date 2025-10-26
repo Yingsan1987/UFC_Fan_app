@@ -412,6 +412,121 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Endpoint to populate the correct collections with existing fighter data
+router.post('/populate-collections', async (req, res) => {
+  try {
+    console.log('🔄 Starting collection population...');
+    
+    // Get existing fighters from the original collection
+    const existingFighters = await Fighter.find();
+    console.log(`📊 Found ${existingFighters.length} fighters in original collection`);
+    
+    if (existingFighters.length === 0) {
+      return res.status(400).json({ 
+        error: 'No fighters found in original collection',
+        message: 'Please add some fighters to the original collection first'
+      });
+    }
+    
+    // Clear existing data in the target collections
+    await FighterDetails.deleteMany({});
+    await FighterTott.deleteMany({});
+    console.log('🧹 Cleared existing data in target collections');
+    
+    // Prepare data for ufc-fighter_details
+    const fighterDetailsData = existingFighters.map(fighter => ({
+      name: fighter.name,
+      nickname: fighter.nickname,
+      division: fighter.division,
+      weight_class: fighter.division,
+      height: fighter.height,
+      weight: fighter.weight,
+      reach: fighter.reach,
+      age: fighter.age,
+      wins: fighter.wins,
+      losses: fighter.losses,
+      draws: fighter.draws,
+      record: fighter.record,
+      status: fighter.status,
+      ranking: fighter.ranking,
+      champion: fighter.champion,
+      nationality: fighter.nationality,
+      country: fighter.nationality,
+      hometown: fighter.hometown,
+      fighting_style: fighter.fightingStyle,
+      camp: fighter.camp,
+      image_url: fighter.imageUrl,
+      profile_url: fighter.profileUrl,
+      striking_accuracy: fighter.strikingAccuracy,
+      grappling: fighter.grappling,
+      knockouts: fighter.knockouts,
+      submissions: fighter.submissions,
+      last_fight: fighter.lastFight,
+      next_fight: fighter.nextFight
+    }));
+    
+    // Prepare data for ufc-fighter_tott (same structure, could be enhanced later)
+    const fighterTottData = existingFighters.map(fighter => ({
+      name: fighter.name,
+      nickname: fighter.nickname,
+      division: fighter.division,
+      weight_class: fighter.division,
+      height: fighter.height,
+      weight: fighter.weight,
+      reach: fighter.reach,
+      age: fighter.age,
+      wins: fighter.wins,
+      losses: fighter.losses,
+      draws: fighter.draws,
+      record: fighter.record,
+      status: fighter.status,
+      ranking: fighter.ranking,
+      champion: fighter.champion,
+      nationality: fighter.nationality,
+      country: fighter.nationality,
+      hometown: fighter.hometown,
+      fighting_style: fighter.fightingStyle,
+      camp: fighter.camp,
+      image_url: fighter.imageUrl,
+      profile_url: fighter.profileUrl,
+      striking_accuracy: fighter.strikingAccuracy,
+      grappling: fighter.grappling,
+      knockouts: fighter.knockouts,
+      submissions: fighter.submissions,
+      last_fight: fighter.lastFight,
+      next_fight: fighter.nextFight
+    }));
+    
+    // Insert data into both collections
+    const insertedDetails = await FighterDetails.insertMany(fighterDetailsData);
+    const insertedTott = await FighterTott.insertMany(fighterTottData);
+    
+    console.log(`✅ Inserted ${insertedDetails.length} fighters into ufc-fighter_details`);
+    console.log(`✅ Inserted ${insertedTott.length} fighters into ufc-fighter_tott`);
+    
+    // Verify the data
+    const finalDetailsCount = await FighterDetails.countDocuments();
+    const finalTottCount = await FighterTott.countDocuments();
+    
+    res.json({
+      success: true,
+      message: 'Collections populated successfully',
+      data: {
+        originalFighters: existingFighters.length,
+        ufcFighterDetails: finalDetailsCount,
+        ufcFighterTott: finalTottCount
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error populating collections:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to populate collections', 
+      message: error.message 
+    });
+  }
+});
+
 // Endpoint to create sample fighters for testing
 router.post('/create-sample', async (req, res) => {
   try {
