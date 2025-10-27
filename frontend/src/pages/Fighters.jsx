@@ -25,21 +25,30 @@ const Fighters = () => {
         setLoading(true);
         const response = await axios.get(`${API_URL}/fighters`);
         
-        // Handle both old format (array) and new format (object with fighters and pagination)
+        // Handle the new format from ufc-fighter_details and ufc-fighter_tott collections
         let fightersData;
-        if (Array.isArray(response.data)) {
-          // Old format - just an array of fighters
+        if (response.data.fighters) {
+          // New format - object with fighters and pagination
+          fightersData = response.data.fighters;
+        } else if (Array.isArray(response.data)) {
+          // Fallback for array format
           fightersData = response.data;
         } else {
-          // New format - object with fighters and pagination
-          fightersData = response.data.fighters || [];
+          // Empty or error response
+          fightersData = [];
         }
         
         setFighters(fightersData);
         setFilteredFighters(fightersData);
-        setError(null);
+        
+        // Check if there's an error message from the API
+        if (response.data.error) {
+          setError(`No fighter data available: ${response.data.error}`);
+        } else {
+          setError(null);
+        }
       } catch (err) {
-        setError('Failed to load fighters');
+        setError('Failed to load fighters from ufc-fighter_details and ufc-fighter_tott collections');
         console.error('Error fetching fighters:', err);
       } finally {
         setLoading(false);
@@ -131,7 +140,7 @@ const Fighters = () => {
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">UFC Fighters</h1>
-        <p className="text-gray-600 mb-6">Live fighter data from MongoDB - Discover profiles and stats of UFC's elite fighters</p>
+        <p className="text-gray-600 mb-6">Live fighter data from ufc-fighter_details and ufc-fighter_tott collections - Discover profiles and stats of UFC's elite fighters</p>
         
         {/* Search Bar */}
         <div className="relative max-w-md mb-4">
@@ -204,7 +213,7 @@ const Fighters = () => {
             {searchTerm ? 'No Fighters Found' : 'No Fighters Available'}
           </h3>
           <p className="text-gray-500">
-            {searchTerm ? `Try a different search term` : 'Check back later for UFC fighter data!'}
+            {searchTerm ? `Try a different search term` : 'No data available from ufc-fighter_details and ufc-fighter_tott collections. Please populate these collections with fighter data.'}
           </p>
         </div>
       ) : (
@@ -282,7 +291,7 @@ const Fighters = () => {
               {searchTerm ? `Showing ${filteredFighters.length} of ${fighters.length} fighters` : `Total Fighters: ${fighters.length}`}
             </h3>
             <p className="text-gray-600 text-sm">
-              {searchTerm ? `Filtered by "${searchTerm}"` : 'Showing all available UFC fighters from MongoDB'}
+              {searchTerm ? `Filtered by "${searchTerm}"` : 'Showing all available UFC fighters from ufc-fighter_details and ufc-fighter_tott collections'}
             </p>
           </div>
         </div>

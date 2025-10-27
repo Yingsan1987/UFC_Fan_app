@@ -291,19 +291,19 @@ async function mapAPIDataToFighter(apiFighter, enhancedData = null, fightHistory
   };
 }
 
-// ✅ Get fighters from MongoDB - now combines data from ufc-fighter_details and ufc-fighter_tott with pagination
+// ✅ Get fighters from MongoDB - ONLY uses combined data from ufc-fighter_details and ufc-fighter_tott
 router.get('/', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     
-    console.log(`📊 Fetching fighters - Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
+    console.log(`📊 Fetching fighters from ufc-fighter_details and ufc-fighter_tott - Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
     
     // Get data from both collections with pagination
     const [fighterDetails, fighterTott] = await Promise.all([
-      FighterDetails.find().skip(skip).limit(limit).catch(() => []),
-      FighterTott.find().skip(skip).limit(limit).catch(() => [])
+      FighterDetails.find().skip(skip).limit(limit),
+      FighterTott.find().skip(skip).limit(limit)
     ]);
     
     console.log(`📊 Found ${fighterDetails.length} fighters from ufc-fighter_details`);
@@ -314,8 +314,8 @@ router.get('/', async (req, res) => {
     
     // Get total count for pagination info
     const [totalDetails, totalTott] = await Promise.all([
-      FighterDetails.countDocuments().catch(() => 0),
-      FighterTott.countDocuments().catch(() => 0)
+      FighterDetails.countDocuments(),
+      FighterTott.countDocuments()
     ]);
     
     const totalFighters = Math.max(totalDetails, totalTott);
@@ -324,29 +324,7 @@ router.get('/', async (req, res) => {
     console.log(`📊 Combined into ${combinedFighters.length} unique fighters`);
     console.log(`📊 Total fighters: ${totalFighters}, Total pages: ${totalPages}`);
     
-    // If no data from new collections, fall back to original collection
-    if (combinedFighters.length === 0 && totalFighters === 0) {
-      console.log('📊 No data in new collections, falling back to original fighters collection');
-      const fighters = await Fighter.find().skip(skip).limit(limit);
-      const totalFightersFallback = await Fighter.countDocuments();
-      const totalPagesFallback = Math.ceil(totalFightersFallback / limit);
-      
-      console.log(`📊 Fallback: Found ${fighters.length} fighters from original collection`);
-      console.log(`📊 Fallback: Total fighters: ${totalFightersFallback}, Total pages: ${totalPagesFallback}`);
-      
-      return res.json({
-        fighters: fighters,
-        pagination: {
-          currentPage: page,
-          totalPages: totalPagesFallback,
-          totalFighters: totalFightersFallback,
-          hasNextPage: page < totalPagesFallback,
-          hasPrevPage: page > 1,
-          limit: limit
-        }
-      });
-    }
-    
+    // Return the combined data - NO FALLBACK to original collection
     res.json({
       fighters: combinedFighters,
       pagination: {
@@ -358,46 +336,23 @@ router.get('/', async (req, res) => {
         limit: limit
       }
     });
+    
   } catch (err) {
     console.error('Database error:', err.message);
-    // Fallback to original Fighter collection if new collections don't exist
-    try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
-      const skip = (page - 1) * limit;
-      
-      const fighters = await Fighter.find().skip(skip).limit(limit);
-      const totalFighters = await Fighter.countDocuments();
-      const totalPages = Math.ceil(totalFighters / limit);
-      
-      console.log(`📊 Fallback: Found ${fighters.length} fighters from original collection`);
-      console.log(`📊 Fallback: Total fighters: ${totalFighters}, Total pages: ${totalPages}`);
-      
-      res.json({
-        fighters: fighters,
-        pagination: {
-          currentPage: page,
-          totalPages: totalPages,
-          totalFighters: totalFighters,
-          hasNextPage: page < totalPages,
-          hasPrevPage: page > 1,
-          limit: limit
-        }
-      });
-    } catch (fallbackErr) {
-      console.error('Fallback error:', fallbackErr.message);
-      res.json({
-        fighters: [],
-        pagination: {
-          currentPage: 1,
-          totalPages: 0,
-          totalFighters: 0,
-          hasNextPage: false,
-          hasPrevPage: false,
-          limit: 10
-        }
-      });
-    }
+    
+    // Return empty result if collections don't exist or have errors
+    res.json({
+      fighters: [],
+      pagination: {
+        currentPage: 1,
+        totalPages: 0,
+        totalFighters: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+        limit: 10
+      },
+      error: 'No data available from ufc-fighter_details and ufc-fighter_tott collections'
+    });
   }
 });
 
@@ -786,16 +741,15 @@ router.get('/debug/combined', async (req, res) => {
 // Endpoint to check if collections exist and have data
 router.get('/debug/collections', async (req, res) => {
   try {
-    console.log('🔍 Debug: Checking collection existence...');
+    console.log('🔍 Debug: Checking ufc-fighter_details and ufc-fighter_tott collections...');
     
-    const [fighterDetailsCount, fighterTottCount, originalFightersCount] = await Promise.all([
+    const [fighterDetailsCount, fighterTottCount] = await Promise.all([
       FighterDetails.countDocuments().catch(() => 0),
-      FighterTott.countDocuments().catch(() => 0),
-      Fighter.countDocuments().catch(() => 0)
+      FighterTott.countDocuments().catch(() => 0)
     ]);
     
     res.json({
-      message: 'Collection status check',
+      message: 'Collection status check for ufc-fighter_details and ufc-fighter_tott',
       collections: {
         'ufc-fighter_details': {
           exists: fighterDetailsCount > 0,
@@ -804,15 +758,11 @@ router.get('/debug/collections', async (req, res) => {
         'ufc-fighter_tott': {
           exists: fighterTottCount > 0,
           count: fighterTottCount
-        },
-        'fighters': {
-          exists: originalFightersCount > 0,
-          count: originalFightersCount
         }
       },
       recommendation: fighterDetailsCount > 0 || fighterTottCount > 0 
-        ? 'Use combined data from new collections' 
-        : 'Use original fighters collection'
+        ? 'Collections have data - API will use combined data' 
+        : 'Collections are empty - populate them with fighter data'
     });
   } catch (error) {
     console.error('❌ Debug error:', error);
