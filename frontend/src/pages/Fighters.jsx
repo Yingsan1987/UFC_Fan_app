@@ -140,7 +140,7 @@ const Fighters = () => {
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">UFC Fighters</h1>
-        <p className="text-gray-600 mb-6">Live fighter data from ufc-fighter_details and ufc-fighter_tott collections - Discover profiles and stats of UFC's elite fighters</p>
+        <p className="text-gray-600 mb-6">Live fighter data from ufc_fighter_details and ufc_fighter_tott collections - Discover profiles and stats of UFC's elite fighters</p>
         
         {/* Search Bar */}
         <div className="relative max-w-md mb-4">
@@ -243,23 +243,82 @@ const Fighters = () => {
                   <p className="text-xs text-red-600 font-medium mb-2">"{fighter.nickname}"</p>
                 )}
                 
-                <div className="space-y-2">
-                  <div className="flex items-center text-gray-600">
-                    <svg className="w-4 h-4 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    <span className="text-xs font-medium truncate">{fighter.division}</span>
-                  </div>
+                <div className="space-y-1">
+                  {/* Division */}
+                  {fighter.division && (
+                    <div className="flex items-center text-gray-600">
+                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      <span className="text-xs font-medium truncate">{fighter.division}</span>
+                    </div>
+                  )}
                   
-                  <div className="flex items-center text-gray-600">
-                    <MapPin className="w-4 h-4 mr-2 text-red-600 flex-shrink-0" />
-                    <span className="text-xs font-medium truncate">{getFlagEmoji(fighter.nationality)} {fighter.nationality}</span>
-                  </div>
+                  {/* Height */}
+                  {fighter.height && fighter.height !== '--' && (
+                    <div className="flex items-center text-gray-600">
+                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V1a1 1 0 011-1h2a1 1 0 011 1v18a1 1 0 01-1 1H4a1 1 0 01-1-1V1a1 1 0 011-1h2a1 1 0 011 1v3m0 0h8" />
+                      </svg>
+                      <span className="text-xs font-medium truncate">Height: {fighter.height}</span>
+                    </div>
+                  )}
 
-                  <div className="flex items-center text-gray-600">
-                    <Target className="w-4 h-4 mr-2 text-red-600 flex-shrink-0" />
-                    <span className="text-xs font-medium truncate">Record: {fighter.record}</span>
-                  </div>
+                  {/* Weight */}
+                  {fighter.weight && fighter.weight !== '--' && (
+                    <div className="flex items-center text-gray-600">
+                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                      </svg>
+                      <span className="text-xs font-medium truncate">Weight: {fighter.weight}</span>
+                    </div>
+                  )}
+
+                  {/* Reach */}
+                  {fighter.reach && fighter.reach !== '--' && (
+                    <div className="flex items-center text-gray-600">
+                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span className="text-xs font-medium truncate">Reach: {fighter.reach}</span>
+                    </div>
+                  )}
+
+                  {/* Stance */}
+                  {fighter.stance && fighter.stance !== 'NaN' && (
+                    <div className="flex items-center text-gray-600">
+                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      <span className="text-xs font-medium truncate">Stance: {fighter.stance}</span>
+                    </div>
+                  )}
+
+                  {/* Date of Birth */}
+                  {fighter.dob && (
+                    <div className="flex items-center text-gray-600">
+                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-xs font-medium truncate">DOB: {fighter.dob}</span>
+                    </div>
+                  )}
+
+                  {/* Nationality */}
+                  {fighter.nationality && (
+                    <div className="flex items-center text-gray-600">
+                      <MapPin className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" />
+                      <span className="text-xs font-medium truncate">{getFlagEmoji(fighter.nationality)} {fighter.nationality}</span>
+                    </div>
+                  )}
+
+                  {/* Record */}
+                  {fighter.record && (
+                    <div className="flex items-center text-gray-600">
+                      <Target className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" />
+                      <span className="text-xs font-medium truncate">Record: {fighter.record}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Stats */}
@@ -277,6 +336,23 @@ const Fighters = () => {
                     <p className="text-xs text-gray-500">Wins</p>
                   </div>
                 </div>
+
+                {/* UFC Stats Link */}
+                {fighter.url && (
+                  <div className="mt-3 pt-2 border-t border-gray-200">
+                    <a 
+                      href={fighter.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      View UFC Stats
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -291,7 +367,7 @@ const Fighters = () => {
               {searchTerm ? `Showing ${filteredFighters.length} of ${fighters.length} fighters` : `Total Fighters: ${fighters.length}`}
             </h3>
             <p className="text-gray-600 text-sm">
-              {searchTerm ? `Filtered by "${searchTerm}"` : 'Showing all available UFC fighters from ufc-fighter_details and ufc-fighter_tott collections'}
+              {searchTerm ? `Filtered by "${searchTerm}"` : 'Showing live data from ufc_fighter_details and ufc_fighter_tott collections'}
             </p>
           </div>
         </div>
