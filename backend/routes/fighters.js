@@ -119,42 +119,45 @@ async function fetchFighterHistory(firstName, lastName) {
   }
 }
 
-// Function to combine fighter data from both collections
+// Function to combine fighter data from both collections with actual data structure
 function combineFighterData(fighterDetails, fighterTott) {
   const fighterMap = new Map();
   
-  // Process fighter details first
+  // Process fighter details first (with actual field names)
   fighterDetails.forEach(fighter => {
-    const key = fighter.name?.toLowerCase() || '';
-    if (key) {
+    const name = fighter.FIRST && fighter.LAST ? `${fighter.FIRST} ${fighter.LAST}` : fighter.FIRST || fighter.LAST || 'Unknown';
+    const key = name.toLowerCase();
+    
+    if (key && key !== 'unknown') {
       fighterMap.set(key, {
         _id: fighter._id,
-        name: fighter.name,
-        nickname: fighter.nickname,
-        division: fighter.division || fighter.weight_class,
-        height: fighter.height,
-        weight: fighter.weight,
-        reach: fighter.reach,
-        age: fighter.age,
-        wins: fighter.wins || 0,
-        losses: fighter.losses || 0,
-        draws: fighter.draws || 0,
-        record: fighter.record,
-        status: fighter.status || 'active',
-        ranking: fighter.ranking,
-        champion: fighter.champion || false,
-        nationality: fighter.nationality || fighter.country,
-        hometown: fighter.hometown,
-        fightingStyle: fighter.fighting_style,
-        camp: fighter.camp,
-        imageUrl: fighter.image_url,
-        profileUrl: fighter.profile_url,
-        strikingAccuracy: fighter.striking_accuracy,
-        grappling: fighter.grappling,
-        knockouts: fighter.knockouts || 0,
-        submissions: fighter.submissions || 0,
-        lastFight: fighter.last_fight,
-        nextFight: fighter.next_fight,
+        name: name,
+        nickname: fighter.NICKNAME || null,
+        division: fighter.DIVISION || null,
+        height: fighter.HEIGHT || null,
+        weight: fighter.WEIGHT || null,
+        reach: fighter.REACH || null,
+        age: fighter.AGE || null,
+        wins: fighter.WINS || 0,
+        losses: fighter.LOSSES || 0,
+        draws: fighter.DRAWS || 0,
+        record: fighter.RECORD || null,
+        status: fighter.STATUS || 'active',
+        ranking: fighter.RANKING || null,
+        champion: fighter.CHAMPION || false,
+        nationality: fighter.NATIONALITY || null,
+        hometown: fighter.HOMETOWN || null,
+        fightingStyle: fighter.FIGHTING_STYLE || null,
+        camp: fighter.CAMP || null,
+        imageUrl: fighter.IMAGE_URL || null,
+        profileUrl: fighter.URL || null,
+        strikingAccuracy: fighter.STRIKING_ACCURACY || null,
+        grappling: fighter.GRAPPLING || null,
+        knockouts: fighter.KNOCKOUTS || 0,
+        submissions: fighter.SUBMISSIONS || 0,
+        lastFight: fighter.LAST_FIGHT || null,
+        nextFight: fighter.NEXT_FIGHT || null,
+        url: fighter.URL || null,
         createdAt: fighter.createdAt,
         updatedAt: fighter.updatedAt,
         source: 'fighter_details'
@@ -164,71 +167,77 @@ function combineFighterData(fighterDetails, fighterTott) {
   
   // Process fighter tott data and merge with existing data
   fighterTott.forEach(fighter => {
-    const key = fighter.name?.toLowerCase() || '';
-    if (key) {
+    const name = fighter.FIGHTER || 'Unknown';
+    const key = name.toLowerCase();
+    
+    if (key && key !== 'unknown') {
       if (fighterMap.has(key)) {
         // Merge with existing data, preferring tott data for certain fields
         const existing = fighterMap.get(key);
         fighterMap.set(key, {
           ...existing,
           // Update with tott data where available
-          nickname: fighter.nickname || existing.nickname,
-          division: fighter.division || fighter.weight_class || existing.division,
-          height: fighter.height || existing.height,
-          weight: fighter.weight || existing.weight,
-          reach: fighter.reach || existing.reach,
-          age: fighter.age || existing.age,
-          wins: fighter.wins || existing.wins,
-          losses: fighter.losses || existing.losses,
-          draws: fighter.draws || existing.draws,
-          record: fighter.record || existing.record,
-          status: fighter.status || existing.status,
-          ranking: fighter.ranking || existing.ranking,
-          champion: fighter.champion !== undefined ? fighter.champion : existing.champion,
-          nationality: fighter.nationality || fighter.country || existing.nationality,
-          hometown: fighter.hometown || existing.hometown,
-          fightingStyle: fighter.fighting_style || existing.fightingStyle,
-          camp: fighter.camp || existing.camp,
-          imageUrl: fighter.image_url || existing.imageUrl,
-          profileUrl: fighter.profile_url || existing.profileUrl,
-          strikingAccuracy: fighter.striking_accuracy || existing.strikingAccuracy,
-          grappling: fighter.grappling || existing.grappling,
-          knockouts: fighter.knockouts || existing.knockouts,
-          submissions: fighter.submissions || existing.submissions,
-          lastFight: fighter.last_fight || existing.lastFight,
-          nextFight: fighter.next_fight || existing.nextFight,
+          height: fighter.HEIGHT || existing.height,
+          weight: fighter.WEIGHT || existing.weight,
+          reach: fighter.REACH || existing.reach,
+          age: fighter.AGE || existing.age,
+          wins: fighter.WINS ?? existing.wins,
+          losses: fighter.LOSSES ?? existing.losses,
+          draws: fighter.DRAWS ?? existing.draws,
+          record: fighter.RECORD || existing.record,
+          status: fighter.STATUS || existing.status,
+          ranking: fighter.RANKING ?? existing.ranking,
+          champion: fighter.CHAMPION !== undefined ? fighter.CHAMPION : existing.champion,
+          nationality: fighter.NATIONALITY || existing.nationality,
+          hometown: fighter.HOMETOWN || existing.hometown,
+          fightingStyle: fighter.FIGHTING_STYLE || existing.fightingStyle,
+          camp: fighter.CAMP || existing.camp,
+          imageUrl: fighter.IMAGE_URL || existing.imageUrl,
+          profileUrl: fighter.URL || existing.profileUrl,
+          strikingAccuracy: fighter.STRIKING_ACCURACY || existing.strikingAccuracy,
+          grappling: fighter.GRAPPLING || existing.grappling,
+          knockouts: fighter.KNOCKOUTS ?? existing.knockouts,
+          submissions: fighter.SUBMISSIONS ?? existing.submissions,
+          lastFight: fighter.LAST_FIGHT || existing.lastFight,
+          nextFight: fighter.NEXT_FIGHT || existing.nextFight,
+          url: fighter.URL || existing.url,
+          stance: fighter.STANCE || null,
+          dob: fighter.DOB || null,
           source: 'combined'
         });
       } else {
         // Add new fighter from tott collection
         fighterMap.set(key, {
           _id: fighter._id,
-          name: fighter.name,
-          nickname: fighter.nickname,
-          division: fighter.division || fighter.weight_class,
-          height: fighter.height,
-          weight: fighter.weight,
-          reach: fighter.reach,
-          age: fighter.age,
-          wins: fighter.wins || 0,
-          losses: fighter.losses || 0,
-          draws: fighter.draws || 0,
-          record: fighter.record,
-          status: fighter.status || 'active',
-          ranking: fighter.ranking,
-          champion: fighter.champion || false,
-          nationality: fighter.nationality || fighter.country,
-          hometown: fighter.hometown,
-          fightingStyle: fighter.fighting_style,
-          camp: fighter.camp,
-          imageUrl: fighter.image_url,
-          profileUrl: fighter.profile_url,
-          strikingAccuracy: fighter.striking_accuracy,
-          grappling: fighter.grappling,
-          knockouts: fighter.knockouts || 0,
-          submissions: fighter.submissions || 0,
-          lastFight: fighter.last_fight,
-          nextFight: fighter.next_fight,
+          name: name,
+          nickname: null,
+          division: fighter.DIVISION || null,
+          height: fighter.HEIGHT || null,
+          weight: fighter.WEIGHT || null,
+          reach: fighter.REACH || null,
+          age: fighter.AGE || null,
+          wins: fighter.WINS || 0,
+          losses: fighter.LOSSES || 0,
+          draws: fighter.DRAWS || 0,
+          record: fighter.RECORD || null,
+          status: fighter.STATUS || 'active',
+          ranking: fighter.RANKING || null,
+          champion: fighter.CHAMPION || false,
+          nationality: fighter.NATIONALITY || null,
+          hometown: fighter.HOMETOWN || null,
+          fightingStyle: fighter.FIGHTING_STYLE || null,
+          camp: fighter.CAMP || null,
+          imageUrl: fighter.IMAGE_URL || null,
+          profileUrl: fighter.URL || null,
+          strikingAccuracy: fighter.STRIKING_ACCURACY || null,
+          grappling: fighter.GRAPPLING || null,
+          knockouts: fighter.KNOCKOUTS || 0,
+          submissions: fighter.SUBMISSIONS || 0,
+          lastFight: fighter.LAST_FIGHT || null,
+          nextFight: fighter.NEXT_FIGHT || null,
+          url: fighter.URL || null,
+          stance: fighter.STANCE || null,
+          dob: fighter.DOB || null,
           createdAt: fighter.createdAt,
           updatedAt: fighter.updatedAt,
           source: 'fighter_tott'
@@ -364,6 +373,35 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.error('Database error:', error.message);
     res.status(500).json({ error: 'Failed to create fighter', message: error.message });
+  }
+});
+
+// Endpoint to clear the collections
+router.post('/clear-collections', async (req, res) => {
+  try {
+    console.log('🧹 Clearing collections...');
+    
+    // Clear existing data in the target collections
+    await FighterDetails.deleteMany({});
+    await FighterTott.deleteMany({});
+    
+    console.log('✅ Collections cleared successfully');
+    
+    res.json({
+      success: true,
+      message: 'Collections cleared successfully',
+      data: {
+        ufcFighterDetails: 0,
+        ufcFighterTott: 0
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error clearing collections:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to clear collections', 
+      message: error.message 
+    });
   }
 });
 

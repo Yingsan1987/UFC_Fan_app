@@ -1,63 +1,51 @@
 const mongoose = require('mongoose');
 
 const fighterDetailsSchema = new mongoose.Schema({
-  // Basic fighter information
-  name: String,
-  nickname: String,
-  division: String,
-  weight_class: String,
+  // Actual data structure from your ufc-fighter_details collection
+  _id: mongoose.Schema.Types.ObjectId,
+  FIRST: String,
+  LAST: String,
+  NICKNAME: String,
+  URL: String,
   
-  // Physical attributes
-  height: String,
-  weight: String,
-  reach: String,
-  age: Number,
-  
-  // Fighting record
-  wins: Number,
-  losses: Number,
-  draws: Number,
-  record: String,
-  
-  // Career status
-  status: String,
-  ranking: Number,
-  champion: Boolean,
-  
-  // Personal information
-  nationality: String,
-  country: String,
-  hometown: String,
-  fighting_style: String,
-  camp: String,
-  
-  // Media
-  image_url: String,
-  profile_url: String,
-  
-  // Fighting statistics
-  striking_accuracy: Number,
-  grappling: String,
-  knockouts: Number,
-  submissions: Number,
-  
-  // Recent fights
-  last_fight: {
-    opponent: String,
-    result: String,
-    method: String,
-    date: Date
+  // Additional fields that might exist in your collection
+  DIVISION: String,
+  HEIGHT: String,
+  WEIGHT: String,
+  REACH: String,
+  AGE: Number,
+  WINS: Number,
+  LOSSES: Number,
+  DRAWS: Number,
+  RECORD: String,
+  STATUS: String,
+  RANKING: Number,
+  CHAMPION: Boolean,
+  NATIONALITY: String,
+  HOMETOWN: String,
+  FIGHTING_STYLE: String,
+  CAMP: String,
+  IMAGE_URL: String,
+  STRIKING_ACCURACY: Number,
+  GRAPPLING: String,
+  KNOCKOUTS: Number,
+  SUBMISSIONS: Number,
+  LAST_FIGHT: {
+    OPPONENT: String,
+    RESULT: String,
+    METHOD: String,
+    DATE: Date
   },
-  next_fight: {
-    opponent: String,
-    event: String,
-    date: Date
+  NEXT_FIGHT: {
+    OPPONENT: String,
+    EVENT: String,
+    DATE: Date
   },
   
   // Metadata
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-});
+}, { strict: false }); // Allow additional fields
 
 // Update the updatedAt field before saving
 fighterDetailsSchema.pre('save', function(next) {
