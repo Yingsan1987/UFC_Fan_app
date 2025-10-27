@@ -53,4 +53,5 @@ fighterDetailsSchema.pre('save', function(next) {
   next();
 });
 
-module.exports = mongoose.model('FighterDetails', fighterDetailsSchema, 'ufc-fighter_details');
+// Try both naming conventions: ufc-fighter_details and ufc_fighter_details
+module.exports = mongoose.model('FighterDetails', fighterDetailsSchema, 'ufc_fighter_details');

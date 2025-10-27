@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const axios = require('axios');
 const Fighter = require('../models/Fighter');
 const FighterDetails = require('../models/FighterDetails');
@@ -787,13 +788,13 @@ router.get('/debug/collections', async (req, res) => {
     ]);
     
     res.json({
-      message: 'Collection status check for ufc-fighter_details and ufc-fighter_tott',
+      message: 'Collection status check for ufc_fighter_details and ufc_fighter_tott',
       collections: {
-        'ufc-fighter_details': {
+        'ufc_fighter_details': {
           exists: fighterDetailsCount > 0,
           count: fighterDetailsCount
         },
-        'ufc-fighter_tott': {
+        'ufc_fighter_tott': {
           exists: fighterTottCount > 0,
           count: fighterTottCount
         }
@@ -807,6 +808,51 @@ router.get('/debug/collections', async (req, res) => {
     res.status(500).json({ 
       error: error.message,
       message: 'Debug failed'
+    });
+  }
+});
+
+// Endpoint to list all collections in the database
+router.get('/debug/list-collections', async (req, res) => {
+  try {
+    console.log('🔍 Debug: Listing all collections in the database...');
+    
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+    
+    console.log(`📊 Found ${collections.length} collections in database`);
+    
+    // Get counts for each collection
+    const collectionInfo = await Promise.all(
+      collections.map(async (collection) => {
+        try {
+          const count = await db.collection(collection.name).countDocuments();
+          return {
+            name: collection.name,
+            count: count,
+            type: collection.type || 'collection'
+          };
+        } catch (err) {
+          return {
+            name: collection.name,
+            count: 'error',
+            error: err.message
+          };
+        }
+      })
+    );
+    
+    res.json({
+      message: 'All collections in the database',
+      database: mongoose.connection.name,
+      totalCollections: collections.length,
+      collections: collectionInfo
+    });
+  } catch (error) {
+    console.error('❌ Debug error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      message: 'Failed to list collections'
     });
   }
 });

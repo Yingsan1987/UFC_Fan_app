@@ -53,4 +53,5 @@ fighterTottSchema.pre('save', function(next) {
   next();
 });
 
-module.exports = mongoose.model('FighterTott', fighterTottSchema, 'ufc-fighter_tott');
+// Try both naming conventions: ufc-fighter_tott and ufc_fighter_tott
+module.exports = mongoose.model('FighterTott', fighterTottSchema, 'ufc_fighter_tott');
