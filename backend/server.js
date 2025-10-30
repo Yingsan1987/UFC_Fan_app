@@ -20,7 +20,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://kurokuku.lol', // Update this to your actual frontend URL
+  origin: (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : '*'),
   methods: ['GET','POST','PUT','DELETE','OPTIONS'],
   credentials: true
 }));
