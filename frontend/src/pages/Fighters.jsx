@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, X, Trophy, MapPin, Target } from 'lucide-react';
+import { Search, X, Trophy, MapPin, Target, ArrowUp } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
@@ -16,6 +16,7 @@ const Fighters = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreFighters, setHasMoreFighters] = useState(true);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const fightersPerPage = 11;
 
   const divisions = [
@@ -108,8 +109,27 @@ const Fighters = () => {
     setCurrentPage(1);
   }, [searchTerm, selectedDivision, statusFilter, fighters]);
 
+  // Scroll detection for Back to Top button
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      // Show button when user scrolls down more than 300px
+      setShowBackToTop(scrollTop > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const clearSearch = () => {
     setSearchTerm('');
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   };
 
   const loadMoreFighters = () => {
@@ -476,6 +496,17 @@ const Fighters = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Floating Back to Top Button */}
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 bg-red-600 hover:bg-red-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 z-50 group"
+          aria-label="Back to top"
+        >
+          <ArrowUp className="h-6 w-6 group-hover:scale-110 transition-transform duration-200" />
+        </button>
       )}
     </div>
   );
