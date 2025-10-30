@@ -5,6 +5,7 @@ import { Menu, X } from "lucide-react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import React from 'react';
 import Fighters from './pages/Fighters';
+import Forums from './pages/Forums';
 import Techniques from './pages/Techniques';
 import News from './pages/News';
 import Events from './pages/Events';
@@ -54,7 +55,7 @@ function App() {
     }
   };
 
-  const menuItems = ["Home", "Fighters", "Techniques", "Events", "Ranking", "Prediction", "News", "Live Chat", "Support"];
+  const menuItems = ["Home", "Fighters", "Techniques", "Events", "Forums", "Ranking", "Prediction", "News", "Live Chat", "Support"];
 
   return (
     <div className="flex h-screen font-sans">
@@ -83,6 +84,8 @@ function App() {
                 // Navigate to the appropriate route
                 if (item === "Events") {
                   navigate("/events");
+                } else if (item === "Forums") {
+                  navigate("/forums");
                 } else if (item === "Support") {
                   navigate("/support");
                 } else if (item === "Home") {
@@ -158,6 +161,7 @@ function App() {
             <Route path="/events" element={<Events />} />
             <Route path="/event-details/:eventName" element={<EventDetails />} />
             <Route path="/support" element={<Support />} />
+            <Route path="/forums" element={<Forums />} />
             <Route path="*" element={
               <div className="text-center py-12">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Page Not Found</h2>

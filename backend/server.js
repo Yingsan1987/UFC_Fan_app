@@ -33,6 +33,7 @@ app.use('/api/fight-details', require('./routes/fight-details'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/news', require('./routes/news'));
 app.use('/api/stripe', require('./routes/stripe'));
+app.use('/api/forums', require('./routes/forums'));
 
 // Chat socket
 chatSocket(io);
