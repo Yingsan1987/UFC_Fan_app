@@ -4,6 +4,7 @@ const axios = require('axios');
 const Fighter = require('../models/Fighter');
 const FighterDetails = require('../models/FighterDetails');
 const FighterTott = require('../models/FighterTott');
+const FighterImages = require('../models/FighterImages');
 const router = express.Router();
 
 // Rate limiting for API calls (3 calls per day)
@@ -117,6 +118,66 @@ async function fetchFighterHistory(firstName, lastName) {
   } catch (error) {
     console.error(`Error fetching fight history for ${firstName} ${lastName}:`, error.message);
     return null;
+  }
+}
+
+// Function to match fighter names and get images
+async function getFighterImages(fighters) {
+  try {
+    // Get all fighter images
+    const fighterImages = await FighterImages.find();
+    
+    // Create a map for quick lookup
+    const imageMap = new Map();
+    fighterImages.forEach(img => {
+      if (img.name) {
+        // Normalize the name for matching
+        const normalizedName = img.name.toLowerCase().trim();
+        imageMap.set(normalizedName, img.image_url || img.image_path);
+      }
+    });
+    
+    // Match fighters with images
+    return fighters.map(fighter => {
+      const fighterName = fighter.name;
+      if (!fighterName) return fighter;
+      
+      // Try different name matching strategies
+      let imageUrl = null;
+      
+      // Strategy 1: Direct match
+      const directMatch = imageMap.get(fighterName.toLowerCase().trim());
+      if (directMatch) {
+        imageUrl = directMatch;
+      } else {
+        // Strategy 2: Try matching with different name formats
+        const nameParts = fighterName.split(' ');
+        if (nameParts.length >= 2) {
+          // Try "Last First" format
+          const lastFirst = `${nameParts[nameParts.length - 1]} ${nameParts[0]}`.toLowerCase().trim();
+          const lastFirstMatch = imageMap.get(lastFirst);
+          if (lastFirstMatch) {
+            imageUrl = lastFirstMatch;
+          } else {
+            // Try partial matches
+            for (const [imgName, imgUrl] of imageMap.entries()) {
+              if (imgName.includes(nameParts[0].toLowerCase()) && imgName.includes(nameParts[nameParts.length - 1].toLowerCase())) {
+                imageUrl = imgUrl;
+                break;
+              }
+            }
+          }
+        }
+      }
+      
+      return {
+        ...fighter,
+        imageUrl: imageUrl
+      };
+    });
+  } catch (error) {
+    console.error('Error getting fighter images:', error.message);
+    return fighters; // Return fighters without images if there's an error
   }
 }
 
@@ -322,6 +383,9 @@ router.get('/', async (req, res) => {
     // Combine and merge the data
     const combinedFighters = combineFighterData(fighterDetails, fighterTott);
     
+    // Get fighter images
+    const fightersWithImages = await getFighterImages(combinedFighters);
+    
     // Get total count for pagination info
     const [totalDetails, totalTott] = await Promise.all([
       FighterDetails.countDocuments(),
@@ -333,10 +397,11 @@ router.get('/', async (req, res) => {
     
     console.log(`📊 Combined into ${combinedFighters.length} unique fighters`);
     console.log(`📊 Total fighters: ${totalFighters}, Total pages: ${totalPages}`);
+    console.log(`🖼️ Added images to ${fightersWithImages.filter(f => f.imageUrl).length} fighters`);
     
-    // Return the combined data - NO FALLBACK to original collection
+    // Return the combined data with images - NO FALLBACK to original collection
     res.json({
-      fighters: combinedFighters,
+      fighters: fightersWithImages,
       pagination: {
         currentPage: page,
         totalPages: totalPages,
@@ -802,6 +867,55 @@ router.get('/debug/collections', async (req, res) => {
       recommendation: fighterDetailsCount > 0 || fighterTottCount > 0 
         ? 'Collections have data - API will use combined data' 
         : 'Collections are empty - populate them with fighter data'
+    });
+  } catch (error) {
+    console.error('❌ Debug error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      message: 'Debug failed'
+    });
+  }
+});
+
+// Endpoint to debug fighter images
+router.get('/debug/images', async (req, res) => {
+  try {
+    console.log('🖼️ Debug: Checking fighter images...');
+    
+    // Get sample fighters
+    const fighters = await FighterDetails.find().limit(3);
+    const fighterTott = await FighterTott.find().limit(3);
+    const combinedFighters = combineFighterData(fighters, fighterTott);
+    
+    // Get sample images
+    const images = await FighterImages.find().limit(5);
+    
+    // Test name matching
+    const testMatching = await getFighterImages(combinedFighters.slice(0, 3));
+    
+    res.json({
+      message: 'Fighter images debug information',
+      fighters: {
+        sample: combinedFighters.slice(0, 3).map(f => ({
+          name: f.name,
+          source: f.source
+        })),
+        total: combinedFighters.length
+      },
+      images: {
+        sample: images.map(img => ({
+          name: img.name,
+          image_url: img.image_url || img.image_path
+        })),
+        total: images.length
+      },
+      matching: {
+        test: testMatching.slice(0, 3).map(f => ({
+          name: f.name,
+          hasImage: !!f.imageUrl,
+          imageUrl: f.imageUrl
+        }))
+      }
     });
   } catch (error) {
     console.error('❌ Debug error:', error);

@@ -7,11 +7,16 @@ const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
 const Fighters = () => {
   const [fighters, setFighters] = useState([]);
   const [filteredFighters, setFilteredFighters] = useState([]);
+  const [displayedFighters, setDisplayedFighters] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDivision, setSelectedDivision] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreFighters, setHasMoreFighters] = useState(true);
+  const fightersPerPage = 11;
 
   const divisions = [
     "Heavyweight", "Light Heavyweight", "Middleweight", "Welterweight", 
@@ -40,6 +45,11 @@ const Fighters = () => {
         
         setFighters(fightersData);
         setFilteredFighters(fightersData);
+        
+        // Set initial displayed fighters (first 11)
+        const initialFighters = fightersData.slice(0, fightersPerPage);
+        setDisplayedFighters(initialFighters);
+        setHasMoreFighters(fightersData.length > fightersPerPage);
         
         // Check if there's an error message from the API
         if (response.data.error) {
@@ -86,10 +96,38 @@ const Fighters = () => {
     }
 
     setFilteredFighters(filtered);
+    
+    // Update displayed fighters based on filtered results
+    const initialFiltered = filtered.slice(0, fightersPerPage);
+    setDisplayedFighters(initialFiltered);
+    setHasMoreFighters(filtered.length > fightersPerPage);
+    setCurrentPage(1);
   }, [searchTerm, selectedDivision, statusFilter, fighters]);
 
   const clearSearch = () => {
     setSearchTerm('');
+  };
+
+  const loadMoreFighters = () => {
+    if (loadingMore || !hasMoreFighters) return;
+    
+    setLoadingMore(true);
+    
+    // Calculate next page of fighters
+    const nextPage = currentPage + 1;
+    const startIndex = nextPage * fightersPerPage;
+    const endIndex = startIndex + fightersPerPage;
+    const nextBatch = filteredFighters.slice(startIndex, endIndex);
+    
+    if (nextBatch.length > 0) {
+      setDisplayedFighters(prev => [...prev, ...nextBatch]);
+      setCurrentPage(nextPage);
+      setHasMoreFighters(endIndex < filteredFighters.length);
+    } else {
+      setHasMoreFighters(false);
+    }
+    
+    setLoadingMore(false);
   };
 
 
@@ -198,7 +236,7 @@ const Fighters = () => {
               <span>No fighters found matching "{searchTerm}"</span>
             ) : (
               <span>
-                {filteredFighters.length} fighter{filteredFighters.length !== 1 ? 's' : ''} found
+                Showing {displayedFighters.length} of {filteredFighters.length} fighter{filteredFighters.length !== 1 ? 's' : ''} found
                 {filteredFighters.length !== fighters.length && ` out of ${fighters.length} total`}
               </span>
             )}
@@ -206,32 +244,53 @@ const Fighters = () => {
         )}
       </div>
 
-      {filteredFighters.length === 0 ? (
+      {displayedFighters.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-gray-400 text-6xl mb-4">🥊</div>
           <h3 className="text-xl font-semibold text-gray-700 mb-2">
             {searchTerm ? 'No Fighters Found' : 'No Fighters Available'}
           </h3>
           <p className="text-gray-500">
-            {searchTerm ? `Try a different search term` : 'No data available from ufc-fighter_details and ufc-fighter_tott collections. Please populate these collections with fighter data.'}
+            {searchTerm ? `Try a different search term` : 'No data available from ufc_fighter_details and ufc_fighter_tott collections. Please populate these collections with fighter data.'}
           </p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredFighters.map((fighter) => (
+          {displayedFighters.map((fighter) => (
             <div
               key={fighter._id}
               className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden border border-gray-200"
             >
               {/* Fighter Header */}
-              <div className="h-24 bg-gradient-to-r from-red-600 to-red-800 flex items-center justify-center relative">
-                <div className="text-white text-center">
-                  <div className="text-2xl mb-1">🥊</div>
-                  <p className="text-xs font-semibold">UFC Fighter</p>
-                </div>
-                <div className="absolute top-2 right-2">
-                  {getStatusBadge(fighter)}
-                </div>
+              <div className="h-32 bg-gradient-to-r from-red-600 to-red-800 flex items-center justify-center relative overflow-hidden">
+                {fighter.imageUrl ? (
+                  <div className="w-full h-full relative">
+                    <img 
+                      src={fighter.imageUrl} 
+                      alt={fighter.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                    <div className="absolute bottom-2 left-2 right-2 text-white text-center">
+                      <div className="text-xs font-semibold">UFC Fighter</div>
+                    </div>
+                    <div className="absolute top-2 right-2">
+                      {getStatusBadge(fighter)}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-white text-center">
+                    <div className="text-2xl mb-1">🥊</div>
+                    <p className="text-xs font-semibold">UFC Fighter</p>
+                    <div className="absolute top-2 right-2">
+                      {getStatusBadge(fighter)}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Fighter Content */}
@@ -359,16 +418,41 @@ const Fighters = () => {
         </div>
       )}
 
+      {/* Show More Button */}
+      {hasMoreFighters && displayedFighters.length > 0 && (
+        <div className="mt-8 text-center">
+          <button
+            onClick={loadMoreFighters}
+            disabled={loadingMore}
+            className="bg-red-600 text-white px-8 py-3 rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
+          >
+            {loadingMore ? (
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Loading more fighters...
+              </div>
+            ) : (
+              `Show More Fighters (${filteredFighters.length - displayedFighters.length} remaining)`
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Footer Stats */}
       {fighters.length > 0 && (
         <div className="mt-12 bg-gray-50 rounded-lg p-6">
           <div className="text-center">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              {searchTerm ? `Showing ${filteredFighters.length} of ${fighters.length} fighters` : `Total Fighters: ${fighters.length}`}
+              {searchTerm ? `Showing ${displayedFighters.length} of ${filteredFighters.length} fighters` : `Showing ${displayedFighters.length} of ${fighters.length} fighters`}
             </h3>
             <p className="text-gray-600 text-sm">
-              {searchTerm ? `Filtered by "${searchTerm}"` : 'Showing live data from ufc_fighter_details and ufc_fighter_tott collections'}
+              {searchTerm ? `Filtered by "${searchTerm}"` : 'Live data from ufc_fighter_details and ufc_fighter_tott collections'}
             </p>
+            {hasMoreFighters && (
+              <p className="text-gray-500 text-xs mt-2">
+                Click "Show More" to load additional fighters
+              </p>
+            )}
           </div>
         </div>
       )}
