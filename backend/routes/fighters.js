@@ -127,41 +127,90 @@ async function getFighterImages(fighters) {
     // Get all fighter images
     const fighterImages = await FighterImages.find();
     
-    // Create a map for quick lookup
-    const imageMap = new Map();
+    // Create multiple maps for different matching strategies
+    const imageMaps = {
+      direct: new Map(),
+      normalized: new Map(),
+      lastFirst: new Map(),
+      partial: new Map()
+    };
+    
     fighterImages.forEach(img => {
       if (img.name) {
-        // Normalize the name for matching
-        const normalizedName = img.name.toLowerCase().trim();
-        imageMap.set(normalizedName, img.image_url || img.image_path);
+        const name = img.name.toLowerCase().trim();
+        const imageUrl = img.image_url || img.image_path;
+        
+        // Direct match
+        imageMaps.direct.set(name, imageUrl);
+        
+        // Normalized match (remove special characters, extra spaces)
+        const normalized = name.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+        imageMaps.normalized.set(normalized, imageUrl);
+        
+        // Last First format
+        const nameParts = name.split(' ');
+        if (nameParts.length >= 2) {
+          const lastFirst = `${nameParts[nameParts.length - 1]} ${nameParts[0]}`;
+          imageMaps.lastFirst.set(lastFirst, imageUrl);
+        }
+        
+        // Partial matches (first name + last name)
+        if (nameParts.length >= 2) {
+          const partial = `${nameParts[0]} ${nameParts[nameParts.length - 1]}`;
+          imageMaps.partial.set(partial, imageUrl);
+        }
       }
     });
     
-    // Match fighters with images
+    // Match fighters with images using multiple strategies
     return fighters.map(fighter => {
       const fighterName = fighter.name;
       if (!fighterName) return fighter;
       
-      // Try different name matching strategies
       let imageUrl = null;
+      const normalizedFighterName = fighterName.toLowerCase().trim();
       
       // Strategy 1: Direct match
-      const directMatch = imageMap.get(fighterName.toLowerCase().trim());
-      if (directMatch) {
-        imageUrl = directMatch;
-      } else {
-        // Strategy 2: Try matching with different name formats
-        const nameParts = fighterName.split(' ');
+      imageUrl = imageMaps.direct.get(normalizedFighterName);
+      
+      if (!imageUrl) {
+        // Strategy 2: Normalized match
+        const normalized = normalizedFighterName.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+        imageUrl = imageMaps.normalized.get(normalized);
+      }
+      
+      if (!imageUrl) {
+        // Strategy 3: Last First format
+        const nameParts = normalizedFighterName.split(' ');
         if (nameParts.length >= 2) {
-          // Try "Last First" format
-          const lastFirst = `${nameParts[nameParts.length - 1]} ${nameParts[0]}`.toLowerCase().trim();
-          const lastFirstMatch = imageMap.get(lastFirst);
-          if (lastFirstMatch) {
-            imageUrl = lastFirstMatch;
-          } else {
-            // Try partial matches
-            for (const [imgName, imgUrl] of imageMap.entries()) {
-              if (imgName.includes(nameParts[0].toLowerCase()) && imgName.includes(nameParts[nameParts.length - 1].toLowerCase())) {
+          const lastFirst = `${nameParts[nameParts.length - 1]} ${nameParts[0]}`;
+          imageUrl = imageMaps.lastFirst.get(lastFirst);
+        }
+      }
+      
+      if (!imageUrl) {
+        // Strategy 4: Partial match (first + last)
+        const nameParts = normalizedFighterName.split(' ');
+        if (nameParts.length >= 2) {
+          const partial = `${nameParts[0]} ${nameParts[nameParts.length - 1]}`;
+          imageUrl = imageMaps.partial.get(partial);
+        }
+      }
+      
+      if (!imageUrl) {
+        // Strategy 5: Fuzzy matching - try to find similar names
+        const nameParts = normalizedFighterName.split(' ');
+        if (nameParts.length >= 2) {
+          for (const [imgName, imgUrl] of imageMaps.direct.entries()) {
+            const imgParts = imgName.split(' ');
+            if (imgParts.length >= 2) {
+              // Check if first and last names match (case insensitive)
+              const firstNameMatch = nameParts[0] === imgParts[0] || 
+                                   nameParts[0] === imgParts[imgParts.length - 1];
+              const lastNameMatch = nameParts[nameParts.length - 1] === imgParts[imgParts.length - 1] ||
+                                  nameParts[nameParts.length - 1] === imgParts[0];
+              
+              if (firstNameMatch && lastNameMatch) {
                 imageUrl = imgUrl;
                 break;
               }

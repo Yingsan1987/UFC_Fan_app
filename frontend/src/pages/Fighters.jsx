@@ -28,7 +28,9 @@ const Fighters = () => {
     const fetchFighters = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/fighters`);
+        
+        // Fetch all fighters by getting a large page size
+        const response = await axios.get(`${API_URL}/fighters?limit=5000`);
         
         // Handle the new format from ufc-fighter_details and ufc-fighter_tott collections
         let fightersData;
@@ -42,6 +44,8 @@ const Fighters = () => {
           // Empty or error response
           fightersData = [];
         }
+        
+        console.log(`📊 Loaded ${fightersData.length} fighters from API`);
         
         setFighters(fightersData);
         setFilteredFighters(fightersData);
@@ -229,19 +233,36 @@ const Fighters = () => {
           </select>
         </div>
         
-        {/* Search Results Count */}
-        {searchTerm && (
-          <div className="text-sm text-gray-600">
-            {filteredFighters.length === 0 ? (
-              <span>No fighters found matching "{searchTerm}"</span>
-            ) : (
-              <span>
-                Showing {displayedFighters.length} of {filteredFighters.length} fighter{filteredFighters.length !== 1 ? 's' : ''} found
-                {filteredFighters.length !== fighters.length && ` out of ${fighters.length} total`}
-              </span>
-            )}
+        {/* Total Fighters Counter */}
+        <div className="bg-gradient-to-r from-red-600 to-red-800 text-white rounded-lg p-4 max-w-md mx-auto mb-6">
+          <div className="flex items-center justify-center space-x-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold">
+                {searchTerm || selectedDivision !== 'all' || statusFilter !== 'all' 
+                  ? filteredFighters.length 
+                  : fighters.length
+                }
+              </div>
+              <div className="text-sm opacity-90">
+                {searchTerm || selectedDivision !== 'all' || statusFilter !== 'all' 
+                  ? 'Filtered Fighters' 
+                  : 'Total Fighters'
+                }
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">{displayedFighters.length}</div>
+              <div className="text-sm opacity-90">Displayed</div>
+            </div>
           </div>
-        )}
+          {(searchTerm || selectedDivision !== 'all' || statusFilter !== 'all') && (
+            <div className="mt-2 text-xs opacity-75">
+              {searchTerm && `Search: "${searchTerm}"`}
+              {selectedDivision !== 'all' && ` • Division: ${selectedDivision}`}
+              {statusFilter !== 'all' && ` • Status: ${statusFilter}`}
+            </div>
+          )}
+        </div>
       </div>
 
       {displayedFighters.length === 0 ? (
