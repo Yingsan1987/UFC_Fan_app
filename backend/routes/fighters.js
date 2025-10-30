@@ -371,37 +371,36 @@ router.get('/', async (req, res) => {
     
     console.log(`📊 Fetching fighters from ufc-fighter_details and ufc-fighter_tott - Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
     
-    // Get data from both collections with pagination
+    // Get ALL data from both collections (no pagination here)
     const [fighterDetails, fighterTott] = await Promise.all([
-      FighterDetails.find().skip(skip).limit(limit),
-      FighterTott.find().skip(skip).limit(limit)
+      FighterDetails.find(),
+      FighterTott.find()
     ]);
     
     console.log(`📊 Found ${fighterDetails.length} fighters from ufc-fighter_details`);
     console.log(`📊 Found ${fighterTott.length} fighters from ufc-fighter_tott`);
     
-    // Combine and merge the data
-    const combinedFighters = combineFighterData(fighterDetails, fighterTott);
+    // Combine and merge ALL the data
+    const allCombinedFighters = combineFighterData(fighterDetails, fighterTott);
     
-    // Get fighter images
-    const fightersWithImages = await getFighterImages(combinedFighters);
+    console.log(`📊 Combined into ${allCombinedFighters.length} unique fighters`);
     
-    // Get total count for pagination info
-    const [totalDetails, totalTott] = await Promise.all([
-      FighterDetails.countDocuments(),
-      FighterTott.countDocuments()
-    ]);
+    // Get fighter images for all fighters
+    const allFightersWithImages = await getFighterImages(allCombinedFighters);
     
-    const totalFighters = Math.max(totalDetails, totalTott);
+    // Apply pagination AFTER combining all data
+    const paginatedFighters = allFightersWithImages.slice(skip, skip + limit);
+    
+    const totalFighters = allFightersWithImages.length;
     const totalPages = Math.ceil(totalFighters / limit);
     
-    console.log(`📊 Combined into ${combinedFighters.length} unique fighters`);
-    console.log(`📊 Total fighters: ${totalFighters}, Total pages: ${totalPages}`);
-    console.log(`🖼️ Added images to ${fightersWithImages.filter(f => f.imageUrl).length} fighters`);
+    console.log(`📊 Total unique fighters: ${totalFighters}, Total pages: ${totalPages}`);
+    console.log(`📊 Returning ${paginatedFighters.length} fighters for page ${page}`);
+    console.log(`🖼️ Added images to ${allFightersWithImages.filter(f => f.imageUrl).length} fighters`);
     
-    // Return the combined data with images - NO FALLBACK to original collection
+    // Return the paginated combined data with images - NO FALLBACK to original collection
     res.json({
-      fighters: fightersWithImages,
+      fighters: paginatedFighters,
       pagination: {
         currentPage: page,
         totalPages: totalPages,
