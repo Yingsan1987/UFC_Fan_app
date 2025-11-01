@@ -127,3 +127,4 @@ The API will merge data from both collections, preferring ufc-fighter_tott data 
 
 The system is now ready to work with your actual data structure. Once deployed and the real data is imported, the fighters page will display the correct information from your `ufc-fighter_details` and `ufc-fighter_tott` collections instead of the sample data.
 
+

@@ -188,3 +188,4 @@ rm .env
 4. **Add the Price ID to Render environment variables**
 
 
+

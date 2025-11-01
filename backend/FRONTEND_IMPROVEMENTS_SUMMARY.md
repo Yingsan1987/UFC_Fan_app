@@ -130,3 +130,4 @@ All fixes have been tested and are ready for deployment:
 
 **The fighters page now provides a complete, professional experience with all available data!** 🥊
 
+

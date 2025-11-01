@@ -77,3 +77,4 @@ async function testFighterCountFix() {
 // Run the test
 testFighterCountFix();
 
+

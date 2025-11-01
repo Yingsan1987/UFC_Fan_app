@@ -107,3 +107,4 @@ You should see:
 - The API combines data from both collections, preferring `ufc-fighter_tott` data when available
 - Make sure to maintain the same document structure in both collections
 
+

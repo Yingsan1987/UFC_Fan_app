@@ -111,3 +111,4 @@ The fix has been tested and confirmed working:
 
 **The fighters page now shows ALL available data instead of just 14 fighters!** 🎉
 
+
