@@ -31,19 +31,24 @@ try {
 
 // Initialize Firebase with error handling
 let app;
+let auth;
+let googleProvider;
+
 try {
   app = initializeApp(firebaseConfig);
   console.log('✅ Firebase initialized successfully');
+  // Initialize Firebase Authentication and get a reference to the service
+  auth = getAuth(app);
+  googleProvider = new GoogleAuthProvider();
 } catch (error) {
   console.error('❌ Firebase initialization failed:', error.message);
   console.error('Check your Firebase configuration in .env file');
-  // Create a fallback to prevent app from breaking
-  throw new Error(`Firebase initialization failed: ${error.message}`);
+  console.error('⚠️ App will run in NO-AUTH mode until Firebase is configured');
+  // Create mock auth object to prevent app from crashing
+  auth = null;
+  googleProvider = null;
 }
 
-// Initialize Firebase Authentication and get a reference to the service
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-
+export { auth, googleProvider };
 export default app;
 

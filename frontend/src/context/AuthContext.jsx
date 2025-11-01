@@ -21,6 +21,7 @@ export function AuthProvider({ children }) {
 
   // Sign up with email and password
   async function signup(email, password, displayName) {
+    if (!auth) throw new Error('Firebase Auth not initialized. Please configure .env file.');
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     if (displayName) {
       await updateProfile(userCredential.user, { displayName });
@@ -30,20 +31,30 @@ export function AuthProvider({ children }) {
 
   // Sign in with email and password
   function login(email, password) {
+    if (!auth) throw new Error('Firebase Auth not initialized. Please configure .env file.');
     return signInWithEmailAndPassword(auth, email, password);
   }
 
   // Sign in with Google
   function loginWithGoogle() {
+    if (!auth || !googleProvider) throw new Error('Firebase Auth not initialized. Please configure .env file.');
     return signInWithPopup(auth, googleProvider);
   }
 
   // Sign out
   function logout() {
+    if (!auth) throw new Error('Firebase Auth not initialized. Please configure .env file.');
     return signOut(auth);
   }
 
   useEffect(() => {
+    // If Firebase auth is not initialized, just set loading to false
+    if (!auth) {
+      console.warn('⚠️ Firebase Auth not initialized - running without authentication');
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setLoading(false);
