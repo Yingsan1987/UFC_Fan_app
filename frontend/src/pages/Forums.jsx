@@ -64,7 +64,8 @@ const Forums = () => {
     try {
       setLoading(true);
       const headers = await getAuthHeaders();
-      await axios.post(`${API_URL}/forums`, { title, content, author }, { headers });
+      // Send only title and content - backend gets user info from auth token
+      await axios.post(`${API_URL}/forums`, { title, content }, { headers });
       setTitle(''); setContent(''); setAuthor('');
       setShowCreateForm(false);
       await loadForums(1);
@@ -135,12 +136,15 @@ const Forums = () => {
     if (!text) return;
     try {
       const headers = await getAuthHeaders();
-      const res = await axios.post(`${API_URL}/forums/${id}/comments`, { content: text, author: author || 'Anonymous' }, { headers });
+      // Send content only - backend will get user info from auth token
+      const res = await axios.post(`${API_URL}/forums/${id}/comments`, { content: text }, { headers });
       setCommentsByForum(prev => ({ ...prev, [id]: [res.data, ...(prev[id] || [])] }));
       setNewCommentByForum(prev => ({ ...prev, [id]: '' }));
       // Update comment count in forum
       setForums(prev => prev.map(f => f._id === id ? { ...f, commentCount: (f.commentCount || 0) + 1 } : f));
-    } catch {}
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
   };
 
   const likeComment = async (forumId, commentId) => {

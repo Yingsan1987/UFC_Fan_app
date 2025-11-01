@@ -5,7 +5,9 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  sendEmailVerification,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 
@@ -26,6 +28,8 @@ export function AuthProvider({ children }) {
     if (displayName) {
       await updateProfile(userCredential.user, { displayName });
     }
+    // Send email verification
+    await sendEmailVerification(userCredential.user);
     return userCredential;
   }
 
@@ -45,6 +49,19 @@ export function AuthProvider({ children }) {
   function logout() {
     if (!auth) throw new Error('Firebase Auth not initialized. Please configure .env file.');
     return signOut(auth);
+  }
+
+  // Reset password
+  function resetPassword(email) {
+    if (!auth) throw new Error('Firebase Auth not initialized. Please configure .env file.');
+    return sendPasswordResetEmail(auth, email);
+  }
+
+  // Resend verification email
+  async function resendVerificationEmail() {
+    if (!auth) throw new Error('Firebase Auth not initialized. Please configure .env file.');
+    if (!currentUser) throw new Error('No user logged in');
+    return sendEmailVerification(currentUser);
   }
 
   useEffect(() => {
@@ -68,7 +85,9 @@ export function AuthProvider({ children }) {
     signup,
     login,
     loginWithGoogle,
-    logout
+    logout,
+    resetPassword,
+    resendVerificationEmail
   };
 
   return (

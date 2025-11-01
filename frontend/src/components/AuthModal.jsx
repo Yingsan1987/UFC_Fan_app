@@ -1,26 +1,33 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User } from 'lucide-react';
+import { X, Mail, Lock, User, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function AuthModal({ isOpen, onClose }) {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, signup, loginWithGoogle } = useAuth();
+  const { login, signup, loginWithGoogle, resetPassword } = useAuth();
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
       if (isLogin) {
         await login(email, password);
+        onClose();
+        setEmail('');
+        setPassword('');
+        setDisplayName('');
       } else {
         if (!displayName.trim()) {
           setError('Please enter your name');
@@ -28,11 +35,16 @@ export default function AuthModal({ isOpen, onClose }) {
           return;
         }
         await signup(email, password, displayName);
+        setSuccess('Account created! Please check your email to verify your account.');
+        setEmail('');
+        setPassword('');
+        setDisplayName('');
+        // Auto close after 3 seconds
+        setTimeout(() => {
+          onClose();
+          setSuccess('');
+        }, 3000);
       }
-      onClose();
-      setEmail('');
-      setPassword('');
-      setDisplayName('');
     } catch (err) {
       setError(err.message || 'Failed to authenticate');
     } finally {
@@ -40,8 +52,31 @@ export default function AuthModal({ isOpen, onClose }) {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      await resetPassword(email);
+      setSuccess('Password reset email sent! Check your inbox.');
+      setEmail('');
+      // Switch back to login after 3 seconds
+      setTimeout(() => {
+        setIsForgotPassword(false);
+        setSuccess('');
+      }, 3000);
+    } catch (err) {
+      setError(err.message || 'Failed to send reset email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setError('');
+    setSuccess('');
     setLoading(true);
     try {
       await loginWithGoogle();
@@ -51,6 +86,15 @@ export default function AuthModal({ isOpen, onClose }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setEmail('');
+    setPassword('');
+    setDisplayName('');
+    setError('');
+    setSuccess('');
+    setIsForgotPassword(false);
   };
 
   return (
@@ -66,7 +110,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
         {/* Title */}
         <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          {isLogin ? 'Welcome Back' : 'Create Account'}
+          {isForgotPassword ? 'Reset Password' : (isLogin ? 'Welcome Back' : 'Create Account')}
         </h2>
 
         {/* Error Message */}
@@ -76,8 +120,61 @@ export default function AuthModal({ isOpen, onClose }) {
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Success Message */}
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4 flex items-center gap-2">
+            <CheckCircle size={20} />
+            <span>{success}</span>
+          </div>
+        )}
+
+        {/* Forgot Password Form */}
+        {isForgotPassword ? (
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Enter your email address and we'll send you a link to reset your password.
+            </p>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-red-600 text-white py-2 rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Sending...' : 'Send Reset Link'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsForgotPassword(false);
+                setError('');
+                setSuccess('');
+              }}
+              className="w-full text-sm text-gray-600 hover:text-gray-800"
+            >
+              Back to Sign In
+            </button>
+          </form>
+        ) : (
+          /* Login/Signup Form */
+          <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -139,24 +236,44 @@ export default function AuthModal({ isOpen, onClose }) {
           >
             {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Sign Up')}
           </button>
+
+          {/* Forgot Password Link */}
+          {isLogin && (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsForgotPassword(true);
+                  setError('');
+                  setSuccess('');
+                }}
+                className="text-sm text-red-600 hover:text-red-700 font-medium"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
         </form>
+        )}
 
-        {/* Divider */}
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Or continue with</span>
-          </div>
-        </div>
+        {/* Divider and Google Sign-in (only for login/signup, not forgot password) */}
+        {!isForgotPassword && (
+          <>
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              </div>
+            </div>
 
-        {/* Google Sign In */}
-        <button
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
-        >
+            {/* Google Sign In */}
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
               fill="#4285F4"
@@ -175,24 +292,27 @@ export default function AuthModal({ isOpen, onClose }) {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          <span>Sign in with Google</span>
-        </button>
+              <span>Sign in with Google</span>
+            </button>
 
-        {/* Toggle Login/Signup */}
-        <div className="mt-6 text-center text-sm">
-          <span className="text-gray-600">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-          </span>
-          <button
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError('');
-            }}
-            className="text-red-600 hover:text-red-700 font-medium"
-          >
-            {isLogin ? 'Sign Up' : 'Sign In'}
-          </button>
-        </div>
+            {/* Toggle Login/Signup */}
+            <div className="mt-6 text-center text-sm">
+              <span className="text-gray-600">
+                {isLogin ? "Don't have an account? " : "Already have an account? "}
+              </span>
+              <button
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError('');
+                  setSuccess('');
+                }}
+                className="text-red-600 hover:text-red-700 font-medium"
+              >
+                {isLogin ? 'Sign Up' : 'Sign In'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
