@@ -33,7 +33,7 @@ router.post('/', optionalAuth, async (req, res) => {
 });
 
 // List forums (paginated)
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -44,8 +44,22 @@ router.get('/', async (req, res) => {
       Forum.countDocuments(),
     ]);
 
+    // Add userLiked and userDisliked flags
+    const userId = req.user ? req.user.uid : null;
+    const forumsWithUserState = items.map(forum => {
+      const forumObj = forum.toObject();
+      if (userId) {
+        forumObj.userLiked = forum.likedBy.includes(userId);
+        forumObj.userDisliked = forum.dislikedBy.includes(userId);
+      } else {
+        forumObj.userLiked = false;
+        forumObj.userDisliked = false;
+      }
+      return forumObj;
+    });
+
     res.json({
-      forums: items,
+      forums: forumsWithUserState,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(total / limit),
@@ -66,6 +80,17 @@ router.post('/:id/like', optionalAuth, async (req, res) => {
     
     const userId = req.user ? req.user.uid : req.body.guestId || 'guest';
     
+    // Remove from disliked if user had disliked
+    if (forum.dislikedBy.includes(userId)) {
+      await Forum.findByIdAndUpdate(
+        req.params.id,
+        { 
+          $pull: { dislikedBy: userId },
+          $inc: { dislikes: -1 }
+        }
+      );
+    }
+    
     // Check if user already liked
     if (forum.likedBy.includes(userId)) {
       // Unlike - remove user from likedBy array
@@ -77,7 +102,7 @@ router.post('/:id/like', optionalAuth, async (req, res) => {
         },
         { new: true }
       );
-      return res.json({ ...updated.toObject(), userLiked: false });
+      return res.json({ ...updated.toObject(), userLiked: false, userDisliked: false });
     } else {
       // Like - add user to likedBy array
       const updated = await Forum.findByIdAndUpdate(
@@ -88,7 +113,55 @@ router.post('/:id/like', optionalAuth, async (req, res) => {
         },
         { new: true }
       );
-      return res.json({ ...updated.toObject(), userLiked: true });
+      return res.json({ ...updated.toObject(), userLiked: true, userDisliked: false });
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Dislike a forum (one dislike per user)
+router.post('/:id/dislike', optionalAuth, async (req, res) => {
+  try {
+    const forum = await Forum.findById(req.params.id);
+    if (!forum) return res.status(404).json({ error: 'Forum not found' });
+    
+    const userId = req.user ? req.user.uid : req.body.guestId || 'guest';
+    
+    // Remove from liked if user had liked
+    if (forum.likedBy.includes(userId)) {
+      await Forum.findByIdAndUpdate(
+        req.params.id,
+        { 
+          $pull: { likedBy: userId },
+          $inc: { likes: -1 }
+        }
+      );
+    }
+    
+    // Check if user already disliked
+    if (forum.dislikedBy.includes(userId)) {
+      // Un-dislike - remove user from dislikedBy array
+      const updated = await Forum.findByIdAndUpdate(
+        req.params.id,
+        { 
+          $pull: { dislikedBy: userId },
+          $inc: { dislikes: -1 }
+        },
+        { new: true }
+      );
+      return res.json({ ...updated.toObject(), userLiked: false, userDisliked: false });
+    } else {
+      // Dislike - add user to dislikedBy array
+      const updated = await Forum.findByIdAndUpdate(
+        req.params.id,
+        { 
+          $addToSet: { dislikedBy: userId },
+          $inc: { dislikes: 1 }
+        },
+        { new: true }
+      );
+      return res.json({ ...updated.toObject(), userLiked: false, userDisliked: true });
     }
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -96,11 +169,26 @@ router.post('/:id/like', optionalAuth, async (req, res) => {
 });
 
 // Get comments for a forum
-router.get('/:id/comments', async (req, res) => {
+router.get('/:id/comments', optionalAuth, async (req, res) => {
   try {
     const comments = await ForumComment.find({ forumId: req.params.id })
       .sort({ createdAt: -1 });
-    res.json(comments);
+    
+    // Add userLiked and userDisliked flags
+    const userId = req.user ? req.user.uid : null;
+    const commentsWithUserState = comments.map(comment => {
+      const commentObj = comment.toObject();
+      if (userId) {
+        commentObj.userLiked = comment.likedBy.includes(userId);
+        commentObj.userDisliked = comment.dislikedBy.includes(userId);
+      } else {
+        commentObj.userLiked = false;
+        commentObj.userDisliked = false;
+      }
+      return commentObj;
+    });
+    
+    res.json(commentsWithUserState);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -145,6 +233,17 @@ router.post('/:id/comments/:commentId/like', optionalAuth, async (req, res) => {
     
     const userId = req.user ? req.user.uid : req.body.guestId || 'guest';
     
+    // Remove from disliked if user had disliked
+    if (comment.dislikedBy.includes(userId)) {
+      await ForumComment.findByIdAndUpdate(
+        req.params.commentId,
+        { 
+          $pull: { dislikedBy: userId },
+          $inc: { dislikes: -1 }
+        }
+      );
+    }
+    
     // Check if user already liked
     if (comment.likedBy.includes(userId)) {
       // Unlike
@@ -156,7 +255,7 @@ router.post('/:id/comments/:commentId/like', optionalAuth, async (req, res) => {
         },
         { new: true }
       );
-      return res.json({ ...updated.toObject(), userLiked: false });
+      return res.json({ ...updated.toObject(), userLiked: false, userDisliked: false });
     } else {
       // Like
       const updated = await ForumComment.findByIdAndUpdate(
@@ -167,7 +266,55 @@ router.post('/:id/comments/:commentId/like', optionalAuth, async (req, res) => {
         },
         { new: true }
       );
-      return res.json({ ...updated.toObject(), userLiked: true });
+      return res.json({ ...updated.toObject(), userLiked: true, userDisliked: false });
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Dislike a comment (one dislike per user)
+router.post('/:id/comments/:commentId/dislike', optionalAuth, async (req, res) => {
+  try {
+    const comment = await ForumComment.findById(req.params.commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    
+    const userId = req.user ? req.user.uid : req.body.guestId || 'guest';
+    
+    // Remove from liked if user had liked
+    if (comment.likedBy.includes(userId)) {
+      await ForumComment.findByIdAndUpdate(
+        req.params.commentId,
+        { 
+          $pull: { likedBy: userId },
+          $inc: { likes: -1 }
+        }
+      );
+    }
+    
+    // Check if user already disliked
+    if (comment.dislikedBy.includes(userId)) {
+      // Un-dislike
+      const updated = await ForumComment.findByIdAndUpdate(
+        req.params.commentId,
+        { 
+          $pull: { dislikedBy: userId },
+          $inc: { dislikes: -1 }
+        },
+        { new: true }
+      );
+      return res.json({ ...updated.toObject(), userLiked: false, userDisliked: false });
+    } else {
+      // Dislike
+      const updated = await ForumComment.findByIdAndUpdate(
+        req.params.commentId,
+        { 
+          $addToSet: { dislikedBy: userId },
+          $inc: { dislikes: 1 }
+        },
+        { new: true }
+      );
+      return res.json({ ...updated.toObject(), userLiked: false, userDisliked: true });
     }
   } catch (e) {
     res.status(500).json({ error: e.message });

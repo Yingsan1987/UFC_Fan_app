@@ -13,6 +13,10 @@ const forumSchema = new mongoose.Schema({
   likes: { type: Number, default: 0 },
   likedBy: [{ type: String }], // Array of Firebase UIDs who liked this
   
+  // Dislike tracking
+  dislikes: { type: Number, default: 0 },
+  dislikedBy: [{ type: String }], // Array of Firebase UIDs who disliked this
+  
   // Comment count
   commentCount: { type: Number, default: 0 },
 }, { timestamps: true });

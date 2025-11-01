@@ -12,6 +12,10 @@ const forumCommentSchema = new mongoose.Schema({
   // Like tracking
   likes: { type: Number, default: 0 },
   likedBy: [{ type: String }], // Array of Firebase UIDs who liked this
+  
+  // Dislike tracking
+  dislikes: { type: Number, default: 0 },
+  dislikedBy: [{ type: String }], // Array of Firebase UIDs who disliked this
 }, { timestamps: true });
 
 module.exports = mongoose.model('ForumComment', forumCommentSchema, 'ufc_forum_comments');
