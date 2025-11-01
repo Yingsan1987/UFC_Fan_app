@@ -7,6 +7,22 @@ const FighterTott = require('../models/FighterTott');
 const FighterImages = require('../models/FighterImages');
 const router = express.Router();
 
+// In-memory cache for fighter data (expires after 10 minutes)
+let fighterCache = {
+  data: null,
+  timestamp: null,
+  CACHE_DURATION: 10 * 60 * 1000 // 10 minutes
+};
+
+// Function to check if cache is valid
+function isCacheValid() {
+  if (!fighterCache.data || !fighterCache.timestamp) {
+    return false;
+  }
+  const now = Date.now();
+  return (now - fighterCache.timestamp) < fighterCache.CACHE_DURATION;
+}
+
 // Rate limiting for API calls (3 calls per day)
 const API_CALL_LIMIT = 3;
 const API_CALLS_FILE = './api-calls.json';
@@ -411,43 +427,55 @@ async function mapAPIDataToFighter(apiFighter, enhancedData = null, fightHistory
   };
 }
 
-// ✅ Get fighters from MongoDB - ONLY uses combined data from ufc-fighter_details and ufc-fighter_tott
+// ✅ Get fighters from MongoDB - OPTIMIZED with caching
 router.get('/', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     
-    console.log(`📊 Fetching fighters from ufc-fighter_details and ufc-fighter_tott - Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
+    const startTime = Date.now();
+    console.log(`📊 Request: Page ${page}, Limit: ${limit}`);
     
-    // Get ALL data from both collections (no pagination here)
-    const [fighterDetails, fighterTott] = await Promise.all([
-      FighterDetails.find(),
-      FighterTott.find()
-    ]);
+    let allFightersWithImages;
     
-    console.log(`📊 Found ${fighterDetails.length} fighters from ufc-fighter_details`);
-    console.log(`📊 Found ${fighterTott.length} fighters from ufc-fighter_tott`);
+    // Check if we have valid cached data
+    if (isCacheValid()) {
+      console.log('✅ Using cached fighter data');
+      allFightersWithImages = fighterCache.data;
+    } else {
+      console.log('🔄 Cache miss - fetching from database...');
+      
+      // Get ALL data from both collections (no pagination here)
+      const [fighterDetails, fighterTott] = await Promise.all([
+        FighterDetails.find().lean(), // .lean() for better performance
+        FighterTott.find().lean()
+      ]);
+      
+      console.log(`📊 Found ${fighterDetails.length} + ${fighterTott.length} fighters`);
+      
+      // Combine and merge ALL the data
+      const allCombinedFighters = combineFighterData(fighterDetails, fighterTott);
+      
+      // Get fighter images for all fighters
+      allFightersWithImages = await getFighterImages(allCombinedFighters);
+      
+      // Cache the result
+      fighterCache.data = allFightersWithImages;
+      fighterCache.timestamp = Date.now();
+      console.log(`💾 Cached ${allFightersWithImages.length} fighters`);
+    }
     
-    // Combine and merge ALL the data
-    const allCombinedFighters = combineFighterData(fighterDetails, fighterTott);
-    
-    console.log(`📊 Combined into ${allCombinedFighters.length} unique fighters`);
-    
-    // Get fighter images for all fighters
-    const allFightersWithImages = await getFighterImages(allCombinedFighters);
-    
-    // Apply pagination AFTER combining all data
+    // Apply pagination AFTER getting data
     const paginatedFighters = allFightersWithImages.slice(skip, skip + limit);
     
     const totalFighters = allFightersWithImages.length;
     const totalPages = Math.ceil(totalFighters / limit);
     
-    console.log(`📊 Total unique fighters: ${totalFighters}, Total pages: ${totalPages}`);
-    console.log(`📊 Returning ${paginatedFighters.length} fighters for page ${page}`);
-    console.log(`🖼️ Added images to ${allFightersWithImages.filter(f => f.imageUrl).length} fighters`);
+    const responseTime = Date.now() - startTime;
+    console.log(`⚡ Response time: ${responseTime}ms`);
     
-    // Return the paginated combined data with images - NO FALLBACK to original collection
+    // Return the paginated combined data with images
     res.json({
       fighters: paginatedFighters,
       pagination: {
@@ -457,6 +485,10 @@ router.get('/', async (req, res) => {
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1,
         limit: limit
+      },
+      _meta: {
+        cached: isCacheValid(),
+        responseTime: `${responseTime}ms`
       }
     });
     

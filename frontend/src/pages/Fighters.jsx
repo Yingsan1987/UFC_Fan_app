@@ -14,6 +14,7 @@ const Fighters = () => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [loadingMessage, setLoadingMessage] = useState('Loading fighters...');
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreFighters, setHasMoreFighters] = useState(true);
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -27,11 +28,28 @@ const Fighters = () => {
 
   useEffect(() => {
     const fetchFighters = async () => {
+      const startTime = Date.now();
+      
       try {
         setLoading(true);
+        setLoadingMessage('Connecting to server...');
         
-        // Fetch all fighters by getting a large page size
-        const response = await axios.get(`${API_URL}/fighters?limit=5000`);
+        // First, try a quick health check to wake up the server
+        try {
+          await axios.get(`${API_URL}/health`, { timeout: 5000 });
+          setLoadingMessage('Server is ready, fetching fighters...');
+        } catch (healthErr) {
+          // Server might be cold starting
+          setLoadingMessage('Waking up server (this may take 30-60 seconds)...');
+        }
+        
+        // Fetch all fighters - backend now caches this
+        const response = await axios.get(`${API_URL}/fighters?limit=5000`, {
+          timeout: 60000 // 60 second timeout for cold starts
+        });
+        
+        const loadTime = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`⏱️  Loaded in ${loadTime}s`);
         
         // Handle the new format from ufc-fighter_details and ufc-fighter_tott collections
         let fightersData;
@@ -47,6 +65,9 @@ const Fighters = () => {
         }
         
         console.log(`📊 Loaded ${fightersData.length} fighters from API`);
+        if (response.data._meta) {
+          console.log(`💾 Cached: ${response.data._meta.cached}, Response time: ${response.data._meta.responseTime}`);
+        }
         
         setFighters(fightersData);
         setFilteredFighters(fightersData);
@@ -63,8 +84,15 @@ const Fighters = () => {
           setError(null);
         }
       } catch (err) {
-        setError('Failed to load fighters from ufc-fighter_details and ufc-fighter_tott collections');
         console.error('Error fetching fighters:', err);
+        
+        if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+          setError('Server is taking too long to respond. It may be waking up from sleep. Please try again in a moment.');
+        } else if (err.response?.status === 503) {
+          setError('Server is starting up. Please wait 30-60 seconds and refresh the page.');
+        } else {
+          setError('Failed to load fighters. The server may be waking up from sleep (Render free tier). Please wait a moment and try again.');
+        }
       } finally {
         setLoading(false);
       }
@@ -184,8 +212,16 @@ const Fighters = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex flex-col justify-center items-center h-64 space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        <div className="text-center">
+          <p className="text-gray-700 font-medium">{loadingMessage}</p>
+          {loadingMessage.includes('Waking up') && (
+            <p className="text-sm text-gray-500 mt-2">
+              ⚠️ First load after inactivity may take up to 60 seconds (Render free tier limitation)
+            </p>
+          )}
+        </div>
       </div>
     );
   }

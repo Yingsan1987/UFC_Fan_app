@@ -38,7 +38,28 @@ app.use('/api/forums', require('./routes/forums'));
 // Chat socket
 chatSocket(io);
 
-app.get('/', (req, res) => res.json({ message: "UFC Fan App API running" }));
+app.get('/', (req, res) => res.json({ 
+  message: "UFC Fan App API running",
+  status: "healthy",
+  uptime: process.uptime(),
+  timestamp: new Date().toISOString()
+}));
+
+// Health check endpoint for keep-alive pings
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: "healthy",
+    uptime: process.uptime(),
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
+});
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📡 Health check available at /api/health`);
+  
+  // Log server ready time
+  console.log(`⏱️  Server started in ${process.uptime().toFixed(2)}s`);
+});

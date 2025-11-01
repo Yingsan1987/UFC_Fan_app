@@ -2,23 +2,39 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    // Ensure the connection string includes the database name 'test'
-    let mongoURI = process.env.MONGO_URI;
-    if (mongoURI && !mongoURI.includes('/test')) {
-      // If the URI doesn't specify a database, append '/test'
-      mongoURI = mongoURI.endsWith('/') ? `${mongoURI}test` : `${mongoURI}/test`;
-    }
-    
-    const conn = await mongoose.connect(mongoURI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    // MongoDB connection options for better performance
+    const options = {
+      maxPoolSize: 10,           // Maintain up to 10 socket connections
+      minPoolSize: 2,            // Maintain at least 2 connections
+      serverSelectionTimeoutMS: 5000,  // Timeout after 5s instead of 30s
+      socketTimeoutMS: 45000,    // Close sockets after 45 seconds of inactivity
+      family: 4,                 // Use IPv4, skip trying IPv6
+      retryWrites: true,
+      w: 'majority'
+    };
+
+    const conn = await mongoose.connect(process.env.MONGO_URI, options);
+
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`📊 Database: ${conn.connection.name}`);
+    
+    // Connection event handlers
+    mongoose.connection.on('disconnected', () => {
+      console.log('⚠️  MongoDB disconnected');
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected');
+    });
+
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ MongoDB error:', err);
+    });
+
     return conn;
-  } catch (err) {
-    console.error(`❌ MongoDB Error: ${err.message}`);
-    throw err; // Don't exit process, just throw error
+  } catch (error) {
+    console.error(`❌ MongoDB Connection Error: ${error.message}`);
+    throw error;
   }
 };
 
