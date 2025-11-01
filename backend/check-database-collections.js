@@ -83,3 +83,4 @@ async function checkDatabaseCollections() {
 
 // Run the check
 checkDatabaseCollections();
+

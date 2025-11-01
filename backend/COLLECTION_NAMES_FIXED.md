@@ -95,3 +95,4 @@ You should see:
 The system is now correctly configured to work with your actual collection names. Once deployed, it should immediately find and display your real fighter data from the `ufc_fighter_details` and `ufc_fighter_tott` collections.
 
 **No more "No data available" message - your real fighters will be displayed!** 🥊
+

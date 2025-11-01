@@ -108,3 +108,4 @@ If images don't appear after deployment:
 4. **Review Logs**: Check server logs for matching errors
 
 The system is now ready to display fighter images with intelligent name matching! 🥊
+

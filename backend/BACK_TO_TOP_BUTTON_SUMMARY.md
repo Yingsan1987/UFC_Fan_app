@@ -157,3 +157,4 @@ The Back to Top button is fully implemented and ready for deployment:
 - ✅ **Testing**: Verified with large dataset
 
 **Users can now easily navigate back to the search area when browsing through thousands of fighters!** 🔝
+

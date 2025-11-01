@@ -38,3 +38,4 @@ async function clearCollections() {
 
 // Run the analysis
 clearCollections();
+

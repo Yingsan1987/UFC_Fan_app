@@ -1,9 +1,13 @@
-# Environment variables (contains Stripe publishable key)
+# Environment variables (contains Firebase config & Stripe keys)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Firebase configuration files (if exported)
+firebase-config.json
+firebaseConfig.js
 
 # Dependencies
 node_modules/
@@ -102,4 +106,5 @@ Thumbs.db
 # Backup files
 *.bak
 *.backup
+
 

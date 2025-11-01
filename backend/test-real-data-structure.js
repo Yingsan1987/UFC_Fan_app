@@ -59,3 +59,4 @@ async function testRealDataStructure() {
 
 // Run the test
 testRealDataStructure();
+

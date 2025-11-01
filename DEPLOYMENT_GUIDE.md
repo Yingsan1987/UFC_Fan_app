@@ -152,3 +152,4 @@ Once deployed, your UFC Fan App will have:
 - ✅ Professional deployment on Render
 - ✅ Secure environment variable management
 
+

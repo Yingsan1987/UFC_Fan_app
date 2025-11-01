@@ -10,3 +10,4 @@ const forumSchema = new mongoose.Schema({
 module.exports = mongoose.model('Forum', forumSchema, 'ufc_forums');
 
 
+

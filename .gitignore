@@ -105,5 +105,23 @@ Thumbs.db
 # Backup files
 *.bak
 *.backup
+
+# Backend environment files (CRITICAL - contains sensitive keys)
 backend/.env
+backend/.env.local
+backend/.env.production
+backend/.env.development
+
+# Frontend environment files (CRITICAL - contains Firebase config)
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.development
+
+# Firebase Service Account files (CRITICAL - DO NOT COMMIT)
+**/serviceAccountKey.json
+**/firebase-adminsdk-*.json
+**/*-firebase-adminsdk-*.json
+**/FIREBASE_SERVICE_ACCOUNT.json
+
 

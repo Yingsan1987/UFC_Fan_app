@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { io } from "socket.io-client";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import React from 'react';
 import Fighters from './pages/Fighters';
@@ -11,6 +11,12 @@ import News from './pages/News';
 import Events from './pages/Events';
 import EventDetails from './pages/EventDetails';
 import Support from './pages/Support';
+import Home from './pages/Home';
+import LiveChat from './pages/LiveChat';
+import Ranking from './pages/Ranking';
+import Prediction from './pages/Prediction';
+import AuthModal from './components/AuthModal';
+import { useAuth } from './context/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
 
@@ -21,17 +27,35 @@ function App() {
   const [message, setMessage] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Home");
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentUser, logout } = useAuth();
 
   // Update activeTab based on current route
   useEffect(() => {
-    if (location.pathname === '/events') {
-      setActiveTab('Events');
-    } else if (location.pathname === '/support') {
-      setActiveTab('Support');
-    } else if (location.pathname === '/') {
+    const path = location.pathname;
+    if (path === '/') {
       setActiveTab('Home');
+    } else if (path === '/fighters') {
+      setActiveTab('Fighters');
+    } else if (path === '/techniques') {
+      setActiveTab('Techniques');
+    } else if (path === '/events' || path.startsWith('/event-details')) {
+      setActiveTab('Events');
+    } else if (path === '/forums') {
+      setActiveTab('Forums');
+    } else if (path === '/ranking') {
+      setActiveTab('Ranking');
+    } else if (path === '/prediction') {
+      setActiveTab('Prediction');
+    } else if (path === '/news') {
+      setActiveTab('News');
+    } else if (path === '/live-chat') {
+      setActiveTab('Live Chat');
+    } else if (path === '/support') {
+      setActiveTab('Support');
     }
   }, [location.pathname]);
 
@@ -48,10 +72,33 @@ function App() {
     return () => socket.disconnect();
   }, []);
 
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showUserMenu && !event.target.closest('.relative')) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showUserMenu]);
+
   const sendMessage = () => {
     if (message.trim()) {
-      socket.emit("chatMessage", { user: "Guest", text: message });
+      const userName = currentUser?.displayName || currentUser?.email || "Guest";
+      socket.emit("chatMessage", { user: userName, text: message });
       setMessage("");
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setShowUserMenu(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to log out:', error);
     }
   };
 
@@ -82,17 +129,19 @@ function App() {
                 setActiveTab(item);
                 setIsOpen(false);
                 // Navigate to the appropriate route
-                if (item === "Events") {
-                  navigate("/events");
-                } else if (item === "Forums") {
-                  navigate("/forums");
-                } else if (item === "Support") {
-                  navigate("/support");
-                } else if (item === "Home") {
-                  navigate("/");
-                } else {
-                  navigate("/");
-                }
+                const routes = {
+                  "Home": "/",
+                  "Fighters": "/fighters",
+                  "Techniques": "/techniques",
+                  "Events": "/events",
+                  "Forums": "/forums",
+                  "Ranking": "/ranking",
+                  "Prediction": "/prediction",
+                  "News": "/news",
+                  "Live Chat": "/live-chat",
+                  "Support": "/support"
+                };
+                navigate(routes[item] || "/");
               }}
             >
               {item}
@@ -112,56 +161,92 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col bg-gray-100">
         {/* Top Bar */}
-        <div className="flex items-center p-4 bg-white shadow-md">
-          <button onClick={() => setIsOpen(true)}>
-            <Menu size={28} />
-          </button>
-          <h1 className="ml-4 text-2xl font-bold">UFC Fan App</h1>
+        <div className="flex items-center justify-between p-4 bg-white shadow-md">
+          <div className="flex items-center">
+            <button onClick={() => setIsOpen(true)}>
+              <Menu size={28} />
+            </button>
+            <h1 className="ml-4 text-2xl font-bold">UFC Fan App</h1>
+          </div>
+
+          {/* Auth Section */}
+          <div className="flex items-center gap-4">
+            {currentUser ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  {currentUser.photoURL ? (
+                    <img
+                      src={currentUser.photoURL}
+                      alt="Profile"
+                      className="w-8 h-8 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
+                      {currentUser.displayName?.[0] || currentUser.email?.[0] || 'U'}
+                    </div>
+                  )}
+                  <span className="text-sm font-medium hidden sm:block">
+                    {currentUser.displayName || currentUser.email}
+                  </span>
+                </button>
+
+                {/* User Dropdown Menu */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                    <div className="px-4 py-2 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {currentUser.displayName || 'User'}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {currentUser.email}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <LogOut size={16} />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                <User size={20} />
+                <span>Sign In</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Page Content */}
         <div className="p-6 overflow-auto flex-1">
           <Routes>
-            <Route path="/" element={
-              <>
-                {activeTab === "Home" && <h2 className="text-xl">Welcome to UFC Fan App 🥊</h2>}
-                {activeTab === "Fighters" && <Fighters />}
-                {activeTab === "Techniques" && <Techniques />}
-                {activeTab === "Live Chat" && (
-                  <>
-                    <h2 className="text-xl font-semibold mb-2">Live Chat</h2>
-                    <div className="border border-gray-300 p-2 h-64 overflow-y-scroll mb-2 bg-white">
-                      {chatMessages.map((m, idx) => (
-                        <p key={idx}>
-                          <b>{m.user}:</b> {m.text}
-                        </p>
-                      ))}
-                    </div>
-                    <div className="flex space-x-2">
-                      <input
-                        className="flex-1 border p-2"
-                        value={message}
-                        onChange={e => setMessage(e.target.value)}
-                        placeholder="Type a message..."
-                      />
-                      <button
-                        onClick={sendMessage}
-                        className="bg-red-500 text-white px-4 rounded"
-                      >
-                        Send
-                      </button>
-                    </div>
-                  </>
-                )}
-                {activeTab === "Ranking" && <p className="text-gray-600">🏆 Ranking page coming soon...</p>}
-                {activeTab === "Prediction" && <p className="text-gray-600">🔮 Prediction page coming soon...</p>}
-                {activeTab === "News" && <News />}
-              </>
-            } />
+            <Route path="/" element={<Home />} />
+            <Route path="/fighters" element={<Fighters />} />
+            <Route path="/techniques" element={<Techniques />} />
             <Route path="/events" element={<Events />} />
             <Route path="/event-details/:eventName" element={<EventDetails />} />
-            <Route path="/support" element={<Support />} />
             <Route path="/forums" element={<Forums />} />
+            <Route path="/ranking" element={<Ranking />} />
+            <Route path="/prediction" element={<Prediction />} />
+            <Route path="/news" element={<News />} />
+            <Route path="/live-chat" element={
+              <LiveChat 
+                chatMessages={chatMessages}
+                message={message}
+                setMessage={setMessage}
+                sendMessage={sendMessage}
+              />
+            } />
+            <Route path="/support" element={<Support />} />
             <Route path="*" element={
               <div className="text-center py-12">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Page Not Found</h2>
@@ -177,6 +262,12 @@ function App() {
           </Routes>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+      />
     </div>
   );
 }

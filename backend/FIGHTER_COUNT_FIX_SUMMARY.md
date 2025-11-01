@@ -110,3 +110,4 @@ The fix has been tested and confirmed working:
 4. **User Feedback**: Confirm users can now access all fighters
 
 **The fighters page now shows ALL available data instead of just 14 fighters!** 🎉
+

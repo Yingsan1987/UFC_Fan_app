@@ -106,3 +106,4 @@ You should see:
 - The `ufc-fighter_tott` collection can be enhanced with additional data later
 - The API combines data from both collections, preferring `ufc-fighter_tott` data when available
 - Make sure to maintain the same document structure in both collections
+

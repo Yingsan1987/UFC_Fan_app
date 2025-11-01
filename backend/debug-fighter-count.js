@@ -203,3 +203,4 @@ async function debugFighterCount() {
 
 // Run the debug
 debugFighterCount();
+

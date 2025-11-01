@@ -10,3 +10,4 @@ const forumCommentSchema = new mongoose.Schema({
 module.exports = mongoose.model('ForumComment', forumCommentSchema, 'ufc_forum_comments');
 
 
+
