@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const PlaceholderFighter = require('../models/PlaceholderFighter');
+const RookieFighter = require('../models/RookieFighter');
 const GameProgress = require('../models/GameProgress');
 const TrainingSession = require('../models/TrainingSession');
 const Fighter = require('../models/Fighter');
@@ -47,15 +47,15 @@ router.post('/initialize', requireAuth, async (req, res) => {
       console.log('✅ User found:', user._id);
     }
 
-    // Create placeholder fighter
-    console.log('Creating placeholder fighter...');
-    const placeholderFighter = new PlaceholderFighter({
+    // Create Rookie Fighter
+    console.log('Creating Rookie Fighter...');
+    const rookieFighter = new RookieFighter({
       userId: user._id,
       firebaseUid,
       selectedWeightClass: weightClass || 'Lightweight'
     });
-    await placeholderFighter.save();
-    console.log('✅ Placeholder fighter created:', placeholderFighter._id);
+    await rookieFighter.save();
+    console.log('✅ Rookie Fighter created:', rookieFighter._id);
 
     // Create game progress
     console.log('Creating game progress...');
@@ -63,8 +63,8 @@ router.post('/initialize', requireAuth, async (req, res) => {
       userId: user._id,
       firebaseUid,
       currentFighter: {
-        isPlaceholder: true,
-        placeholderFighterId: placeholderFighter._id
+        isRookie: true,
+        rookieFighterId: rookieFighter._id
       }
     });
     await gameProgress.save();
@@ -78,7 +78,7 @@ router.post('/initialize', requireAuth, async (req, res) => {
     console.log('🎉 Game initialization complete!');
     res.json({
       message: 'Game initialized successfully',
-      placeholderFighter,
+      rookieFighter,
       gameProgress
     });
   } catch (error) {
@@ -98,25 +98,25 @@ router.get('/status', requireAuth, async (req, res) => {
     const firebaseUid = req.user.uid;
 
     const gameProgress = await GameProgress.findOne({ firebaseUid })
-      .populate('currentFighter.placeholderFighterId')
+      .populate('currentFighter.rookieFighterId')
       .populate('currentFighter.realFighterId');
 
     if (!gameProgress) {
       return res.json({ initialized: false });
     }
 
-    const placeholderFighter = await PlaceholderFighter.findOne({ firebaseUid });
+    const rookieFighter = await RookieFighter.findOne({ firebaseUid });
     
     // Refresh energy if needed
-    if (placeholderFighter && !placeholderFighter.isTransferred) {
-      placeholderFighter.refreshEnergy();
-      await placeholderFighter.save();
+    if (rookieFighter && !rookieFighter.isTransferred) {
+      rookieFighter.refreshEnergy();
+      await rookieFighter.save();
     }
 
     res.json({
       initialized: true,
       gameProgress,
-      placeholderFighter
+      rookieFighter
     });
   } catch (error) {
     console.error('Error fetching game status:', error);
@@ -130,20 +130,20 @@ router.post('/train', requireAuth, async (req, res) => {
     const firebaseUid = req.user.uid;
     const { trainingType } = req.body;
 
-    const placeholderFighter = await PlaceholderFighter.findOne({ firebaseUid, isTransferred: false });
+    const rookieFighter = await RookieFighter.findOne({ firebaseUid, isTransferred: false });
     
-    if (!placeholderFighter) {
-      return res.status(404).json({ message: 'No active placeholder fighter found' });
+    if (!rookieFighter) {
+      return res.status(404).json({ message: 'No active Rookie Fighter found' });
     }
 
     // Refresh energy
-    placeholderFighter.refreshEnergy();
+    rookieFighter.refreshEnergy();
 
     // Check if user has energy
-    if (placeholderFighter.energy <= 0) {
+    if (rookieFighter.energy <= 0) {
       return res.status(400).json({ 
         message: 'No energy remaining. Come back tomorrow!',
-        energy: placeholderFighter.energy
+        energy: rookieFighter.energy
       });
     }
 
@@ -160,38 +160,36 @@ router.post('/train', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid training type' });
     }
 
-    // Random XP gain (1-3)
-    const xpGained = Math.floor(Math.random() * 3) + 1;
+    // Random stat gain (1-3)
+    const statGained = Math.floor(Math.random() * 3) + 1;
 
     // Update stats (max 100)
-    placeholderFighter.stats[attribute] = Math.min(100, placeholderFighter.stats[attribute] + xpGained);
-    placeholderFighter.trainingSessions += 1;
-    placeholderFighter.energy -= 1;
-    await placeholderFighter.save();
+    rookieFighter.stats[attribute] = Math.min(100, rookieFighter.stats[attribute] + statGained);
+    rookieFighter.trainingSessions += 1;
+    rookieFighter.energy -= 1;
+    await rookieFighter.save();
 
     // Create training session record
     const user = await User.findOne({ firebaseUid });
     const trainingSession = new TrainingSession({
       userId: user._id,
       firebaseUid,
-      placeholderFighterId: placeholderFighter._id,
+      placeholderFighterId: rookieFighter._id,
       trainingType,
       attributeImproved: attribute,
-      xpGained
+      xpGained: statGained
     });
     await trainingSession.save();
 
-    // Update game progress XP
+    // Update game progress
     const gameProgress = await GameProgress.findOne({ firebaseUid });
-    const leveledUp = gameProgress.addXP(xpGained * 10);
     await gameProgress.save();
 
     res.json({
-      message: `Training complete! +${xpGained} ${attribute}`,
-      xpGained,
+      message: `Training complete! +${statGained} ${attribute}`,
+      statGained,
       attribute,
-      leveledUp,
-      placeholderFighter,
+      rookieFighter,
       gameProgress
     });
   } catch (error) {
@@ -204,27 +202,27 @@ router.post('/train', requireAuth, async (req, res) => {
 router.get('/available-fighters', requireAuth, async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
-    const placeholderFighter = await PlaceholderFighter.findOne({ firebaseUid, isTransferred: false });
+    const rookieFighter = await RookieFighter.findOne({ firebaseUid, isTransferred: false });
 
-    if (!placeholderFighter) {
-      return res.status(404).json({ message: 'No active placeholder fighter found' });
+    if (!rookieFighter) {
+      return res.status(404).json({ message: 'No active Rookie Fighter found' });
     }
 
-    if (!placeholderFighter.isEligibleForTransfer()) {
+    if (!rookieFighter.isEligibleForTransfer()) {
       return res.status(400).json({ 
         message: 'Not eligible for transfer yet',
-        progress: `${placeholderFighter.trainingSessions}/${placeholderFighter.trainingGoal}`
+        progress: `${rookieFighter.trainingSessions}/${rookieFighter.trainingGoal}`
       });
     }
 
     // Get fighters from the selected weight class
     const fighters = await Fighter.find({ 
-      division: placeholderFighter.selectedWeightClass,
+      division: rookieFighter.selectedWeightClass,
       status: 'active'
     }).limit(20);
 
     res.json({
-      weightClass: placeholderFighter.selectedWeightClass,
+      weightClass: rookieFighter.selectedWeightClass,
       fighters
     });
   } catch (error) {
@@ -239,13 +237,13 @@ router.post('/transfer', requireAuth, async (req, res) => {
     const firebaseUid = req.user.uid;
     const { fighterId } = req.body;
 
-    const placeholderFighter = await PlaceholderFighter.findOne({ firebaseUid, isTransferred: false });
+    const rookieFighter = await RookieFighter.findOne({ firebaseUid, isTransferred: false });
     
-    if (!placeholderFighter) {
-      return res.status(404).json({ message: 'No active placeholder fighter found' });
+    if (!rookieFighter) {
+      return res.status(404).json({ message: 'No active Rookie Fighter found' });
     }
 
-    if (!placeholderFighter.isEligibleForTransfer()) {
+    if (!rookieFighter.isEligibleForTransfer()) {
       return res.status(400).json({ message: 'Not eligible for transfer yet' });
     }
 
@@ -255,23 +253,23 @@ router.post('/transfer', requireAuth, async (req, res) => {
       return res.status(404).json({ message: 'Fighter not found' });
     }
 
-    if (fighter.division !== placeholderFighter.selectedWeightClass) {
+    if (fighter.division !== rookieFighter.selectedWeightClass) {
       return res.status(400).json({ message: 'Fighter not in selected weight class' });
     }
 
-    // Mark placeholder as transferred
-    placeholderFighter.isTransferred = true;
-    placeholderFighter.transferredTo = fighterId;
-    await placeholderFighter.save();
+    // Mark Rookie Fighter as transferred
+    rookieFighter.isTransferred = true;
+    rookieFighter.transferredTo = fighterId;
+    await rookieFighter.save();
 
     // Update game progress
     const gameProgress = await GameProgress.findOne({ firebaseUid });
     gameProgress.currentFighter = {
-      isPlaceholder: false,
-      placeholderFighterId: placeholderFighter._id,
+      isRookie: false,
+      rookieFighterId: rookieFighter._id,
       realFighterId: fighterId
     };
-    gameProgress.fanCorn += 100; // Bonus for completing training
+    gameProgress.fanCoin += 100; // Bonus for completing training
     await gameProgress.save();
 
     res.json({

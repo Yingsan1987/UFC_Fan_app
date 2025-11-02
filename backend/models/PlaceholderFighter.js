@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const placeholderFighterSchema = new mongoose.Schema({
+const rookieFighterSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -70,13 +70,13 @@ const placeholderFighterSchema = new mongoose.Schema({
 });
 
 // Update the updatedAt field before saving
-placeholderFighterSchema.pre('save', function(next) {
+rookieFighterSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
 
 // Method to refresh energy (3 per day)
-placeholderFighterSchema.methods.refreshEnergy = function() {
+rookieFighterSchema.methods.refreshEnergy = function() {
   const now = new Date();
   const lastRefresh = new Date(this.lastEnergyRefresh);
   
@@ -92,9 +92,9 @@ placeholderFighterSchema.methods.refreshEnergy = function() {
 };
 
 // Method to check if eligible for transfer
-placeholderFighterSchema.methods.isEligibleForTransfer = function() {
+rookieFighterSchema.methods.isEligibleForTransfer = function() {
   return this.trainingSessions >= this.trainingGoal && !this.isTransferred;
 };
 
-module.exports = mongoose.model('PlaceholderFighter', placeholderFighterSchema);
+module.exports = mongoose.model('RookieFighter', rookieFighterSchema);
 

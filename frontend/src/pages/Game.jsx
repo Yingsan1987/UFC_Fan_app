@@ -144,7 +144,7 @@ function Game() {
         initialized: true, 
         ...response.data 
       });
-      showMessage('Game initialized! Start training your fighter!', 'success');
+      showMessage('Game initialized! Start training your Rookie Fighter!', 'success');
     } catch (error) {
       console.error('❌ Error initializing game:', error);
       console.error('Error details:', {
@@ -184,12 +184,11 @@ function Game() {
       // Update game status with new data
       setGameStatus(prev => ({
         ...prev,
-        placeholderFighter: response.data.placeholderFighter,
+        rookieFighter: response.data.rookieFighter,
         gameProgress: response.data.gameProgress
       }));
       
-      const levelUpMsg = response.data.leveledUp ? ' 🎉 LEVEL UP!' : '';
-      showMessage(`${response.data.message}${levelUpMsg}`, 'success');
+      showMessage(`${response.data.message}`, 'success');
     } catch (error) {
       console.error('Error during training:', error);
       showMessage(error.response?.data?.message || 'Training failed', 'error');
@@ -337,15 +336,15 @@ function Game() {
     );
   }
 
-  const { placeholderFighter, gameProgress } = gameStatus;
-  const isTransferred = placeholderFighter?.isTransferred;
-  const stats = placeholderFighter?.stats || {};
-  const progress = placeholderFighter ? 
-    `${placeholderFighter.trainingSessions}/${placeholderFighter.trainingGoal}` : '0/50';
-  const progressPercent = placeholderFighter ? 
-    (placeholderFighter.trainingSessions / placeholderFighter.trainingGoal) * 100 : 0;
-  const isEligible = placeholderFighter && 
-    placeholderFighter.trainingSessions >= placeholderFighter.trainingGoal && 
+  const { rookieFighter, gameProgress } = gameStatus;
+  const isTransferred = rookieFighter?.isTransferred;
+  const stats = rookieFighter?.stats || {};
+  const progress = rookieFighter ? 
+    `${rookieFighter.trainingSessions}/${rookieFighter.trainingGoal}` : '0/50';
+  const progressPercent = rookieFighter ? 
+    (rookieFighter.trainingSessions / rookieFighter.trainingGoal) * 100 : 0;
+  const isEligible = rookieFighter && 
+    rookieFighter.trainingSessions >= rookieFighter.trainingGoal && 
     !isTransferred;
 
   return (
@@ -360,31 +359,22 @@ function Game() {
       )}
 
       {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center gap-3">
-            <Star className="w-8 h-8 text-yellow-500" />
-            <div>
-              <p className="text-sm text-gray-600">Level</p>
-              <p className="text-2xl font-bold">{gameProgress?.level || 1}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center gap-3">
-            <TrendingUp className="w-8 h-8 text-blue-500" />
-            <div>
-              <p className="text-sm text-gray-600">Total XP</p>
-              <p className="text-2xl font-bold">{gameProgress?.totalXP || 0}</p>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <Trophy className="w-8 h-8 text-green-500" />
             <div>
-              <p className="text-sm text-gray-600">Fan Corn</p>
-              <p className="text-2xl font-bold">{gameProgress?.fanCorn || 0}</p>
+              <p className="text-sm text-gray-600">Fan Coins</p>
+              <p className="text-2xl font-bold">{gameProgress?.fanCoin || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center gap-3">
+            <Star className="w-8 h-8 text-purple-500" />
+            <div>
+              <p className="text-sm text-gray-600">Prestige</p>
+              <p className="text-2xl font-bold">{gameProgress?.prestige || 0}</p>
             </div>
           </div>
         </div>
@@ -393,7 +383,7 @@ function Game() {
             <Zap className="w-8 h-8 text-orange-500" />
             <div>
               <p className="text-sm text-gray-600">Energy</p>
-              <p className="text-2xl font-bold">{placeholderFighter?.energy || 0}/3</p>
+              <p className="text-2xl font-bold">{rookieFighter?.energy || 0}/3</p>
             </div>
           </div>
         </div>
@@ -473,7 +463,7 @@ function Game() {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Target className="w-6 h-6 text-red-600" />
-              {isTransferred ? 'Your Fighter' : 'Placeholder Fighter'}
+              {isTransferred ? 'Your Fighter' : 'Rookie Fighter'}
             </h2>
 
             {!isTransferred ? (
@@ -518,7 +508,7 @@ function Game() {
                     <Clock className="w-5 h-5 text-blue-600" />
                     <span className="font-bold text-blue-900">Weight Class</span>
                   </div>
-                  <p className="text-blue-800">{placeholderFighter?.selectedWeightClass}</p>
+                  <p className="text-blue-800">{rookieFighter?.selectedWeightClass}</p>
                 </div>
               </>
             ) : (
@@ -562,7 +552,7 @@ function Game() {
               </div>
             ) : (
               <>
-                {placeholderFighter?.energy === 0 && (
+                {rookieFighter?.energy === 0 && (
                   <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6">
                     <p className="text-orange-800 font-medium">
                       ⚡ No energy remaining! Come back tomorrow for 3 new training sessions.
@@ -586,7 +576,7 @@ function Game() {
                       </p>
                       <button
                         onClick={() => handleTraining(option.type)}
-                        disabled={actionLoading || placeholderFighter?.energy === 0}
+                        disabled={actionLoading || rookieFighter?.energy === 0}
                         className={`w-full py-2 rounded-md font-bold transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed ${option.color} text-white hover:opacity-90`}
                       >
                         {actionLoading ? 'Training...' : 'Train (1 Energy)'}

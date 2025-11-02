@@ -15,10 +15,10 @@ const gameProgressSchema = new mongoose.Schema({
   
   // Current Fighter Status
   currentFighter: {
-    isPlaceholder: { type: Boolean, default: true },
-    placeholderFighterId: {
+    isRookie: { type: Boolean, default: true },
+    rookieFighterId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'PlaceholderFighter'
+      ref: 'RookieFighter'
     },
     realFighterId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -27,19 +27,9 @@ const gameProgressSchema = new mongoose.Schema({
   },
   
   // Game Currency
-  fanCorn: {
+  fanCoin: {
     type: Number,
     default: 0
-  },
-  
-  // Experience and Level
-  totalXP: {
-    type: Number,
-    default: 0
-  },
-  level: {
-    type: Number,
-    default: 1
   },
   
   // Fight History
@@ -49,8 +39,7 @@ const gameProgressSchema = new mongoose.Schema({
     opponent: String,
     result: { type: String, enum: ['win', 'loss', 'draw', 'no contest'] },
     method: String,
-    xpGained: Number,
-    fanCornGained: Number,
+    fanCoinGained: Number,
     date: { type: Date, default: Date.now }
   }],
   
@@ -89,20 +78,6 @@ gameProgressSchema.pre('save', function(next) {
   next();
 });
 
-// Method to add XP and level up
-gameProgressSchema.methods.addXP = function(xp) {
-  this.totalXP += xp;
-  
-  // Simple leveling formula: Level = floor(sqrt(totalXP / 100)) + 1
-  const newLevel = Math.floor(Math.sqrt(this.totalXP / 100)) + 1;
-  
-  if (newLevel > this.level) {
-    this.level = newLevel;
-    return true; // Leveled up
-  }
-  return false; // No level up
-};
-
 // Method to add fight result
 gameProgressSchema.methods.addFightResult = function(fightData) {
   this.fightHistory.push(fightData);
@@ -117,12 +92,9 @@ gameProgressSchema.methods.addFightResult = function(fightData) {
     this.totalDraws += 1;
   }
   
-  // Add XP and Fan Corn
-  if (fightData.xpGained) {
-    this.addXP(fightData.xpGained);
-  }
-  if (fightData.fanCornGained) {
-    this.fanCorn += fightData.fanCornGained;
+  // Add Fan Coin
+  if (fightData.fanCoinGained) {
+    this.fanCoin += fightData.fanCoinGained;
   }
 };
 

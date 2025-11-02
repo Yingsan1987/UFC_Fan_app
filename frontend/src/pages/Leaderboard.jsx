@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Trophy, Medal, TrendingUp, Coins, Star, Award, Crown } from 'lucide-react';
+import { Trophy, Medal, TrendingUp, Coins, Award, Crown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
@@ -104,7 +104,7 @@ function Leaderboard() {
             <div className="text-right">
               <div className="flex items-center gap-2 justify-end">
                 <Coins className="w-6 h-6 text-yellow-300" />
-                <span className="text-3xl font-bold">{myRank.fanCorn}</span>
+                <span className="text-3xl font-bold">{myRank.fanCoin}</span>
               </div>
               <div className="text-sm text-blue-100">Fan Coins</div>
             </div>
@@ -173,9 +173,6 @@ function Leaderboard() {
                   Fan Coins
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Level
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Record
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -238,16 +235,8 @@ function Leaderboard() {
                     <div className="flex items-center justify-center gap-2">
                       <Coins className="w-5 h-5 text-yellow-500" />
                       <span className="text-2xl font-bold text-yellow-600">
-                        {player.fanCorn}
+                        {player.fanCoin}
                       </span>
-                    </div>
-                  </td>
-
-                  {/* Level */}
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <div className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-semibold">
-                      <Star className="w-4 h-4" />
-                      {player.level}
                     </div>
                   </td>
 

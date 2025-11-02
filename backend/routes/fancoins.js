@@ -113,8 +113,8 @@ router.post('/process-event/:eventId', requireAuth, async (req, res) => {
             
             if (fighter && fighter.name === fight.winner) {
               // Award coins
-              const oldBalance = gameProgress.fanCorn;
-              gameProgress.fanCorn += coinValue;
+              const oldBalance = gameProgress.fanCoin;
+              gameProgress.fanCoin += coinValue;
               
               // Add to fight history
               gameProgress.addFightResult({
@@ -123,8 +123,7 @@ router.post('/process-event/:eventId', requireAuth, async (req, res) => {
                 opponent: fight.fighter1 === fight.winner ? fight.fighter2 : fight.fighter1,
                 result: 'win',
                 method: fight.method,
-                xpGained: coinValue * 50, // Bonus XP
-                fanCornGained: coinValue
+                fanCoinGained: coinValue
               });
 
               await gameProgress.save();
@@ -144,7 +143,7 @@ router.post('/process-event/:eventId', requireAuth, async (req, res) => {
                   cardPosition: cardType,
                   result: 'win'
                 },
-                balanceAfter: gameProgress.fanCorn,
+                balanceAfter: gameProgress.fanCoin,
                 description: `Won ${coinValue} Fan Coins - ${fighter.name} victory at ${event.eventName} (${cardType})`
               });
 
@@ -201,18 +200,16 @@ router.get('/leaderboard', async (req, res) => {
     console.log('📊 Fetching Fan Coin leaderboard...');
     
     const leaderboard = await GameProgress.find()
-      .sort({ fanCorn: -1, totalXP: -1 }) // Primary: Fan Coins, Secondary: XP
+      .sort({ fanCoin: -1, prestige: -1 }) // Primary: Fan Coins, Secondary: Prestige
       .limit(limit)
       .populate('userId', 'displayName photoURL email')
-      .select('userId firebaseUid fanCorn totalXP level totalWins totalLosses prestige');
+      .select('userId firebaseUid fanCoin totalWins totalLosses prestige');
 
     // Add rank to each entry
     const rankedLeaderboard = leaderboard.map((entry, index) => ({
       rank: index + 1,
       userId: entry.userId,
-      fanCorn: entry.fanCorn,
-      totalXP: entry.totalXP,
-      level: entry.level,
+      fanCoin: entry.fanCoin,
       totalWins: entry.totalWins,
       totalLosses: entry.totalLosses,
       prestige: entry.prestige,
@@ -241,10 +238,10 @@ router.get('/leaderboard/my-rank', requireAuth, async (req, res) => {
     // Count users with more Fan Coins
     const rank = await GameProgress.countDocuments({
       $or: [
-        { fanCorn: { $gt: gameProgress.fanCorn } },
+        { fanCoin: { $gt: gameProgress.fanCoin } },
         { 
-          fanCorn: gameProgress.fanCorn, 
-          totalXP: { $gt: gameProgress.totalXP } 
+          fanCoin: gameProgress.fanCoin, 
+          prestige: { $gt: gameProgress.prestige } 
         }
       ]
     }) + 1;
@@ -255,7 +252,7 @@ router.get('/leaderboard/my-rank', requireAuth, async (req, res) => {
     res.json({
       rank,
       totalUsers,
-      fanCorn: gameProgress.fanCorn,
+      fanCoin: gameProgress.fanCoin,
       percentile: ((totalUsers - rank) / totalUsers * 100).toFixed(1)
     });
   } catch (error) {
