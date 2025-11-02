@@ -4,19 +4,19 @@ import { Heart, Zap, Check } from 'lucide-react';
 const StaminaGame = ({ onComplete, onCancel }) => {
   const [gameState, setGameState] = useState('ready'); // ready, playing, complete
   const [staminaBar, setStaminaBar] = useState(100);
-  const [timeLeft, setTimeLeft] = useState(12); // Increased from 10s for higher difficulty
+  const [timeLeft, setTimeLeft] = useState(10); // Back to 10s for better balance
   const [tapCount, setTapCount] = useState(0);
   const [lastTapTime, setLastTapTime] = useState(Date.now());
-  const [drainRate, setDrainRate] = useState(4); // Increased from 3
+  const [drainRate, setDrainRate] = useState(2.5); // Reduced for more fun (was 4)
   const [isOverheating, setIsOverheating] = useState(false);
   const [result, setResult] = useState(null);
   const [resistance, setResistance] = useState(1);
   const intervalRef = useRef(null);
   const cooldownRef = useRef(null);
 
-  // Randomize resistance pattern (higher range)
+  // Randomize resistance pattern (balanced range)
   useEffect(() => {
-    const randomResistance = Math.random() * 0.7 + 0.9; // 0.9 to 1.6 (was 0.8 to 1.3)
+    const randomResistance = Math.random() * 0.4 + 0.8; // 0.8 to 1.2 (more forgiving)
     setResistance(randomResistance);
   }, []);
 
@@ -42,14 +42,14 @@ const StaminaGame = ({ onComplete, onCancel }) => {
           
           let currentDrainRate = drainRate;
           
-          // If no tap in 800ms, drain faster (was 1000ms)
-          if (timeSinceLastTap > 800) {
-            currentDrainRate = drainRate * 2.5; // More punishing (was 2)
+          // If no tap in 1 second, drain faster (more forgiving)
+          if (timeSinceLastTap > 1000) {
+            currentDrainRate = drainRate * 2; // Balanced (was 2.5)
           }
           
-          // If overheating, drain much faster
+          // If overheating, drain faster but not too punishing
           if (isOverheating) {
-            currentDrainRate = drainRate * 4; // More punishing (was 3)
+            currentDrainRate = drainRate * 2.5; // More forgiving (was 4)
           }
           
           const newStamina = Math.max(0, prev - (currentDrainRate * resistance));
@@ -84,7 +84,7 @@ const StaminaGame = ({ onComplete, onCancel }) => {
   const startGame = () => {
     setGameState('playing');
     setStaminaBar(100);
-    setTimeLeft(12); // Match the increased time
+    setTimeLeft(10); // Back to 10s
     setTapCount(0);
     setIsOverheating(false);
     setLastTapTime(Date.now());
@@ -96,13 +96,13 @@ const StaminaGame = ({ onComplete, onCancel }) => {
     const now = Date.now();
     const timeSinceLast = now - lastTapTime;
 
-    // Check for rapid tapping (overheat) - stricter timing
-    if (timeSinceLast < 180) {
-      // Too fast! Overheat (was 150ms)
+    // Check for rapid tapping (overheat) - more forgiving window
+    if (timeSinceLast < 120) {
+      // Too fast! Overheat (120ms is very fast but not impossible)
       setIsOverheating(true);
     } else {
-      // Good tap - less refill
-      setStaminaBar(prev => Math.min(100, prev + 6)); // Reduced from 8
+      // Good tap - good refill amount
+      setStaminaBar(prev => Math.min(100, prev + 8)); // Back to 8 for better balance
       setIsOverheating(false);
     }
 
@@ -120,20 +120,18 @@ const StaminaGame = ({ onComplete, onCancel }) => {
       xpGained = 1;
       performance = 'Ran out of stamina!';
     } else {
-      // Calculate based on final stamina and tap efficiency
-      const efficiency = tapCount / 100; // Ideal is around 70-90 taps
-      
-      if (staminaBar >= 70 && efficiency >= 0.7 && efficiency <= 1.0) {
-        xpGained = 5; // Excellent
+      // Calculate based on final stamina - more lenient scoring
+      if (staminaBar >= 60) {
+        xpGained = 5; // Excellent (lowered from 70)
         performance = 'Perfect Endurance!';
-      } else if (staminaBar >= 50) {
-        xpGained = 4; // Great
+      } else if (staminaBar >= 40) {
+        xpGained = 4; // Great (lowered from 50)
         performance = 'Great Pace!';
-      } else if (staminaBar >= 30) {
-        xpGained = 3; // Good
+      } else if (staminaBar >= 20) {
+        xpGained = 3; // Good (lowered from 30)
         performance = 'Good Effort!';
-      } else {
-        xpGained = 2; // Okay
+      } else if (staminaBar > 0) {
+        xpGained = 2; // Okay - survived!
         performance = 'Barely Finished!';
       }
     }
@@ -175,9 +173,9 @@ const StaminaGame = ({ onComplete, onCancel }) => {
               <p className="text-sm text-gray-600 mb-2">Instructions:</p>
               <ul className="text-sm text-gray-700 space-y-1">
                 <li>• Tap to maintain stamina above 0</li>
-                <li>• Find the right rhythm - don't overtap!</li>
-                <li>• Tapping too fast causes OVERHEAT</li>
-                <li>• Survive 12 seconds with high stamina = big XP</li>
+                <li>• Find your rhythm - tap every ~200-300ms</li>
+                <li>• Tapping too fast causes OVERHEAT (&lt; 120ms)</li>
+                <li>• Survive 10 seconds with high stamina = big XP</li>
               </ul>
             </div>
             <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3">
