@@ -13,7 +13,9 @@ import {
   Activity,
   Shield,
   Heart,
-  Swords
+  Swords,
+  Coins,
+  Calendar
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
@@ -27,6 +29,7 @@ function Game() {
   const [availableFighters, setAvailableFighters] = useState([]);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
 
   const weightClasses = [
     'Flyweight', 'Bantamweight', 'Featherweight', 'Lightweight',
@@ -103,7 +106,17 @@ function Game() {
     } else {
       setLoading(false);
     }
+    fetchUpcomingEvents();
   }, [currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchUpcomingEvents = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/fancoins/events/upcoming`);
+      setUpcomingEvents(response.data.slice(0, 3)); // Show top 3
+    } catch (error) {
+      console.error('Error fetching upcoming events:', error);
+    }
+  };
 
   const initializeGame = async () => {
     console.log('🎮 Initializing game...', { selectedWeightClass, currentUser });
@@ -385,6 +398,73 @@ function Game() {
           </div>
         </div>
       </div>
+
+      {/* Fan Coin Opportunities */}
+      {upcomingEvents.length > 0 && (
+        <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-400 rounded-lg shadow-lg p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold flex items-center gap-2 text-yellow-900">
+              <Coins className="w-6 h-6 text-yellow-600" />
+              Earn Fan Coins - Upcoming Events
+            </h2>
+            <button
+              onClick={() => window.location.href = '/leaderboard'}
+              className="text-sm bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+            >
+              View Leaderboard
+            </button>
+          </div>
+          <p className="text-yellow-800 mb-4">
+            Transfer to fighters in these upcoming events. When they win, you earn Fan Coins based on their card position!
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {upcomingEvents.map((event, index) => (
+              <div key={index} className="bg-white rounded-lg p-4 shadow">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-5 h-5 text-red-600" />
+                  <h3 className="font-bold text-lg">{event.eventName}</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">
+                  {new Date(event.eventDate).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Main Event:</span>
+                    <span className="font-bold text-purple-600 flex items-center gap-1">
+                      <Coins className="w-4 h-4" /> 5 coins
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Co-Main:</span>
+                    <span className="font-bold text-blue-600 flex items-center gap-1">
+                      <Coins className="w-4 h-4" /> 4 coins
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Main Card:</span>
+                    <span className="font-bold text-green-600 flex items-center gap-1">
+                      <Coins className="w-4 h-4" /> 3 coins
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-4 p-3 bg-white rounded border-l-4 border-yellow-600">
+            <p className="text-sm text-gray-700">
+              <strong>💡 Pro Tip:</strong> Transfer to fighters before events to maximize your Fan Coin earnings. 
+              Higher profile fights = more coins!
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

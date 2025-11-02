@@ -16,6 +16,7 @@ import LiveChat from './pages/LiveChat';
 import Ranking from './pages/Ranking';
 import Prediction from './pages/Prediction';
 import Game from './pages/Game';
+import Leaderboard from './pages/Leaderboard';
 import AuthModal from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
 
@@ -64,6 +65,8 @@ function App() {
       setActiveTab('Prediction');
     } else if (path === '/game') {
       setActiveTab('Game');
+    } else if (path === '/leaderboard') {
+      setActiveTab('Leaderboard');
     } else if (path === '/news') {
       setActiveTab('News');
     } else if (path === '/live-chat') {
@@ -116,7 +119,7 @@ function App() {
     }
   };
 
-  const menuItems = ["Home", "Fighters", "Techniques", "Events", "Forums", "Ranking", "Prediction", "Game", "News", "Live Chat", "Support"];
+  const menuItems = ["Home", "Fighters", "Techniques", "Events", "Forums", "Ranking", "Prediction", "Game", "Leaderboard", "News", "Live Chat", "Support"];
 
   return (
     <div className="flex h-screen font-sans">
@@ -152,6 +155,7 @@ function App() {
                   "Ranking": "/ranking",
                   "Prediction": "/prediction",
                   "Game": "/game",
+                  "Leaderboard": "/leaderboard",
                   "News": "/news",
                   "Live Chat": "/live-chat",
                   "Support": "/support"
@@ -284,6 +288,7 @@ function App() {
             <Route path="/ranking" element={<Ranking />} />
             <Route path="/prediction" element={<Prediction />} />
             <Route path="/game" element={<Game />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/news" element={<News />} />
             <Route path="/live-chat" element={
               <LiveChat 
