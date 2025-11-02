@@ -128,7 +128,7 @@ router.get('/status', requireAuth, async (req, res) => {
 router.post('/train', requireAuth, async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
-    const { trainingType } = req.body;
+    const { trainingType, xpGained } = req.body;
 
     const rookieFighter = await RookieFighter.findOne({ firebaseUid, isTransferred: false });
     
@@ -166,11 +166,16 @@ router.post('/train', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid training type' });
     }
 
-    // Random stat gain (1-3)
-    const statGained = Math.floor(Math.random() * 3) + 1;
+    // Use XP from mini-game or default random (1-3)
+    const statGained = xpGained || Math.floor(Math.random() * 3) + 1;
+    
+    // Validate XP is within reasonable range (1-10 for critical hits)
+    const validatedXP = Math.max(1, Math.min(10, statGained));
+
+    console.log(`🎮 Mini-game XP gained: ${validatedXP} for ${attribute}`);
 
     // Update stats (max 100)
-    rookieFighter.stats[attribute] = Math.min(100, rookieFighter.stats[attribute] + statGained);
+    rookieFighter.stats[attribute] = Math.min(100, rookieFighter.stats[attribute] + validatedXP);
     rookieFighter.trainingSessions += 1;
     
     // Reduce energy
@@ -189,7 +194,7 @@ router.post('/train', requireAuth, async (req, res) => {
       rookieFighterId: rookieFighter._id,
       trainingType,
       attributeImproved: attribute,
-      xpGained: statGained
+      xpGained: validatedXP
     });
     await trainingSession.save();
 
@@ -198,8 +203,8 @@ router.post('/train', requireAuth, async (req, res) => {
     await gameProgress.save();
 
     res.json({
-      message: `Training complete! +${statGained} ${attribute}. Energy: ${rookieFighter.energy}/3`,
-      statGained,
+      message: `Training complete! +${validatedXP} ${attribute}. Energy: ${rookieFighter.energy}/3`,
+      statGained: validatedXP,
       attribute,
       rookieFighter,
       gameProgress

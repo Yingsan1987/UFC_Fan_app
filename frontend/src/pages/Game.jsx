@@ -20,6 +20,10 @@ import {
   ChevronUp,
   Users
 } from 'lucide-react';
+import StrikingGame from '../components/MiniGames/StrikingGame';
+import GrapplingGame from '../components/MiniGames/GrapplingGame';
+import StaminaGame from '../components/MiniGames/StaminaGame';
+import DefenseGame from '../components/MiniGames/DefenseGame';
 
 const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
 
@@ -42,6 +46,8 @@ function Game() {
   const [myRank, setMyRank] = useState(null);
   const [activeTab, setActiveTab] = useState('game'); // 'game' or 'leaderboard'
   const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const [activeMiniGame, setActiveMiniGame] = useState(null); // 'striking', 'grappling', 'stamina', 'defense'
+  const [currentTrainingType, setCurrentTrainingType] = useState(null);
 
   const weightClasses = [
     'Flyweight', 'Bantamweight', 'Featherweight', 'Lightweight',
@@ -227,13 +233,30 @@ function Game() {
     }
   };
 
-  const handleTraining = async (trainingType) => {
+  const handleTraining = (trainingType) => {
+    // Launch the appropriate mini-game
+    setCurrentTrainingType(trainingType);
+    
+    const miniGameMap = {
+      bagWork: 'striking',
+      grappleDrills: 'grappling',
+      cardio: 'stamina',
+      sparDefense: 'defense'
+    };
+    
+    setActiveMiniGame(miniGameMap[trainingType]);
+  };
+
+  const handleMiniGameComplete = async (xpGained) => {
     try {
       setActionLoading(true);
       const token = await getAuthToken();
       const response = await axios.post(
         `${API_URL}/game/train`,
-        { trainingType },
+        { 
+          trainingType: currentTrainingType,
+          xpGained: xpGained 
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -250,7 +273,14 @@ function Game() {
       showMessage(error.response?.data?.message || 'Training failed', 'error');
     } finally {
       setActionLoading(false);
+      setActiveMiniGame(null);
+      setCurrentTrainingType(null);
     }
+  };
+
+  const handleMiniGameCancel = () => {
+    setActiveMiniGame(null);
+    setCurrentTrainingType(null);
   };
 
   const fetchAvailableFighters = async () => {
@@ -1325,6 +1355,32 @@ function Game() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Mini-Games */}
+      {activeMiniGame === 'striking' && (
+        <StrikingGame 
+          onComplete={handleMiniGameComplete}
+          onCancel={handleMiniGameCancel}
+        />
+      )}
+      {activeMiniGame === 'grappling' && (
+        <GrapplingGame 
+          onComplete={handleMiniGameComplete}
+          onCancel={handleMiniGameCancel}
+        />
+      )}
+      {activeMiniGame === 'stamina' && (
+        <StaminaGame 
+          onComplete={handleMiniGameComplete}
+          onCancel={handleMiniGameCancel}
+        />
+      )}
+      {activeMiniGame === 'defense' && (
+        <DefenseGame 
+          onComplete={handleMiniGameComplete}
+          onCancel={handleMiniGameCancel}
+        />
       )}
     </div>
   );
