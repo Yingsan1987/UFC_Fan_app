@@ -55,6 +55,21 @@ const gameProgressSchema = new mongoose.Schema({
     min: 0
   },
   
+  // Fighter Level Progression
+  fighterLevel: {
+    type: String,
+    enum: ['Preliminary Card', 'Main Card', 'Co-Main Event', 'Main Event', 'Champion'],
+    default: 'Preliminary Card'
+  },
+  levelWins: {
+    type: Number,
+    default: 0
+  },
+  winsNeededForNextLevel: {
+    type: Number,
+    default: 3
+  },
+  
   // Membership Status
   isPremium: {
     type: Boolean,
@@ -78,13 +93,33 @@ gameProgressSchema.pre('save', function(next) {
   next();
 });
 
-// Method to add fight result
+// Method to add fight result and check for level up
 gameProgressSchema.methods.addFightResult = function(fightData) {
   this.fightHistory.push(fightData);
+  
+  let leveledUp = false;
   
   if (fightData.result === 'win') {
     this.totalWins += 1;
     this.prestige += 10;
+    this.levelWins += 1;
+    
+    // Check for level progression
+    if (this.levelWins >= this.winsNeededForNextLevel) {
+      const levels = ['Preliminary Card', 'Main Card', 'Co-Main Event', 'Main Event', 'Champion'];
+      const currentIndex = levels.indexOf(this.fighterLevel);
+      
+      if (currentIndex < levels.length - 1) {
+        this.fighterLevel = levels[currentIndex + 1];
+        this.levelWins = 0;
+        leveledUp = true;
+        
+        // Increase wins needed for next level (except for champion)
+        if (this.fighterLevel !== 'Champion') {
+          this.winsNeededForNextLevel = 3;
+        }
+      }
+    }
   } else if (fightData.result === 'loss') {
     this.totalLosses += 1;
     this.prestige = Math.max(0, this.prestige - 5);
@@ -96,6 +131,8 @@ gameProgressSchema.methods.addFightResult = function(fightData) {
   if (fightData.fanCoinGained) {
     this.fanCoin += fightData.fanCoinGained;
   }
+  
+  return leveledUp;
 };
 
 module.exports = mongoose.model('GameProgress', gameProgressSchema);

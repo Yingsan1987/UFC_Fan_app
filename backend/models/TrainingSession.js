@@ -10,9 +10,9 @@ const trainingSessionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  placeholderFighterId: {
+  rookieFighterId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'PlaceholderFighter',
+    ref: 'RookieFighter',
     required: true
   },
   

@@ -174,7 +174,7 @@ router.post('/train', requireAuth, async (req, res) => {
     const trainingSession = new TrainingSession({
       userId: user._id,
       firebaseUid,
-      placeholderFighterId: rookieFighter._id,
+      rookieFighterId: rookieFighter._id,
       trainingType,
       attributeImproved: attribute,
       xpGained: statGained

@@ -26,7 +26,7 @@ const rookieFighterSchema = new mongoose.Schema({
   },
   trainingGoal: {
     type: Number,
-    default: 50
+    default: 12
   },
   
   // Energy System

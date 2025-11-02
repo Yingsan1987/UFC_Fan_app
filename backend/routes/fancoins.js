@@ -203,7 +203,7 @@ router.get('/leaderboard', async (req, res) => {
       .sort({ fanCoin: -1, prestige: -1 }) // Primary: Fan Coins, Secondary: Prestige
       .limit(limit)
       .populate('userId', 'displayName photoURL email')
-      .select('userId firebaseUid fanCoin totalWins totalLosses prestige');
+      .select('userId firebaseUid fanCoin totalWins totalLosses prestige fighterLevel');
 
     // Add rank to each entry
     const rankedLeaderboard = leaderboard.map((entry, index) => ({
@@ -213,6 +213,7 @@ router.get('/leaderboard', async (req, res) => {
       totalWins: entry.totalWins,
       totalLosses: entry.totalLosses,
       prestige: entry.prestige,
+      fighterLevel: entry.fighterLevel,
       displayName: entry.userId?.displayName || 'Anonymous',
       photoURL: entry.userId?.photoURL || null
     }));

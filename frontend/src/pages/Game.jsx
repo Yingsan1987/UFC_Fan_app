@@ -37,6 +37,9 @@ function Game() {
   const [showTrainingCenter, setShowTrainingCenter] = useState(true);
   const [showFighterPreview, setShowFighterPreview] = useState(true);
   const [previewFighters, setPreviewFighters] = useState([]);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [myRank, setMyRank] = useState(null);
 
   const weightClasses = [
     'Flyweight', 'Bantamweight', 'Featherweight', 'Lightweight',
@@ -141,6 +144,27 @@ function Game() {
       fetchPreviewFighters();
     }
   }, [gameStatus?.rookieFighter?.selectedWeightClass]);
+
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/fancoins/leaderboard?limit=10`);
+      setLeaderboard(response.data);
+      
+      if (currentUser) {
+        const token = await getAuthToken();
+        const rankResponse = await axios.get(`${API_URL}/fancoins/leaderboard/my-rank`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setMyRank(rankResponse.data);
+      }
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const initializeGame = async () => {
     console.log('🎮 Initializing game...', { selectedWeightClass, currentUser });
@@ -364,12 +388,17 @@ function Game() {
   const isTransferred = rookieFighter?.isTransferred;
   const stats = rookieFighter?.stats || {};
   const progress = rookieFighter ? 
-    `${rookieFighter.trainingSessions}/${rookieFighter.trainingGoal}` : '0/50';
+    `${rookieFighter.trainingSessions}/${rookieFighter.trainingGoal}` : '0/12';
   const progressPercent = rookieFighter ? 
     (rookieFighter.trainingSessions / rookieFighter.trainingGoal) * 100 : 0;
   const isEligible = rookieFighter && 
     rookieFighter.trainingSessions >= rookieFighter.trainingGoal && 
     !isTransferred;
+
+  // Fighter Level Info
+  const fighterLevel = gameProgress?.fighterLevel || 'Preliminary Card';
+  const levelWins = gameProgress?.levelWins || 0;
+  const winsNeeded = gameProgress?.winsNeededForNextLevel || 3;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -383,7 +412,7 @@ function Game() {
       )}
 
       {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <Trophy className="w-8 h-8 text-green-500" />
@@ -397,8 +426,17 @@ function Game() {
           <div className="flex items-center gap-3">
             <Star className="w-8 h-8 text-purple-500" />
             <div>
-              <p className="text-sm text-gray-600">Prestige</p>
-              <p className="text-2xl font-bold">{gameProgress?.prestige || 0}</p>
+              <p className="text-sm text-gray-600">Fighter Level</p>
+              <p className="text-sm font-bold">{fighterLevel}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center gap-3">
+            <Target className="w-8 h-8 text-blue-500" />
+            <div>
+              <p className="text-sm text-gray-600">Level Progress</p>
+              <p className="text-2xl font-bold">{levelWins}/{winsNeeded}</p>
             </div>
           </div>
         </div>
@@ -407,7 +445,7 @@ function Game() {
             <Zap className="w-8 h-8 text-orange-500" />
             <div>
               <p className="text-sm text-gray-600">Energy</p>
-              <p className="text-2xl font-bold">{rookieFighter?.energy || 0}/3</p>
+              <p className="text-2xl font-bold">{rookieFighter?.energy ?? 3}/3</p>
             </div>
           </div>
         </div>
@@ -480,6 +518,149 @@ function Game() {
         </div>
       )}
 
+      {/* Fighter Progression Ladder */}
+      {gameStatus?.gameProgress && (
+        <div className="bg-gradient-to-r from-purple-50 to-purple-100 border-2 border-purple-400 rounded-lg shadow-lg p-6 mb-6">
+          <h2 className="text-2xl font-bold flex items-center gap-2 text-purple-900 mb-4">
+            <Trophy className="w-6 h-6 text-purple-600" />
+            Fighter Career Ladder
+          </h2>
+          <div className="grid grid-cols-5 gap-2">
+            {[
+              { level: 'Preliminary Card', coins: 2, color: 'from-gray-400 to-gray-600' },
+              { level: 'Main Card', coins: 3, color: 'from-blue-400 to-blue-600' },
+              { level: 'Co-Main Event', coins: 4, color: 'from-green-400 to-green-600' },
+              { level: 'Main Event', coins: 5, color: 'from-orange-400 to-orange-600' },
+              { level: 'Champion', coins: 5, color: 'from-yellow-400 to-yellow-600' }
+            ].map((tier, index) => {
+              const isCurrent = fighterLevel === tier.level;
+              const isCompleted = ['Preliminary Card', 'Main Card', 'Co-Main Event', 'Main Event', 'Champion']
+                .indexOf(fighterLevel) > index;
+              
+              return (
+                <div 
+                  key={tier.level}
+                  className={`relative p-4 rounded-lg text-center transition-all ${
+                    isCurrent 
+                      ? `bg-gradient-to-br ${tier.color} text-white shadow-xl scale-105 border-4 border-white` 
+                      : isCompleted
+                      ? `bg-gradient-to-br ${tier.color} text-white opacity-60`
+                      : 'bg-white text-gray-400 border-2 border-gray-200'
+                  }`}
+                >
+                  {isCurrent && (
+                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      YOU
+                    </div>
+                  )}
+                  <div className="text-2xl font-bold mb-1">{index + 1}</div>
+                  <div className="text-xs font-semibold mb-2">{tier.level}</div>
+                  <div className="text-xs">
+                    <Coins className="w-3 h-3 inline mr-1" />
+                    {tier.coins}/win
+                  </div>
+                  {isCurrent && (
+                    <div className="mt-2 text-xs font-bold bg-white/20 rounded px-2 py-1">
+                      {levelWins}/{winsNeeded} wins
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-center text-sm text-purple-800 mt-4">
+            🏆 Win 3 fights at each level to advance to the next tier!
+          </p>
+        </div>
+      )}
+
+      {/* Leaderboard Section */}
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
+        <button
+          onClick={() => setShowLeaderboard(!showLeaderboard)}
+          className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        >
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Trophy className="w-6 h-6 text-yellow-500" />
+            Top 10 Leaderboard
+            {myRank && myRank.rank && (
+              <span className="text-sm font-normal text-gray-600">
+                (You're #{myRank.rank})
+              </span>
+            )}
+          </h2>
+          {showLeaderboard ? (
+            <ChevronUp className="w-6 h-6 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-6 h-6 text-gray-400" />
+          )}
+        </button>
+
+        {showLeaderboard && (
+          <div className="px-6 pb-6 border-t border-gray-100">
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Rank</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Player</th>
+                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Coins</th>
+                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Level</th>
+                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Record</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {leaderboard.map((player) => (
+                    <tr 
+                      key={player.rank}
+                      className={`hover:bg-gray-50 ${
+                        currentUser && player.userId?.email === currentUser.email 
+                          ? 'bg-blue-50 border-l-4 border-blue-500' 
+                          : ''
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
+                          player.rank === 1 ? 'bg-yellow-400 text-white' :
+                          player.rank === 2 ? 'bg-gray-400 text-white' :
+                          player.rank === 3 ? 'bg-orange-600 text-white' :
+                          'bg-gray-200 text-gray-700'
+                        }`}>
+                          {player.rank}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-sm">{player.displayName || 'Anonymous'}</div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Coins className="w-4 h-4 text-yellow-500" />
+                          <span className="font-bold text-yellow-600">{player.fanCoin}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="text-xs">{player.fighterLevel || 'Preliminary Card'}</span>
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm">
+                        <span className="text-green-600 font-bold">{player.totalWins}W</span>
+                        {' - '}
+                        <span className="text-red-600 font-bold">{player.totalLosses}L</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {myRank && myRank.rank && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
+                <strong>Your Stats:</strong> Rank #{myRank.rank} of {myRank.totalUsers} players
+                ({myRank.fanCoin} Fan Coins, Top {myRank.percentile}%)
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Fighter Stats */}
@@ -537,22 +718,28 @@ function Game() {
               <div className="px-6 pb-6 border-t border-gray-100">
                 {!isTransferred ? (
                   <>
-                    <div className="space-y-4 mt-4">
-                      {Object.entries(stats).map(([key, value]) => (
-                        <div key={key}>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm font-medium text-gray-700 capitalize">{key}</span>
-                            <span className="text-sm font-bold">{value}/100</span>
+                    {stats && Object.keys(stats).length > 0 ? (
+                      <div className="space-y-4 mt-4">
+                        {Object.entries(stats).map(([key, value]) => (
+                          <div key={key}>
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm font-medium text-gray-700 capitalize">{key}</span>
+                              <span className="text-sm font-bold">{value}/100</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-500"
+                                style={{ width: `${value}%` }}
+                              ></div>
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-500"
-                              style={{ width: `${value}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-4 text-center text-gray-500 py-4">
+                        No stats available yet. Start training to build your fighter!
+                      </div>
+                    )}
 
                     <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
@@ -623,7 +810,7 @@ function Game() {
                     ))}
                   </div>
                   <p className="text-xs text-gray-500 mt-3">
-                    💡 Complete {50 - (rookieFighter?.trainingSessions || 0)} more training sessions to unlock transfer
+                    💡 Complete {12 - (rookieFighter?.trainingSessions || 0)} more training sessions to unlock transfer
                   </p>
                 </div>
               )}
@@ -698,10 +885,11 @@ function Game() {
                     <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                       <h4 className="font-bold mb-2">💡 Training Tips:</h4>
                       <ul className="text-sm text-gray-700 space-y-1">
-                        <li>• Each training session costs 1 energy and gives +1-3 stat points</li>
-                        <li>• Energy refreshes daily (3 sessions per day)</li>
-                        <li>• Complete 50 sessions to unlock fighter transfer</li>
-                        <li>• Balanced training creates a well-rounded fighter</li>
+                    <li>• Each training session costs 1 energy and gives +1-3 stat points</li>
+                    <li>• Energy refreshes daily (3 sessions per day)</li>
+                    <li>• Complete 12 sessions to unlock fighter transfer</li>
+                    <li>• Win 3 fights to advance to the next level</li>
+                    <li>• Progress: Preliminary → Main Card → Co-Main → Main Event → Champion</li>
                       </ul>
                     </div>
                   </>
