@@ -40,6 +40,7 @@ function Game() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
   const [myRank, setMyRank] = useState(null);
+  const [activeTab, setActiveTab] = useState('game'); // 'game' or 'leaderboard'
 
   const weightClasses = [
     'Flyweight', 'Bantamweight', 'Featherweight', 'Lightweight',
@@ -147,7 +148,7 @@ function Game() {
 
   const fetchLeaderboard = async () => {
     try {
-      const response = await axios.get(`${API_URL}/fancoins/leaderboard?limit=10`);
+      const response = await axios.get(`${API_URL}/fancoins/leaderboard?limit=30`);
       setLeaderboard(response.data);
       
       if (currentUser) {
@@ -398,10 +399,38 @@ function Game() {
   // Fighter Level Info
   const fighterLevel = gameProgress?.fighterLevel || 'Preliminary Card';
   const levelWins = gameProgress?.levelWins || 0;
-  const winsNeeded = gameProgress?.winsNeededForNextLevel || 3;
+  const winsNeeded = gameProgress?.winsNeededForNextLevel || 5;
+  const championWins = gameProgress?.championWins || 0;
+  const isRetired = gameProgress?.isRetired || false;
 
   return (
     <div className="max-w-7xl mx-auto">
+      {/* Navigation Tabs */}
+      <div className="mb-6 border-b border-gray-200">
+        <div className="flex gap-4">
+          <button
+            onClick={() => setActiveTab('game')}
+            className={`px-6 py-3 font-semibold border-b-2 transition-colors ${
+              activeTab === 'game'
+                ? 'border-red-600 text-red-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            🎮 Game
+          </button>
+          <button
+            onClick={() => setActiveTab('leaderboard')}
+            className={`px-6 py-3 font-semibold border-b-2 transition-colors ${
+              activeTab === 'leaderboard'
+                ? 'border-red-600 text-red-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            🏆 Leaderboard
+          </button>
+        </div>
+      </div>
+
       {/* Message Banner */}
       {message.text && (
         <div className={`mb-4 p-4 rounded-lg ${
@@ -411,8 +440,165 @@ function Game() {
         </div>
       )}
 
-      {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      {/* Retirement Notice */}
+      {isRetired && (
+        <div className="mb-6 bg-gradient-to-r from-purple-100 to-purple-200 border-2 border-purple-500 rounded-lg p-6">
+          <div className="text-center">
+            <Trophy className="w-16 h-16 mx-auto text-purple-600 mb-4" />
+            <h2 className="text-2xl font-bold text-purple-900 mb-2">🏆 Champion Retired!</h2>
+            <p className="text-purple-800 mb-4">
+              Your fighter has retired as Champion after 5 wins at the highest level!
+              <br />
+              Total Fan Coins Earned: <strong>{gameProgress?.fanCoin}</strong>
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-purple-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors"
+            >
+              Start New Rookie Fighter
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'leaderboard' ? (
+        // Leaderboard Tab Content
+        <div className="space-y-6">
+          {myRank && myRank.rank && (
+            <div className="bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-lg shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="bg-white/20 rounded-full p-4">
+                    <Star className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Your Ranking</h3>
+                    <p className="text-blue-100">
+                      {currentUser?.displayName || currentUser?.email}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-4xl font-bold">#{myRank.rank}</div>
+                  <div className="text-sm text-blue-100">
+                    out of {myRank.totalUsers} players
+                  </div>
+                  <div className="text-sm text-blue-100">
+                    Top {myRank.percentile}%
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-2 justify-end">
+                    <Coins className="w-6 h-6 text-yellow-300" />
+                    <span className="text-3xl font-bold">{myRank.fanCoin}</span>
+                  </div>
+                  <div className="text-sm text-blue-100">Fan Coins</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <Trophy className="w-6 h-6 text-yellow-500" />
+                Top 30 Rankings
+              </h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Player</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Fan Coins</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Fighter Level</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Record</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Prestige</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {leaderboard.map((player) => (
+                    <tr 
+                      key={player.rank}
+                      className={`hover:bg-gray-50 transition-colors ${
+                        player.rank <= 3 ? 'bg-gradient-to-r from-yellow-50/30' : ''
+                      } ${
+                        currentUser && player.userId?.email === currentUser.email 
+                          ? 'bg-blue-50 border-l-4 border-blue-500' 
+                          : ''
+                      }`}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${
+                          player.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-white' :
+                          player.rank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-white' :
+                          player.rank === 3 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
+                          player.rank <= 10 ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {player.rank}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          {player.photoURL ? (
+                            <img src={player.photoURL} alt={player.displayName} className="w-10 h-10 rounded-full" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
+                              {player.displayName?.[0] || 'U'}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-semibold text-gray-900">{player.displayName || 'Anonymous'}</div>
+                            {currentUser && player.userId?.email === currentUser.email && (
+                              <div className="text-xs text-blue-600 font-medium">You</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Coins className="w-5 h-5 text-yellow-500" />
+                          <span className="text-2xl font-bold text-yellow-600">{player.fanCoin}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                          player.fighterLevel === 'Champion' ? 'bg-yellow-100 text-yellow-800' :
+                          player.fighterLevel === 'Main Card' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {player.fighterLevel || 'Preliminary Card'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                        <span className="text-green-600 font-bold">{player.totalWins}W</span>
+                        {' - '}
+                        <span className="text-red-600 font-bold">{player.totalLosses}L</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className="font-semibold">{player.prestige}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {leaderboard.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                <Trophy className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium">No rankings yet</p>
+                <p className="text-sm">Be the first to earn Fan Coins!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        // Game Tab Content
+        <>
+          {/* Header Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <Trophy className="w-8 h-8 text-green-500" />
@@ -445,7 +631,9 @@ function Game() {
             <Zap className="w-8 h-8 text-orange-500" />
             <div>
               <p className="text-sm text-gray-600">Energy</p>
-              <p className="text-2xl font-bold">{rookieFighter?.energy ?? 3}/3</p>
+              <p className="text-2xl font-bold">
+                {rookieFighter && typeof rookieFighter.energy === 'number' ? rookieFighter.energy : 3}/3
+              </p>
             </div>
           </div>
         </div>
@@ -519,28 +707,26 @@ function Game() {
       )}
 
       {/* Fighter Progression Ladder */}
-      {gameStatus?.gameProgress && (
+      {gameStatus?.gameProgress && !isRetired && (
         <div className="bg-gradient-to-r from-purple-50 to-purple-100 border-2 border-purple-400 rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-2xl font-bold flex items-center gap-2 text-purple-900 mb-4">
             <Trophy className="w-6 h-6 text-purple-600" />
             Fighter Career Ladder
           </h2>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 gap-4">
             {[
-              { level: 'Preliminary Card', coins: 2, color: 'from-gray-400 to-gray-600' },
-              { level: 'Main Card', coins: 3, color: 'from-blue-400 to-blue-600' },
-              { level: 'Co-Main Event', coins: 4, color: 'from-green-400 to-green-600' },
-              { level: 'Main Event', coins: 5, color: 'from-orange-400 to-orange-600' },
-              { level: 'Champion', coins: 5, color: 'from-yellow-400 to-yellow-600' }
+              { level: 'Preliminary Card', wins: 5, coins: 2, color: 'from-gray-400 to-gray-600' },
+              { level: 'Main Card', wins: 3, coins: 3, color: 'from-blue-400 to-blue-600' },
+              { level: 'Champion', wins: 2, coins: 5, color: 'from-yellow-400 to-yellow-600' }
             ].map((tier, index) => {
               const isCurrent = fighterLevel === tier.level;
-              const isCompleted = ['Preliminary Card', 'Main Card', 'Co-Main Event', 'Main Event', 'Champion']
+              const isCompleted = ['Preliminary Card', 'Main Card', 'Champion']
                 .indexOf(fighterLevel) > index;
               
               return (
                 <div 
                   key={tier.level}
-                  className={`relative p-4 rounded-lg text-center transition-all ${
+                  className={`relative p-6 rounded-lg text-center transition-all ${
                     isCurrent 
                       ? `bg-gradient-to-br ${tier.color} text-white shadow-xl scale-105 border-4 border-white` 
                       : isCompleted
@@ -553,15 +739,23 @@ function Game() {
                       YOU
                     </div>
                   )}
-                  <div className="text-2xl font-bold mb-1">{index + 1}</div>
-                  <div className="text-xs font-semibold mb-2">{tier.level}</div>
-                  <div className="text-xs">
-                    <Coins className="w-3 h-3 inline mr-1" />
-                    {tier.coins}/win
+                  <div className="text-3xl font-bold mb-2">{index + 1}</div>
+                  <div className="text-sm font-semibold mb-2">{tier.level}</div>
+                  <div className="text-xs mb-2">
+                    <Coins className="w-4 h-4 inline mr-1" />
+                    {tier.coins} coins/win
+                  </div>
+                  <div className="text-xs font-bold">
+                    {tier.wins} wins needed
                   </div>
                   {isCurrent && (
-                    <div className="mt-2 text-xs font-bold bg-white/20 rounded px-2 py-1">
-                      {levelWins}/{winsNeeded} wins
+                    <div className="mt-3 text-sm font-bold bg-white/30 rounded px-3 py-2">
+                      Progress: {levelWins}/{winsNeeded}
+                      {fighterLevel === 'Champion' && (
+                        <div className="text-xs mt-1">
+                          ({championWins}/5 champion wins)
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -569,97 +763,11 @@ function Game() {
             })}
           </div>
           <p className="text-center text-sm text-purple-800 mt-4">
-            🏆 Win 3 fights at each level to advance to the next tier!
+            🏆 Preliminary: 5 wins → Main Card: 3 wins → Champion: 2 wins to unlock, retire after 5 champion wins
           </p>
         </div>
       )}
 
-      {/* Leaderboard Section */}
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
-        <button
-          onClick={() => setShowLeaderboard(!showLeaderboard)}
-          className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
-        >
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Trophy className="w-6 h-6 text-yellow-500" />
-            Top 10 Leaderboard
-            {myRank && myRank.rank && (
-              <span className="text-sm font-normal text-gray-600">
-                (You're #{myRank.rank})
-              </span>
-            )}
-          </h2>
-          {showLeaderboard ? (
-            <ChevronUp className="w-6 h-6 text-gray-400" />
-          ) : (
-            <ChevronDown className="w-6 h-6 text-gray-400" />
-          )}
-        </button>
-
-        {showLeaderboard && (
-          <div className="px-6 pb-6 border-t border-gray-100">
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Rank</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Player</th>
-                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Coins</th>
-                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Level</th>
-                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-500">Record</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {leaderboard.map((player) => (
-                    <tr 
-                      key={player.rank}
-                      className={`hover:bg-gray-50 ${
-                        currentUser && player.userId?.email === currentUser.email 
-                          ? 'bg-blue-50 border-l-4 border-blue-500' 
-                          : ''
-                      }`}
-                    >
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
-                          player.rank === 1 ? 'bg-yellow-400 text-white' :
-                          player.rank === 2 ? 'bg-gray-400 text-white' :
-                          player.rank === 3 ? 'bg-orange-600 text-white' :
-                          'bg-gray-200 text-gray-700'
-                        }`}>
-                          {player.rank}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-sm">{player.displayName || 'Anonymous'}</div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Coins className="w-4 h-4 text-yellow-500" />
-                          <span className="font-bold text-yellow-600">{player.fanCoin}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="text-xs">{player.fighterLevel || 'Preliminary Card'}</span>
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm">
-                        <span className="text-green-600 font-bold">{player.totalWins}W</span>
-                        {' - '}
-                        <span className="text-red-600 font-bold">{player.totalLosses}L</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {myRank && myRank.rank && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
-                <strong>Your Stats:</strong> Rank #{myRank.rank} of {myRank.totalUsers} players
-                ({myRank.fanCoin} Fan Coins, Top {myRank.percentile}%)
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -718,28 +826,43 @@ function Game() {
               <div className="px-6 pb-6 border-t border-gray-100">
                 {!isTransferred ? (
                   <>
-                    {stats && Object.keys(stats).length > 0 ? (
-                      <div className="space-y-4 mt-4">
-                        {Object.entries(stats).map(([key, value]) => (
-                          <div key={key}>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-sm font-medium text-gray-700 capitalize">{key}</span>
-                              <span className="text-sm font-bold">{value}/100</span>
+                    <div className="space-y-4 mt-4">
+                      {stats && Object.keys(stats).length > 0 ? (
+                        <>
+                          {Object.entries(stats).map(([key, value]) => (
+                            <div key={key}>
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-sm font-medium text-gray-700 capitalize">{key}</span>
+                                <span className="text-sm font-bold">{value || 50}/100</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-500"
+                                  style={{ width: `${value || 50}%` }}
+                                ></div>
+                              </div>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-500"
-                                style={{ width: `${value}%` }}
-                              ></div>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          {['striking', 'grappling', 'stamina', 'defense'].map((key) => (
+                            <div key={key}>
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-sm font-medium text-gray-700 capitalize">{key}</span>
+                                <span className="text-sm font-bold">50/100</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-500"
+                                  style={{ width: '50%' }}
+                                ></div>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="mt-4 text-center text-gray-500 py-4">
-                        No stats available yet. Start training to build your fighter!
-                      </div>
-                    )}
+                          ))}
+                        </>
+                      )}
+                    </div>
 
                     <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
@@ -849,13 +972,13 @@ function Game() {
                   </div>
                 ) : (
                   <>
-                    {rookieFighter?.energy === 0 && (
-                      <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6 mt-4">
-                        <p className="text-orange-800 font-medium">
-                          ⚡ No energy remaining! Come back tomorrow for 3 new training sessions.
-                        </p>
-                      </div>
-                    )}
+                {rookieFighter && rookieFighter.energy <= 0 && (
+                  <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6 mt-4">
+                    <p className="text-orange-800 font-medium">
+                      ⚡ No energy remaining! Come back tomorrow for 3 new training sessions.
+                    </p>
+                  </div>
+                )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       {trainingOptions.map((option) => (
@@ -871,13 +994,13 @@ function Game() {
                           <p className="text-xs text-gray-500 mb-3">
                             Improves: <span className="font-bold text-red-600">{option.attribute}</span>
                           </p>
-                          <button
-                            onClick={() => handleTraining(option.type)}
-                            disabled={actionLoading || rookieFighter?.energy === 0}
-                            className={`w-full py-2 rounded-md font-bold transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed ${option.color} text-white hover:opacity-90`}
-                          >
-                            {actionLoading ? 'Training...' : 'Train (1 Energy)'}
-                          </button>
+                      <button
+                        onClick={() => handleTraining(option.type)}
+                        disabled={actionLoading || (rookieFighter && rookieFighter.energy <= 0)}
+                        className={`w-full py-2 rounded-md font-bold transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed ${option.color} text-white hover:opacity-90`}
+                      >
+                        {actionLoading ? 'Training...' : 'Train (1 Energy)'}
+                      </button>
                         </div>
                       ))}
                     </div>
@@ -899,6 +1022,8 @@ function Game() {
           </div>
         </div>
       </div>
+        </>
+      )}
 
       {/* Transfer Modal */}
       {showTransferModal && (
@@ -906,7 +1031,7 @@ function Game() {
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 sticky top-0 bg-white">
               <h2 className="text-2xl font-bold">Choose Your Fighter</h2>
-              <p className="text-gray-600">Select a fighter from {placeholderFighter?.selectedWeightClass}</p>
+              <p className="text-gray-600">Select a fighter from {rookieFighter?.selectedWeightClass}</p>
             </div>
             
             <div className="p-6">

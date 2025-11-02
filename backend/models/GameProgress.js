@@ -55,10 +55,10 @@ const gameProgressSchema = new mongoose.Schema({
     min: 0
   },
   
-  // Fighter Level Progression
+  // Fighter Level Progression (3-tier system)
   fighterLevel: {
     type: String,
-    enum: ['Preliminary Card', 'Main Card', 'Co-Main Event', 'Main Event', 'Champion'],
+    enum: ['Preliminary Card', 'Main Card', 'Champion'],
     default: 'Preliminary Card'
   },
   levelWins: {
@@ -67,7 +67,17 @@ const gameProgressSchema = new mongoose.Schema({
   },
   winsNeededForNextLevel: {
     type: Number,
-    default: 3
+    default: 5  // Varies by level
+  },
+  
+  // Champion Retirement
+  championWins: {
+    type: Number,
+    default: 0
+  },
+  isRetired: {
+    type: Boolean,
+    default: false
   },
   
   // Membership Status
@@ -98,26 +108,36 @@ gameProgressSchema.methods.addFightResult = function(fightData) {
   this.fightHistory.push(fightData);
   
   let leveledUp = false;
+  let retired = false;
   
   if (fightData.result === 'win') {
     this.totalWins += 1;
     this.prestige += 10;
     this.levelWins += 1;
     
-    // Check for level progression
-    if (this.levelWins >= this.winsNeededForNextLevel) {
-      const levels = ['Preliminary Card', 'Main Card', 'Co-Main Event', 'Main Event', 'Champion'];
-      const currentIndex = levels.indexOf(this.fighterLevel);
+    // Track champion wins separately
+    if (this.fighterLevel === 'Champion') {
+      this.championWins += 1;
       
-      if (currentIndex < levels.length - 1) {
-        this.fighterLevel = levels[currentIndex + 1];
+      // Retire after 5 champion wins
+      if (this.championWins >= 5) {
+        this.isRetired = true;
+        retired = true;
+      }
+    }
+    
+    // Check for level progression (3-tier system)
+    if (this.levelWins >= this.winsNeededForNextLevel && !this.isRetired) {
+      if (this.fighterLevel === 'Preliminary Card') {
+        this.fighterLevel = 'Main Card';
         this.levelWins = 0;
+        this.winsNeededForNextLevel = 3;
         leveledUp = true;
-        
-        // Increase wins needed for next level (except for champion)
-        if (this.fighterLevel !== 'Champion') {
-          this.winsNeededForNextLevel = 3;
-        }
+      } else if (this.fighterLevel === 'Main Card') {
+        this.fighterLevel = 'Champion';
+        this.levelWins = 0;
+        this.winsNeededForNextLevel = 2; // Champion needs 2 wins, then retires at 5
+        leveledUp = true;
       }
     }
   } else if (fightData.result === 'loss') {
@@ -132,7 +152,7 @@ gameProgressSchema.methods.addFightResult = function(fightData) {
     this.fanCoin += fightData.fanCoinGained;
   }
   
-  return leveledUp;
+  return { leveledUp, retired };
 };
 
 module.exports = mongoose.model('GameProgress', gameProgressSchema);
