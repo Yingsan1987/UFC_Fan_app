@@ -41,6 +41,7 @@ function Game() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [myRank, setMyRank] = useState(null);
   const [activeTab, setActiveTab] = useState('game'); // 'game' or 'leaderboard'
+  const [showHowToPlay, setShowHowToPlay] = useState(false);
 
   const weightClasses = [
     'Flyweight', 'Bantamweight', 'Featherweight', 'Lightweight',
@@ -81,6 +82,12 @@ function Game() {
       color: 'bg-purple-500'
     }
   ];
+
+  const coinValues = {
+    'Preliminary Card': 1,
+    'Main Card': 5,
+    'Champion': 30
+  };
 
   const fetchGameStatus = async () => {
     if (!currentUser) {
@@ -440,6 +447,97 @@ function Game() {
         </div>
       )}
 
+      {/* How to Play Section - Collapsible */}
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
+        <button
+          onClick={() => setShowHowToPlay(!showHowToPlay)}
+          className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        >
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Target className="w-6 h-6 text-blue-600" />
+            How to Play
+          </h2>
+          {showHowToPlay ? (
+            <ChevronUp className="w-6 h-6 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-6 h-6 text-gray-400" />
+          )}
+        </button>
+
+        {showHowToPlay && (
+          <div className="px-6 pb-6 border-t border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              {/* Left Column */}
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">1️⃣</span>
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">Train Your Rookie</h3>
+                    <p className="text-gray-600 text-sm">
+                      Complete 12 training sessions (4 days at 3 energy/day). Build your fighter's stats: 
+                      Striking, Grappling, Stamina, and Defense.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">2️⃣</span>
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">Transfer to Real Fighter</h3>
+                    <p className="text-gray-600 text-sm">
+                      After 12 sessions, choose a real UFC fighter from your weight class. 
+                      Receive +100 Fan Coins bonus instantly!
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">3️⃣</span>
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">Compete & Advance</h3>
+                    <p className="text-gray-600 text-sm">
+                      Start at Preliminary Card. Win fights to earn coins and climb the ladder:
+                      Preliminary → Main Card → Champion.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">4️⃣</span>
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">Earn Fan Coins</h3>
+                    <p className="text-gray-600 text-sm mb-2">
+                      When your fighter wins in real UFC events, you earn coins:
+                    </p>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      <li>• Preliminary: <strong>1 coin/win</strong></li>
+                      <li>• Main Card: <strong>5 coins/win</strong></li>
+                      <li>• Champion: <strong>30 coins/win</strong></li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">5️⃣</span>
+                  <div>
+                    <h3 className="font-bold text-lg mb-1">Retire & Repeat</h3>
+                    <p className="text-gray-600 text-sm">
+                      After 5 Champion wins, your fighter retires. Keep all your Fan Coins 
+                      and start a new Rookie to continue climbing the leaderboard!
+                    </p>
+                  </div>
+                </div>
+                <div className="p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                  <p className="text-sm text-yellow-800">
+                    <strong>🎯 Goal:</strong> Accumulate the most Fan Coins to reach #1 on the leaderboard!
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Retirement Notice */}
       {isRetired && (
         <div className="mb-6 bg-gradient-to-r from-purple-100 to-purple-200 border-2 border-purple-500 rounded-lg p-6">
@@ -464,6 +562,69 @@ function Game() {
       {activeTab === 'leaderboard' ? (
         // Leaderboard Tab Content
         <div className="space-y-6">
+          {/* How to Earn Fan Coins */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              <Coins className="w-6 h-6 text-yellow-500" />
+              How to Earn Fan Coins
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-gray-300">
+                <div className="text-4xl font-bold text-gray-600 mb-2">1</div>
+                <div className="text-lg font-semibold mb-2">Preliminary Card</div>
+                <div className="text-sm text-gray-600 mb-2">Win 5 fights</div>
+                <div className="text-2xl font-bold text-yellow-600">1 coin/win</div>
+                <div className="text-xs text-gray-500 mt-2">Total: 5 coins</div>
+              </div>
+              <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border-2 border-blue-300">
+                <div className="text-4xl font-bold text-blue-600 mb-2">2</div>
+                <div className="text-lg font-semibold mb-2">Main Card</div>
+                <div className="text-sm text-gray-600 mb-2">Win 3 fights</div>
+                <div className="text-2xl font-bold text-yellow-600">5 coins/win</div>
+                <div className="text-xs text-gray-500 mt-2">Total: 15 coins</div>
+              </div>
+              <div className="text-center p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg border-2 border-yellow-400">
+                <div className="text-4xl font-bold text-yellow-600 mb-2">3</div>
+                <div className="text-lg font-semibold mb-2">Champion</div>
+                <div className="text-sm text-gray-600 mb-2">Win 5 fights</div>
+                <div className="text-2xl font-bold text-yellow-600">30 coins/win</div>
+                <div className="text-xs text-gray-500 mt-2">Total: 150 coins</div>
+              </div>
+            </div>
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+              <p className="text-sm text-gray-700">
+                <strong>💡 How it works:</strong> Transfer to a real UFC fighter before their fight. 
+                When they win, you earn Fan Coins based on their position on the fight card. 
+                Progress through the ladder to earn more coins per win!
+              </p>
+            </div>
+            <div className="mt-4 p-4 bg-green-50 rounded-lg">
+              <h3 className="font-bold mb-2 text-green-900">📊 Total Earnings Per Career (Perfect Record):</h3>
+              <div className="space-y-1 text-sm text-green-800">
+                <div className="flex justify-between">
+                  <span>Transfer Bonus:</span>
+                  <span className="font-bold">+100 coins</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Preliminary (5 × 1):</span>
+                  <span className="font-bold">+5 coins</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Main Card (3 × 5):</span>
+                  <span className="font-bold">+15 coins</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Champion (5 × 30):</span>
+                  <span className="font-bold">+150 coins</span>
+                </div>
+                <div className="border-t-2 border-green-300 pt-2 mt-2 flex justify-between text-lg">
+                  <span className="font-bold">TOTAL PER CAREER:</span>
+                  <span className="font-bold text-green-600">270 coins 🪙</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {myRank && myRank.rank && (
             <div className="bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-lg shadow-lg p-6">
               <div className="flex items-center justify-between">
@@ -715,9 +876,9 @@ function Game() {
           </h2>
           <div className="grid grid-cols-3 gap-4">
             {[
-              { level: 'Preliminary Card', wins: 5, coins: 2, color: 'from-gray-400 to-gray-600' },
-              { level: 'Main Card', wins: 3, coins: 3, color: 'from-blue-400 to-blue-600' },
-              { level: 'Champion', wins: 2, coins: 5, color: 'from-yellow-400 to-yellow-600' }
+              { level: 'Preliminary Card', wins: 5, coins: 1, color: 'from-gray-400 to-gray-600' },
+              { level: 'Main Card', wins: 3, coins: 5, color: 'from-blue-400 to-blue-600' },
+              { level: 'Champion', wins: 2, coins: 30, color: 'from-yellow-400 to-yellow-600' }
             ].map((tier, index) => {
               const isCurrent = fighterLevel === tier.level;
               const isCompleted = ['Preliminary Card', 'Main Card', 'Champion']
@@ -762,9 +923,20 @@ function Game() {
               );
             })}
           </div>
-          <p className="text-center text-sm text-purple-800 mt-4">
-            🏆 Preliminary: 5 wins → Main Card: 3 wins → Champion: 2 wins to unlock, retire after 5 champion wins
-          </p>
+          <div className="mt-4 grid grid-cols-3 gap-4 text-center text-sm text-purple-900">
+            <div>
+              <div className="font-bold">5 wins</div>
+              <div className="text-xs">→ Main Card</div>
+            </div>
+            <div>
+              <div className="font-bold">3 wins</div>
+              <div className="text-xs">→ Champion</div>
+            </div>
+            <div>
+              <div className="font-bold">5 wins total</div>
+              <div className="text-xs">→ Retire</div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1008,11 +1180,12 @@ function Game() {
                     <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                       <h4 className="font-bold mb-2">💡 Training Tips:</h4>
                       <ul className="text-sm text-gray-700 space-y-1">
-                    <li>• Each training session costs 1 energy and gives +1-3 stat points</li>
-                    <li>• Energy refreshes daily (3 sessions per day)</li>
-                    <li>• Complete 12 sessions to unlock fighter transfer</li>
-                    <li>• Win 3 fights to advance to the next level</li>
-                    <li>• Progress: Preliminary → Main Card → Co-Main → Main Event → Champion</li>
+                        <li>• Each training session costs 1 energy and gives +1-3 stat points</li>
+                        <li>• Energy refreshes daily (3 sessions per day)</li>
+                        <li>• Complete 12 sessions to unlock fighter transfer</li>
+                        <li>• Preliminary: 5 wins (1 coin each) → Main Card</li>
+                        <li>• Main Card: 3 wins (5 coins each) → Champion</li>
+                        <li>• Champion: 5 wins (30 coins each) → Retire & Restart</li>
                       </ul>
                     </div>
                   </>

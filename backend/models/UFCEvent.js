@@ -86,11 +86,11 @@ ufcEventSchema.pre('save', function(next) {
 // Method to get coin value for a fight based on card position
 ufcEventSchema.methods.getCoinValue = function(cardType) {
   const coinValues = {
-    mainEvent: 5,
-    coMainEvent: 4,
-    mainCard: 3,
-    preliminaryCard: 2,
-    earlyPreliminaryCard: 1
+    mainEvent: 30,        // Champion level
+    coMainEvent: 30,      // Champion level
+    mainCard: 5,          // Main Card level
+    preliminaryCard: 1,   // Preliminary level
+    earlyPreliminaryCard: 1  // Preliminary level
   };
   return coinValues[cardType] || 0;
 };
