@@ -357,15 +357,9 @@ function Game() {
 
   // Get fighter image based on current stage
   const getFighterStageImage = () => {
-    const basePath = `${process.env.PUBLIC_URL || ''}/Images/Fighter_Game`;
-    
-    if (!gameStatus?.initialized) {
-      return `${basePath}/fighter_stage_1_Rookie.png`;
-    }
-    
-    if (!rookieFighter?.isTransferred) {
+    if (!gameStatus?.initialized || !rookieFighter?.isTransferred) {
       // Still in rookie stage
-      return `${basePath}/fighter_stage_1_Rookie.png`;
+      return '/Images/Fighter_Game/fighter_stage_1_Rookie.png';
     }
     
     // Based on fighter level after transfer
@@ -373,13 +367,13 @@ function Game() {
     
     switch(level) {
       case 'Preliminary Card':
-        return `${basePath}/fighter_stage_2_Preliminary.png`;
+        return '/Images/Fighter_Game/fighter_stage_2_Preliminary.png';
       case 'Main Card':
-        return `${basePath}/fighter_stage_3_Main_Event.png`;
+        return '/Images/Fighter_Game/fighter_stage_3_Main_Event.png';
       case 'Champion':
-        return `${basePath}/fighter_stage_4_Champion.png`;
+        return '/Images/Fighter_Game/fighter_stage_4_Champion.png';
       default:
-        return `${basePath}/fighter_stage_1_Rookie.png`;
+        return '/Images/Fighter_Game/fighter_stage_1_Rookie.png';
     }
   };
 
@@ -929,8 +923,8 @@ function Game() {
             <Zap className="w-8 h-8 text-orange-500" />
             <div>
               <p className="text-sm text-gray-600">Energy</p>
-              <p className="text-2xl font-bold">
-                {rookieFighter && typeof rookieFighter.energy === 'number' ? rookieFighter.energy : 3}/3
+              <p className="text-2xl font-bold" key={rookieFighter?.energy}>
+                {rookieFighter?.energy ?? 3}/3
               </p>
             </div>
           </div>
@@ -1150,29 +1144,26 @@ function Game() {
                 {/* Fighter Stage Image */}
                 <div className="flex justify-center my-6">
                   <div className="relative w-48 h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center shadow-md">
-                    {!imageLoadError ? (
-                      <img 
-                        src={getFighterStageImage().replace(`${process.env.PUBLIC_URL || ''}`, '')} 
-                        alt="Fighter Stage" 
-                        className="w-full h-full object-contain p-2"
-                        onError={(e) => {
-                          console.error('Failed to load fighter stage image');
-                          setImageLoadError(true);
-                        }}
-                        onLoad={(e) => {
-                          console.log('Fighter stage image loaded successfully');
-                        }}
-                      />
-                    ) : (
-                      <div className="text-8xl">{getFighterStageEmoji()}</div>
-                    )}
-                    {!imageLoadError && !isTransferred && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white text-center py-2 rounded-b-lg">
+                    <img 
+                      src={getFighterStageImage()} 
+                      alt="Fighter Stage" 
+                      className="w-full h-full object-contain p-2"
+                      onError={(e) => {
+                        console.error('❌ Failed to load image:', getFighterStageImage());
+                        e.target.style.display = 'none';
+                        e.target.parentElement.insertAdjacentHTML('beforeend', `<div class="text-8xl">${getFighterStageEmoji()}</div>`);
+                      }}
+                      onLoad={(e) => {
+                        console.log('✅ Fighter stage image loaded:', getFighterStageImage());
+                      }}
+                    />
+                    {!isTransferred && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white text-center py-2 rounded-b-lg z-10">
                         <span className="text-sm font-bold">Rookie</span>
                       </div>
                     )}
-                    {!imageLoadError && isTransferred && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white text-center py-2 rounded-b-lg">
+                    {isTransferred && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white text-center py-2 rounded-b-lg z-10">
                         <span className="text-sm font-bold">{gameProgress?.fighterLevel || 'Preliminary Card'}</span>
                       </div>
                     )}
