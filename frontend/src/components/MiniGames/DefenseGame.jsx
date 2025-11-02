@@ -10,12 +10,12 @@ const DefenseGame = ({ onComplete, onCancel }) => {
   const [combo, setCombo] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
   const [result, setResult] = useState(null);
-  const [doubleHitChance, setDoubleHitChance] = useState(0.15);
+  const [doubleHitChance, setDoubleHitChance] = useState(0.25); // Increased from 0.15
   const spawnIntervalRef = useRef(null);
   const padTimeoutRefs = useRef({});
 
   const gridSize = 9; // 3x3 grid
-  const padLifetime = 800; // milliseconds to tap before miss
+  const padLifetime = 650; // milliseconds to tap before miss (reduced from 800)
 
   useEffect(() => {
     if (gameState === 'playing' && timeLeft > 0) {
@@ -32,53 +32,57 @@ const DefenseGame = ({ onComplete, onCancel }) => {
   useEffect(() => {
     if (gameState === 'playing') {
       const spawnPad = () => {
-        // Random delay between spawns (300-800ms)
-        const nextSpawnDelay = Math.random() * 500 + 300;
+        // Random delay between spawns (200-600ms) - faster spawns
+        const nextSpawnDelay = Math.random() * 400 + 200;
         
         // Determine if double hit
         const isDoubleHit = Math.random() < doubleHitChance;
         
-        // Get available positions (not currently active)
-        const availablePositions = Array.from({ length: gridSize }, (_, i) => i)
-          .filter(pos => !activePads.some(pad => pad.position === pos));
-        
-        if (availablePositions.length > 0) {
-          const position = availablePositions[Math.floor(Math.random() * availablePositions.length)];
-          const padId = Date.now() + Math.random();
+        setActivePads(currentPads => {
+          // Get available positions (not currently active)
+          const availablePositions = Array.from({ length: gridSize }, (_, i) => i)
+            .filter(pos => !currentPads.some(pad => pad.position === pos));
           
-          const newPad = {
-            id: padId,
-            position,
-            timestamp: Date.now()
-          };
-          
-          setActivePads(prev => [...prev, newPad]);
-          
-          // Set timeout to remove pad (miss)
-          padTimeoutRefs.current[padId] = setTimeout(() => {
-            handleMiss(padId);
-          }, padLifetime);
-          
-          // If double hit, spawn another immediately
-          if (isDoubleHit && availablePositions.length > 1) {
-            const position2 = availablePositions.filter(p => p !== position)[
-              Math.floor(Math.random() * (availablePositions.length - 1))
-            ];
-            const padId2 = Date.now() + Math.random() + 0.1;
+          if (availablePositions.length > 0) {
+            const position = availablePositions[Math.floor(Math.random() * availablePositions.length)];
+            const padId = Date.now() + Math.random();
             
-            const newPad2 = {
-              id: padId2,
-              position: position2,
+            const newPad = {
+              id: padId,
+              position,
               timestamp: Date.now()
             };
             
-            setActivePads(prev => [...prev, newPad2]);
-            
-            padTimeoutRefs.current[padId2] = setTimeout(() => {
-              handleMiss(padId2);
+            // Set timeout to remove pad (miss)
+            padTimeoutRefs.current[padId] = setTimeout(() => {
+              handleMiss(padId);
             }, padLifetime);
+            
+            // If double hit, spawn another immediately
+            if (isDoubleHit && availablePositions.length > 1) {
+              const position2 = availablePositions.filter(p => p !== position)[
+                Math.floor(Math.random() * (availablePositions.length - 1))
+              ];
+              const padId2 = Date.now() + Math.random() + 0.1;
+              
+              const newPad2 = {
+                id: padId2,
+                position: position2,
+                timestamp: Date.now()
+              };
+              
+              padTimeoutRefs.current[padId2] = setTimeout(() => {
+                handleMiss(padId2);
+              }, padLifetime);
+              
+              return [...currentPads, newPad, newPad2];
+            }
+            
+            return [...currentPads, newPad];
           }
-        }
+          
+          return currentPads;
+        });
         
         spawnIntervalRef.current = setTimeout(spawnPad, nextSpawnDelay);
       };
@@ -90,7 +94,7 @@ const DefenseGame = ({ onComplete, onCancel }) => {
         Object.values(padTimeoutRefs.current).forEach(timeout => clearTimeout(timeout));
       };
     }
-  }, [gameState, activePads, doubleHitChance]);
+  }, [gameState, doubleHitChance]); // Removed activePads to prevent infinite loop
 
   const startGame = () => {
     setGameState('playing');
@@ -117,14 +121,14 @@ const DefenseGame = ({ onComplete, onCancel }) => {
       delete padTimeoutRefs.current[padId];
     }
 
-    // Calculate timing bonus
+    // Calculate timing bonus (stricter timing)
     const reactionTime = Date.now() - pad.timestamp;
     let points = 1;
     
-    if (reactionTime < 200) {
-      points = 3; // Lightning fast
-    } else if (reactionTime < 400) {
-      points = 2; // Quick
+    if (reactionTime < 150) {
+      points = 3; // Lightning fast (stricter - was 200ms)
+    } else if (reactionTime < 350) {
+      points = 2; // Quick (stricter - was 400ms)
     }
 
     setScore(prev => prev + points);
@@ -160,26 +164,26 @@ const DefenseGame = ({ onComplete, onCancel }) => {
     let xpGained = 1;
     let performance = '';
 
-    // Base on score and accuracy
+    // Base on score and accuracy (higher thresholds)
     const totalAttempts = score + misses;
     const accuracy = totalAttempts > 0 ? score / totalAttempts : 0;
 
-    if (score >= 30 && accuracy >= 0.8 && maxCombo >= 5) {
-      xpGained = 5; // Excellent
+    if (score >= 40 && accuracy >= 0.85 && maxCombo >= 6) {
+      xpGained = 5; // Excellent (harder - was 30 score, 0.8 accuracy, 5 combo)
       performance = 'Perfect Defense!';
-    } else if (score >= 20 && accuracy >= 0.7) {
-      xpGained = 4; // Great
+    } else if (score >= 28 && accuracy >= 0.75) {
+      xpGained = 4; // Great (harder - was 20 score, 0.7 accuracy)
       performance = 'Great Reflexes!';
-    } else if (score >= 15) {
-      xpGained = 3; // Good
+    } else if (score >= 20) {
+      xpGained = 3; // Good (harder - was 15)
       performance = 'Good Blocks!';
-    } else if (score >= 10) {
-      xpGained = 2; // Okay
+    } else if (score >= 12) {
+      xpGained = 2; // Okay (harder - was 10)
       performance = 'Keep Practicing!';
     }
 
     // Penalty for too many misses
-    if (misses >= 10) {
+    if (misses >= 8) {
       xpGained = Math.max(1, xpGained - 1);
     }
 
@@ -213,10 +217,10 @@ const DefenseGame = ({ onComplete, onCancel }) => {
             <div className="bg-purple-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600 mb-2">Instructions:</p>
               <ul className="text-sm text-gray-700 space-y-1">
-                <li>• Tap RED pads before they disappear</li>
-                <li>• Faster reactions = more points</li>
+                <li>• Tap RED pads FAST before they disappear</li>
+                <li>• Lightning-fast reactions = more points</li>
                 <li>• Chain 3+ perfects = combo bonus</li>
-                <li>• Watch out for double-hits!</li>
+                <li>• Watch out for frequent double-hits!</li>
                 <li>• 15 seconds to score as much as possible</li>
               </ul>
             </div>

@@ -20,7 +20,7 @@ const StrikingGame = ({ onComplete, onCancel }) => {
 
   // Generate random sequence
   const generateSequence = () => {
-    const length = Math.floor(Math.random() * 3) + 3; // 3-5 moves
+    const length = Math.floor(Math.random() * 4) + 4; // 4-7 moves (was 3-5)
     const newSequence = [];
     for (let i = 0; i < length; i++) {
       const randomMove = moves[Math.floor(Math.random() * moves.length)];
@@ -28,8 +28,8 @@ const StrikingGame = ({ onComplete, onCancel }) => {
     }
     setSequence(newSequence);
     
-    // 10% chance for critical combo
-    const critical = Math.random() < 0.1;
+    // 8% chance for critical combo (reduced from 10%)
+    const critical = Math.random() < 0.08;
     setIsCritical(critical);
     
     return newSequence;
@@ -46,12 +46,12 @@ const StrikingGame = ({ onComplete, onCancel }) => {
     if (gameState === 'showing' && currentMoveIndex < sequence.length) {
       const timeout = setTimeout(() => {
         setCurrentMoveIndex(prev => prev + 1);
-      }, 1000);
+      }, 800); // Faster display (was 1000ms)
       return () => clearTimeout(timeout);
     } else if (gameState === 'showing' && currentMoveIndex >= sequence.length) {
       // Start playing phase
       setGameState('playing');
-      setTimeLeft(5);
+      setTimeLeft(6 + sequence.length); // Dynamic time based on length
       setCurrentMoveIndex(0);
     }
   }, [gameState, currentMoveIndex, sequence.length]);
@@ -167,9 +167,9 @@ const StrikingGame = ({ onComplete, onCancel }) => {
             <div className="bg-blue-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600 mb-2">Instructions:</p>
               <ul className="text-sm text-gray-700 space-y-1">
-                <li>• Memorize {sequence.length} moves</li>
+                <li>• Memorize {sequence.length} moves quickly!</li>
                 <li>• Repeat the exact sequence</li>
-                <li>• You have 5 seconds</li>
+                <li>• Limited time to complete</li>
                 <li>• Perfect = +5 XP, Good = +3 XP</li>
               </ul>
             </div>

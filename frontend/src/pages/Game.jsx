@@ -328,13 +328,15 @@ function Game() {
 
   // Get fighter image based on current stage
   const getFighterStageImage = () => {
+    const basePath = `${process.env.PUBLIC_URL || ''}/Images/Fighter_Game`;
+    
     if (!gameStatus?.initialized) {
-      return '/Images/Fighter_Game/fighter_stage_1_Rookie.png';
+      return `${basePath}/fighter_stage_1_Rookie.png`;
     }
     
     if (!rookieFighter?.isTransferred) {
       // Still in rookie stage
-      return '/Images/Fighter_Game/fighter_stage_1_Rookie.png';
+      return `${basePath}/fighter_stage_1_Rookie.png`;
     }
     
     // Based on fighter level after transfer
@@ -342,13 +344,13 @@ function Game() {
     
     switch(level) {
       case 'Preliminary Card':
-        return '/Images/Fighter_Game/fighter_stage_2_Preliminary.png';
+        return `${basePath}/fighter_stage_2_Preliminary.png`;
       case 'Main Card':
-        return '/Images/Fighter_Game/fighter_stage_3_Main_Event.png';
+        return `${basePath}/fighter_stage_3_Main_Event.png`;
       case 'Champion':
-        return '/Images/Fighter_Game/fighter_stage_4_Champion.png';
+        return `${basePath}/fighter_stage_4_Champion.png`;
       default:
-        return '/Images/Fighter_Game/fighter_stage_1_Rookie.png';
+        return `${basePath}/fighter_stage_1_Rookie.png`;
     }
   };
 
@@ -387,9 +389,13 @@ function Game() {
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
             <img 
-              src="/Images/Fighter_Game/fighter_stage_1_Rookie.png" 
+              src={`${process.env.PUBLIC_URL || ''}/Images/Fighter_Game/fighter_stage_1_Rookie.png`}
               alt="Rookie Fighter" 
               className="w-48 h-48 mx-auto object-contain mb-4"
+              onError={(e) => {
+                console.error('Failed to load rookie fighter image');
+                e.target.style.display = 'none';
+              }}
             />
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to UFC Fighter Game!</h2>
             <p className="text-gray-600">Choose your weight class to begin your journey</p>
@@ -603,9 +609,13 @@ function Game() {
         <div className="mb-6 bg-gradient-to-r from-purple-100 to-purple-200 border-2 border-purple-500 rounded-lg p-6">
           <div className="text-center">
             <img 
-              src="/Images/Fighter_Game/fighter_stage_4_Champion.png" 
+              src={`${process.env.PUBLIC_URL || ''}/Images/Fighter_Game/fighter_stage_4_Champion.png`}
               alt="Champion Fighter" 
               className="w-32 h-32 mx-auto object-contain mb-4"
+              onError={(e) => {
+                console.error('Failed to load champion fighter image');
+                e.target.style.display = 'none';
+              }}
             />
             <Trophy className="w-16 h-16 mx-auto text-purple-600 mb-4" />
             <h2 className="text-2xl font-bold text-purple-900 mb-2">🏆 Champion Retired!</h2>
@@ -1069,7 +1079,8 @@ function Game() {
                       alt="Fighter Stage" 
                       className="w-48 h-48 object-contain rounded-lg"
                       onError={(e) => {
-                        e.target.src = '/Images/Fighter_Game/fighter_stage_1_Rookie.png';
+                        console.error('Failed to load fighter stage image:', getFighterStageImage());
+                        e.target.src = `${process.env.PUBLIC_URL || ''}/Images/Fighter_Game/fighter_stage_1_Rookie.png`;
                       }}
                     />
                     {!isTransferred && (

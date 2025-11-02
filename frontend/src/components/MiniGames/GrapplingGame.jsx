@@ -11,13 +11,13 @@ const GrapplingGame = ({ onComplete, onCancel }) => {
   const [scores, setScores] = useState([]);
   const animationRef = useRef(null);
 
-  // Sweet spot is 40-60% of the bar
-  const sweetSpotStart = 40;
-  const sweetSpotEnd = 60;
+  // Sweet spot is 42-58% of the bar (narrower - was 40-60%)
+  const sweetSpotStart = 42;
+  const sweetSpotEnd = 58;
 
   useEffect(() => {
-    // Randomize speed between 1.5 and 3
-    const randomSpeed = Math.random() * 1.5 + 1.5;
+    // Randomize speed between 2.0 and 4.0 (faster - was 1.5-3.0)
+    const randomSpeed = Math.random() * 2.0 + 2.0;
     setSpeed(randomSpeed);
   }, []);
 
@@ -63,7 +63,7 @@ const GrapplingGame = ({ onComplete, onCancel }) => {
   const handleTap = () => {
     if (gameState !== 'playing' || attempts <= 0) return;
 
-    // Calculate accuracy
+    // Calculate accuracy (stricter scoring)
     let xp = 0;
     let feedback = '';
     
@@ -71,11 +71,11 @@ const GrapplingGame = ({ onComplete, onCancel }) => {
       // Inside sweet spot - calculate how close to center (50)
       const distanceFromCenter = Math.abs(markerPosition - 50);
       
-      if (distanceFromCenter <= 2) {
-        xp = 5; // Perfect center
+      if (distanceFromCenter <= 1.5) {
+        xp = 5; // Perfect center (stricter - was 2)
         feedback = '🎯 Perfect Takedown!';
-      } else if (distanceFromCenter <= 5) {
-        xp = 4; // Very good
+      } else if (distanceFromCenter <= 4) {
+        xp = 4; // Very good (stricter - was 5)
         feedback = '💪 Excellent Timing!';
       } else {
         xp = 3; // Good
@@ -88,8 +88,8 @@ const GrapplingGame = ({ onComplete, onCancel }) => {
         Math.abs(markerPosition - sweetSpotEnd)
       );
       
-      if (distanceFromSweet <= 10) {
-        xp = 2; // Close
+      if (distanceFromSweet <= 8) {
+        xp = 2; // Close (stricter - was 10)
         feedback = '😅 Slipped Grip';
       } else {
         xp = 1; // Miss
