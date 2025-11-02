@@ -15,7 +15,10 @@ import {
   Heart,
   Swords,
   Coins,
-  Calendar
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Users
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
@@ -30,6 +33,10 @@ function Game() {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [showFighterStats, setShowFighterStats] = useState(true);
+  const [showTrainingCenter, setShowTrainingCenter] = useState(true);
+  const [showFighterPreview, setShowFighterPreview] = useState(true);
+  const [previewFighters, setPreviewFighters] = useState([]);
 
   const weightClasses = [
     'Flyweight', 'Bantamweight', 'Featherweight', 'Lightweight',
@@ -117,6 +124,23 @@ function Game() {
       console.error('Error fetching upcoming events:', error);
     }
   };
+
+  const fetchPreviewFighters = async () => {
+    try {
+      // Get fighters from user's selected weight class or default
+      const weightClass = gameStatus?.rookieFighter?.selectedWeightClass || selectedWeightClass;
+      const response = await axios.get(`${API_URL}/fighters?division=${weightClass}&limit=6`);
+      setPreviewFighters(response.data.slice(0, 6)); // Show 6 preview fighters
+    } catch (error) {
+      console.error('Error fetching preview fighters:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (gameStatus?.rookieFighter?.selectedWeightClass) {
+      fetchPreviewFighters();
+    }
+  }, [gameStatus?.rookieFighter?.selectedWeightClass]);
 
   const initializeGame = async () => {
     console.log('🎮 Initializing game...', { selectedWeightClass, currentUser });
@@ -459,142 +483,230 @@ function Game() {
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Fighter Stats */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Target className="w-6 h-6 text-red-600" />
-              {isTransferred ? 'Your Fighter' : 'Rookie Fighter'}
-            </h2>
+        <div className="lg:col-span-1 space-y-4">
+          {/* Training Progress - Always Visible */}
+          {!isTransferred && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">Training Progress</span>
+                <span className="text-sm font-bold text-red-600">{progress}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div 
+                  className="bg-red-600 h-4 transition-all duration-500 rounded-full"
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
+              </div>
+              {isEligible && (
+                <p className="text-green-600 font-bold mt-2 text-sm">
+                  ✅ Eligible to claim real fighter!
+                </p>
+              )}
+              
+              {isEligible && !isTransferred && (
+                <button
+                  onClick={fetchAvailableFighters}
+                  disabled={actionLoading}
+                  className="w-full mt-4 bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition-colors disabled:bg-gray-400 flex items-center justify-center gap-2"
+                >
+                  Transfer to Real Fighter
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          )}
 
-            {!isTransferred ? (
-              <>
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">Training Progress</span>
-                    <span className="text-sm font-bold text-red-600">{progress}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                    <div 
-                      className="bg-red-600 h-4 transition-all duration-500 rounded-full"
-                      style={{ width: `${progressPercent}%` }}
-                    ></div>
-                  </div>
-                  {isEligible && (
-                    <p className="text-green-600 font-bold mt-2 text-sm">
-                      ✅ Eligible to claim real fighter!
-                    </p>
-                  )}
-                </div>
+          {/* Collapsible Fighter Stats */}
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <button
+              onClick={() => setShowFighterStats(!showFighterStats)}
+              className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Target className="w-6 h-6 text-red-600" />
+                {isTransferred ? 'Your Fighter' : 'Rookie Fighter Stats'}
+              </h2>
+              {showFighterStats ? (
+                <ChevronUp className="w-6 h-6 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-6 h-6 text-gray-400" />
+              )}
+            </button>
 
-                <div className="space-y-4">
-                  {Object.entries(stats).map(([key, value]) => (
-                    <div key={key}>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-700 capitalize">{key}</span>
-                        <span className="text-sm font-bold">{value}/100</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${value}%` }}
-                        ></div>
-                      </div>
+            {showFighterStats && (
+              <div className="px-6 pb-6 border-t border-gray-100">
+                {!isTransferred ? (
+                  <>
+                    <div className="space-y-4 mt-4">
+                      {Object.entries(stats).map(([key, value]) => (
+                        <div key={key}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-medium text-gray-700 capitalize">{key}</span>
+                            <span className="text-sm font-bold">{value}/100</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-500"
+                              style={{ width: `${value}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
 
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="w-5 h-5 text-blue-600" />
-                    <span className="font-bold text-blue-900">Weight Class</span>
-                  </div>
-                  <p className="text-blue-800">{rookieFighter?.selectedWeightClass}</p>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <Trophy className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
-                <p className="text-gray-700 font-medium">
-                  You've transferred to a real UFC fighter!
-                </p>
-              </div>
-            )}
-
-            {isEligible && !isTransferred && (
-              <button
-                onClick={fetchAvailableFighters}
-                disabled={actionLoading}
-                className="w-full mt-6 bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition-colors disabled:bg-gray-400 flex items-center justify-center gap-2"
-              >
-                Transfer to Real Fighter
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Training Options */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Dumbbell className="w-6 h-6 text-red-600" />
-              Training Center
-            </h2>
-
-            {isTransferred ? (
-              <div className="text-center py-12">
-                <Trophy className="w-20 h-20 mx-auto text-yellow-500 mb-4" />
-                <h3 className="text-2xl font-bold mb-2">Training Complete!</h3>
-                <p className="text-gray-600">
-                  You've successfully transferred to a real UFC fighter. 
-                  Check upcoming events to see when your fighter competes!
-                </p>
-              </div>
-            ) : (
-              <>
-                {rookieFighter?.energy === 0 && (
-                  <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6">
-                    <p className="text-orange-800 font-medium">
-                      ⚡ No energy remaining! Come back tomorrow for 3 new training sessions.
+                    <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="w-5 h-5 text-blue-600" />
+                        <span className="font-bold text-blue-900">Weight Class</span>
+                      </div>
+                      <p className="text-blue-800">{rookieFighter?.selectedWeightClass}</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <Trophy className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
+                    <p className="text-gray-700 font-medium">
+                      You've transferred to a real UFC fighter!
                     </p>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {trainingOptions.map((option) => (
-                    <div
-                      key={option.type}
-                      className="border-2 border-gray-200 rounded-lg p-4 hover:border-red-500 transition-all"
-                    >
-                      <div className={`${option.color} w-12 h-12 rounded-lg flex items-center justify-center text-white mb-3`}>
-                        {option.icon}
-                      </div>
-                      <h3 className="font-bold text-lg mb-1">{option.name}</h3>
-                      <p className="text-sm text-gray-600 mb-2">{option.description}</p>
-                      <p className="text-xs text-gray-500 mb-3">
-                        Improves: <span className="font-bold text-red-600">{option.attribute}</span>
-                      </p>
-                      <button
-                        onClick={() => handleTraining(option.type)}
-                        disabled={actionLoading || rookieFighter?.energy === 0}
-                        className={`w-full py-2 rounded-md font-bold transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed ${option.color} text-white hover:opacity-90`}
+          {/* Fighter Preview Panel */}
+          {!isTransferred && previewFighters.length > 0 && (
+            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+              <button
+                onClick={() => setShowFighterPreview(!showFighterPreview)}
+                className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Users className="w-6 h-6 text-purple-600" />
+                  Available Fighters
+                </h2>
+                {showFighterPreview ? (
+                  <ChevronUp className="w-6 h-6 text-gray-400" />
+                ) : (
+                  <ChevronDown className="w-6 h-6 text-gray-400" />
+                )}
+              </button>
+
+              {showFighterPreview && (
+                <div className="px-6 pb-6 border-t border-gray-100">
+                  <p className="text-sm text-gray-600 mt-4 mb-3">
+                    Preview of fighters in your weight class ({rookieFighter?.selectedWeightClass})
+                  </p>
+                  <div className="space-y-2">
+                    {previewFighters.map((fighter, index) => (
+                      <div 
+                        key={index}
+                        className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                       >
-                        {actionLoading ? 'Training...' : 'Train (1 Energy)'}
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-sm">{fighter.name}</p>
+                            {fighter.nickname && (
+                              <p className="text-xs text-gray-500">"{fighter.nickname}"</p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-gray-700">
+                              {fighter.record || `${fighter.wins}-${fighter.losses}-${fighter.draws}`}
+                            </p>
+                            {fighter.ranking && (
+                              <p className="text-xs text-gray-500">#{fighter.ranking}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3">
+                    💡 Complete {50 - (rookieFighter?.trainingSessions || 0)} more training sessions to unlock transfer
+                  </p>
                 </div>
+              )}
+            </div>
+          )}
+        </div>
 
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-bold mb-2">💡 Training Tips:</h4>
-                  <ul className="text-sm text-gray-700 space-y-1">
-                    <li>• Each training session costs 1 energy and gives +1-3 stat points</li>
-                    <li>• Energy refreshes daily (3 sessions per day)</li>
-                    <li>• Complete 50 sessions to unlock fighter transfer</li>
-                    <li>• Balanced training creates a well-rounded fighter</li>
-                  </ul>
-                </div>
-              </>
+        {/* Collapsible Training Center */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <button
+              onClick={() => setShowTrainingCenter(!showTrainingCenter)}
+              className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Dumbbell className="w-6 h-6 text-red-600" />
+                Training Center
+              </h2>
+              {showTrainingCenter ? (
+                <ChevronUp className="w-6 h-6 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-6 h-6 text-gray-400" />
+              )}
+            </button>
+
+            {showTrainingCenter && (
+              <div className="px-6 pb-6 border-t border-gray-100">
+                {isTransferred ? (
+                  <div className="text-center py-12">
+                    <Trophy className="w-20 h-20 mx-auto text-yellow-500 mb-4" />
+                    <h3 className="text-2xl font-bold mb-2">Training Complete!</h3>
+                    <p className="text-gray-600">
+                      You've successfully transferred to a real UFC fighter. 
+                      Check upcoming events to see when your fighter competes!
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {rookieFighter?.energy === 0 && (
+                      <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6 mt-4">
+                        <p className="text-orange-800 font-medium">
+                          ⚡ No energy remaining! Come back tomorrow for 3 new training sessions.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      {trainingOptions.map((option) => (
+                        <div
+                          key={option.type}
+                          className="border-2 border-gray-200 rounded-lg p-4 hover:border-red-500 transition-all"
+                        >
+                          <div className={`${option.color} w-12 h-12 rounded-lg flex items-center justify-center text-white mb-3`}>
+                            {option.icon}
+                          </div>
+                          <h3 className="font-bold text-lg mb-1">{option.name}</h3>
+                          <p className="text-sm text-gray-600 mb-2">{option.description}</p>
+                          <p className="text-xs text-gray-500 mb-3">
+                            Improves: <span className="font-bold text-red-600">{option.attribute}</span>
+                          </p>
+                          <button
+                            onClick={() => handleTraining(option.type)}
+                            disabled={actionLoading || rookieFighter?.energy === 0}
+                            className={`w-full py-2 rounded-md font-bold transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed ${option.color} text-white hover:opacity-90`}
+                          >
+                            {actionLoading ? 'Training...' : 'Train (1 Energy)'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-bold mb-2">💡 Training Tips:</h4>
+                      <ul className="text-sm text-gray-700 space-y-1">
+                        <li>• Each training session costs 1 energy and gives +1-3 stat points</li>
+                        <li>• Energy refreshes daily (3 sessions per day)</li>
+                        <li>• Complete 50 sessions to unlock fighter transfer</li>
+                        <li>• Balanced training creates a well-rounded fighter</li>
+                      </ul>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>
