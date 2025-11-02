@@ -136,8 +136,14 @@ router.post('/train', requireAuth, async (req, res) => {
       return res.status(404).json({ message: 'No active Rookie Fighter found' });
     }
 
-    // Refresh energy
-    rookieFighter.refreshEnergy();
+    // Refresh energy and save if it was refreshed
+    const wasRefreshed = rookieFighter.refreshEnergy();
+    if (wasRefreshed) {
+      await rookieFighter.save();
+      console.log('✅ Energy refreshed to 3 for new day');
+    }
+
+    console.log(`⚡ Current energy before training: ${rookieFighter.energy}`);
 
     // Check if user has energy
     if (rookieFighter.energy <= 0) {
@@ -166,8 +172,14 @@ router.post('/train', requireAuth, async (req, res) => {
     // Update stats (max 100)
     rookieFighter.stats[attribute] = Math.min(100, rookieFighter.stats[attribute] + statGained);
     rookieFighter.trainingSessions += 1;
+    
+    // Reduce energy
     rookieFighter.energy -= 1;
+    console.log(`⚡ Energy after training: ${rookieFighter.energy}`);
+    
+    // Save the updated fighter
     await rookieFighter.save();
+    console.log(`✅ Fighter saved with energy: ${rookieFighter.energy}`);
 
     // Create training session record
     const user = await User.findOne({ firebaseUid });
@@ -186,7 +198,7 @@ router.post('/train', requireAuth, async (req, res) => {
     await gameProgress.save();
 
     res.json({
-      message: `Training complete! +${statGained} ${attribute}`,
+      message: `Training complete! +${statGained} ${attribute}. Energy: ${rookieFighter.energy}/3`,
       statGained,
       attribute,
       rookieFighter,
