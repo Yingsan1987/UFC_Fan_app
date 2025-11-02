@@ -48,6 +48,8 @@ function Game() {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [activeMiniGame, setActiveMiniGame] = useState(null); // 'striking', 'grappling', 'stamina', 'defense'
   const [currentTrainingType, setCurrentTrainingType] = useState(null);
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const [showCareerLadder, setShowCareerLadder] = useState(true);
 
   const weightClasses = [
     'Flyweight', 'Bantamweight', 'Featherweight', 'Lightweight',
@@ -73,10 +75,10 @@ function Game() {
     },
     {
       type: 'cardio',
-      name: 'Cardio',
+      name: 'Road Work',
       icon: <Heart className="w-6 h-6" />,
       attribute: 'Stamina',
-      description: 'Improves endurance for simulated fights',
+      description: 'Sprint pace timing - maintain speed in green zone',
       color: 'bg-green-500'
     },
     {
@@ -260,12 +262,16 @@ function Game() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Update game status with new data
-      setGameStatus(prev => ({
-        ...prev,
+      console.log('Training response:', response.data);
+      console.log('New energy:', response.data.rookieFighter?.energy);
+      console.log('New sessions:', response.data.rookieFighter?.trainingSessions);
+      
+      // Force complete state update
+      setGameStatus({
+        initialized: true,
         rookieFighter: response.data.rookieFighter,
         gameProgress: response.data.gameProgress
-      }));
+      });
       
       showMessage(`${response.data.message}`, 'success');
     } catch (error) {
@@ -407,19 +413,22 @@ function Game() {
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
             <div className="w-48 h-48 mx-auto mb-4 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-gray-300">
-              <img 
-                src={`${process.env.PUBLIC_URL || ''}/Images/Fighter_Game/fighter_stage_1_Rookie.png`}
-                alt="Rookie Fighter" 
-                className="w-full h-full object-contain p-2"
-                onError={(e) => {
-                  console.error('Failed to load rookie fighter image - showing emoji fallback');
-                  e.target.style.display = 'none';
-                  e.target.parentElement.innerHTML = '<div class="text-8xl">🥊</div>';
-                }}
-                onLoad={(e) => {
-                  console.log('Rookie image loaded successfully!');
-                }}
-              />
+              {!imageLoadError ? (
+                <img 
+                  src="/Images/Fighter_Game/fighter_stage_1_Rookie.png"
+                  alt="Rookie Fighter" 
+                  className="w-full h-full object-contain p-2"
+                  onError={(e) => {
+                    console.error('Failed to load rookie fighter image');
+                    setImageLoadError(true);
+                  }}
+                  onLoad={(e) => {
+                    console.log('Rookie image loaded successfully!');
+                  }}
+                />
+              ) : (
+                <div className="text-8xl">🥊</div>
+              )}
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to UFC Fighter Game!</h2>
             <p className="text-gray-600">Choose your weight class to begin your journey</p>
@@ -974,11 +983,23 @@ function Game() {
 
       {/* Fighter Progression Ladder */}
       {gameStatus?.gameProgress && !isRetired && (
-        <div className="bg-gradient-to-r from-purple-50 to-purple-100 border-2 border-purple-400 rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold flex items-center gap-2 text-purple-900 mb-4">
-            <Trophy className="w-6 h-6 text-purple-600" />
-            Fighter Career Ladder
-          </h2>
+        <div className="bg-gradient-to-r from-purple-50 to-purple-100 border-2 border-purple-400 rounded-lg shadow-lg overflow-hidden mb-6">
+          <button
+            onClick={() => setShowCareerLadder(!showCareerLadder)}
+            className="w-full p-6 flex items-center justify-between hover:bg-purple-100 transition-colors"
+          >
+            <h2 className="text-2xl font-bold flex items-center gap-2 text-purple-900">
+              <Trophy className="w-6 h-6 text-purple-600" />
+              Fighter Career Ladder
+            </h2>
+            {showCareerLadder ? (
+              <ChevronUp className="w-6 h-6 text-purple-600" />
+            ) : (
+              <ChevronDown className="w-6 h-6 text-purple-600" />
+            )}
+          </button>
+          {showCareerLadder && (
+          <div className="px-6 pb-6 border-t border-purple-200">
           <div className="grid grid-cols-3 gap-4">
             {[
               { level: 'Preliminary Card', wins: 5, coins: 1, color: 'from-gray-400 to-gray-600' },
@@ -1042,6 +1063,8 @@ function Game() {
               <div className="text-xs">→ Retire</div>
             </div>
           </div>
+          </div>
+          )}
         </div>
       )}
 
@@ -1104,26 +1127,28 @@ function Game() {
                 {/* Fighter Stage Image */}
                 <div className="flex justify-center my-6">
                   <div className="relative w-48 h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center shadow-md">
-                    <img 
-                      src={getFighterStageImage()} 
-                      alt="Fighter Stage" 
-                      className="w-full h-full object-contain p-2"
-                      onError={(e) => {
-                        console.error('Failed to load fighter stage image - showing emoji fallback');
-                        e.target.style.display = 'none';
-                        const emoji = getFighterStageEmoji();
-                        e.target.parentElement.innerHTML = `<div class="text-8xl">${emoji}</div>`;
-                      }}
-                      onLoad={(e) => {
-                        console.log('Fighter stage image loaded successfully');
-                      }}
-                    />
-                    {!isTransferred && (
+                    {!imageLoadError ? (
+                      <img 
+                        src={getFighterStageImage().replace(`${process.env.PUBLIC_URL || ''}`, '')} 
+                        alt="Fighter Stage" 
+                        className="w-full h-full object-contain p-2"
+                        onError={(e) => {
+                          console.error('Failed to load fighter stage image');
+                          setImageLoadError(true);
+                        }}
+                        onLoad={(e) => {
+                          console.log('Fighter stage image loaded successfully');
+                        }}
+                      />
+                    ) : (
+                      <div className="text-8xl">{getFighterStageEmoji()}</div>
+                    )}
+                    {!imageLoadError && !isTransferred && (
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white text-center py-2 rounded-b-lg">
                         <span className="text-sm font-bold">Rookie</span>
                       </div>
                     )}
-                    {isTransferred && (
+                    {!imageLoadError && isTransferred && (
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white text-center py-2 rounded-b-lg">
                         <span className="text-sm font-bold">{gameProgress?.fighterLevel || 'Preliminary Card'}</span>
                       </div>
@@ -1315,12 +1340,11 @@ function Game() {
                     <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                       <h4 className="font-bold mb-2">💡 Training Tips:</h4>
                       <ul className="text-sm text-gray-700 space-y-1">
-                        <li>• Each training session costs 1 energy and gives +1-3 stat points</li>
+                        <li>• Each training mini-game costs 1 energy and gives +1-5 XP</li>
+                        <li>• Better performance = more XP (Perfect = +5, Good = +3)</li>
+                        <li>• Road Work: Keep speed in the moving green zone</li>
                         <li>• Energy refreshes daily (3 sessions per day)</li>
                         <li>• Complete 12 sessions to unlock fighter transfer</li>
-                        <li>• Preliminary: 5 wins (1 coin each) → Main Card</li>
-                        <li>• Main Card: 3 wins (5 coins each) → Champion</li>
-                        <li>• Champion: 5 wins (30 coins each) → Retire & Restart</li>
                       </ul>
                     </div>
                   </>
