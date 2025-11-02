@@ -135,6 +135,13 @@ function Game() {
     fetchUpcomingEvents();
   }, [currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Reset image error when game status changes
+  useEffect(() => {
+    if (gameStatus?.rookieFighter) {
+      setImageLoadError(false);
+    }
+  }, [gameStatus?.rookieFighter?.isTransferred, gameStatus?.gameProgress?.fighterLevel]);
+
   const fetchUpcomingEvents = async () => {
     try {
       const response = await axios.get(`${API_URL}/fancoins/events/upcoming`);
@@ -1142,21 +1149,35 @@ function Game() {
             {showFighterStats && (
               <div className="px-6 pb-6 border-t border-gray-100">
                 {/* Fighter Stage Image */}
+                {/* Debug Info - Remove after testing */}
+                <div className="text-xs text-gray-500 text-center mb-2">
+                  Image Path: {getFighterStageImage()}
+                  <br />
+                  Status: {imageLoadError ? '❌ Failed' : '✅ Loading...'}
+                </div>
+                
                 <div className="flex justify-center my-6">
-                  <div className="relative w-48 h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center shadow-md">
+                  <div className="relative w-48 h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center shadow-md overflow-hidden">
                     <img 
                       src={getFighterStageImage()} 
                       alt="Fighter Stage" 
                       className="w-full h-full object-contain p-2"
+                      style={{ display: imageLoadError ? 'none' : 'block' }}
                       onError={(e) => {
                         console.error('❌ Failed to load image:', getFighterStageImage());
-                        e.target.style.display = 'none';
-                        e.target.parentElement.insertAdjacentHTML('beforeend', `<div class="text-8xl">${getFighterStageEmoji()}</div>`);
+                        console.error('❌ Image error details:', e);
+                        setImageLoadError(true);
                       }}
                       onLoad={(e) => {
                         console.log('✅ Fighter stage image loaded:', getFighterStageImage());
+                        setImageLoadError(false);
                       }}
                     />
+                    {imageLoadError && (
+                      <div className="text-8xl absolute inset-0 flex items-center justify-center">
+                        {getFighterStageEmoji()}
+                      </div>
+                    )}
                     {!isTransferred && (
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-white text-center py-2 rounded-b-lg z-10">
                         <span className="text-sm font-bold">Rookie</span>
