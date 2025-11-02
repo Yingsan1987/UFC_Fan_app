@@ -236,6 +236,15 @@ function Game() {
   };
 
   const handleTraining = (trainingType) => {
+    // Check energy for free users
+    const isPremium = gameProgress?.isPremium || false;
+    const hasEnergy = rookieFighter && rookieFighter.energy > 0;
+    
+    if (!hasEnergy && !isPremium) {
+      showMessage('⚡ No energy remaining! Upgrade to Premium to keep playing (no XP gain)', 'error');
+      return;
+    }
+    
     // Launch the appropriate mini-game
     setCurrentTrainingType(trainingType);
     
@@ -250,6 +259,17 @@ function Game() {
   };
 
   const handleMiniGameComplete = async (xpGained) => {
+    const isPremium = gameProgress?.isPremium || false;
+    const hasEnergy = rookieFighter && rookieFighter.energy > 0;
+    
+    // Premium users can play without energy but won't gain XP
+    if (!hasEnergy && isPremium) {
+      showMessage('⭐ Premium Training (No Energy) - No XP gained but thanks for playing!', 'success');
+      setActiveMiniGame(null);
+      setCurrentTrainingType(null);
+      return;
+    }
+    
     try {
       setActionLoading(true);
       const token = await getAuthToken();
@@ -262,20 +282,23 @@ function Game() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      console.log('Training response:', response.data);
-      console.log('New energy:', response.data.rookieFighter?.energy);
-      console.log('New sessions:', response.data.rookieFighter?.trainingSessions);
+      console.log('✅ Training response received:', response.data);
+      console.log('⚡ New energy:', response.data.rookieFighter?.energy);
+      console.log('📊 New stats:', response.data.rookieFighter?.stats);
+      console.log('📈 Training sessions:', response.data.rookieFighter?.trainingSessions);
       
-      // Force complete state update
+      // Force complete state update to trigger re-render
       setGameStatus({
         initialized: true,
         rookieFighter: response.data.rookieFighter,
         gameProgress: response.data.gameProgress
       });
       
+      console.log('🔄 Game status updated');
+      
       showMessage(`${response.data.message}`, 'success');
     } catch (error) {
-      console.error('Error during training:', error);
+      console.error('❌ Error during training:', error);
       showMessage(error.response?.data?.message || 'Training failed', 'error');
     } finally {
       setActionLoading(false);
@@ -1305,10 +1328,30 @@ function Game() {
                 ) : (
                   <>
                 {rookieFighter && rookieFighter.energy <= 0 && (
-                  <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6 mt-4">
-                    <p className="text-orange-800 font-medium">
-                      ⚡ No energy remaining! Come back tomorrow for 3 new training sessions.
-                    </p>
+                  <div className={`border-l-4 p-4 mb-6 mt-4 ${
+                    gameProgress?.isPremium 
+                      ? 'bg-purple-50 border-purple-500' 
+                      : 'bg-orange-50 border-orange-500'
+                  }`}>
+                    {gameProgress?.isPremium ? (
+                      <div>
+                        <p className="text-purple-800 font-bold mb-1">
+                          ⭐ Premium Member - Continue Training!
+                        </p>
+                        <p className="text-purple-700 text-sm">
+                          You can keep playing mini-games, but no XP or energy will be consumed until tomorrow.
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-orange-800 font-medium">
+                          ⚡ No energy remaining! Come back tomorrow for 3 new training sessions.
+                        </p>
+                        <p className="text-orange-700 text-sm mt-1">
+                          💎 Premium members can continue playing (no XP gain)
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1328,10 +1371,13 @@ function Game() {
                           </p>
                       <button
                         onClick={() => handleTraining(option.type)}
-                        disabled={actionLoading || (rookieFighter && rookieFighter.energy <= 0)}
+                        disabled={actionLoading || (rookieFighter && rookieFighter.energy <= 0 && !gameProgress?.isPremium)}
                         className={`w-full py-2 rounded-md font-bold transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed ${option.color} text-white hover:opacity-90`}
                       >
-                        {actionLoading ? 'Training...' : 'Train (1 Energy)'}
+                        {actionLoading ? 'Training...' : 
+                         rookieFighter && rookieFighter.energy <= 0 && gameProgress?.isPremium ? 'Premium Play (No XP)' :
+                         rookieFighter && rookieFighter.energy <= 0 ? 'No Energy' :
+                         'Train (1 Energy)'}
                       </button>
                         </div>
                       ))}
