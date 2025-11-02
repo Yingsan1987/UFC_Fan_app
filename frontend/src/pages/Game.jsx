@@ -354,6 +354,24 @@ function Game() {
     }
   };
 
+  // Get stage emoji for fallback display
+  const getFighterStageEmoji = () => {
+    if (!gameStatus?.initialized || !rookieFighter?.isTransferred) {
+      return '🥊'; // Rookie
+    }
+    const level = gameProgress?.fighterLevel || 'Preliminary Card';
+    switch(level) {
+      case 'Preliminary Card':
+        return '🥋';
+      case 'Main Card':
+        return '🏅';
+      case 'Champion':
+        return '🏆';
+      default:
+        return '🥊';
+    }
+  };
+
   if (!currentUser) {
     return (
       <div className="max-w-4xl mx-auto">
@@ -394,8 +412,9 @@ function Game() {
                 alt="Rookie Fighter" 
                 className="w-full h-full object-contain p-2"
                 onError={(e) => {
-                  console.error('Failed to load rookie fighter image:', e);
+                  console.error('Failed to load rookie fighter image - showing emoji fallback');
                   e.target.style.display = 'none';
+                  e.target.parentElement.innerHTML = '<div class="text-8xl">🥊</div>';
                 }}
                 onLoad={(e) => {
                   console.log('Rookie image loaded successfully!');
@@ -463,7 +482,10 @@ function Game() {
     );
   }
 
-  const { rookieFighter, gameProgress } = gameStatus;
+  // Extract data reactively from gameStatus to ensure updates are reflected
+  const rookieFighter = gameStatus?.rookieFighter;
+  const gameProgress = gameStatus?.gameProgress;
+  
   const isTransferred = rookieFighter?.isTransferred;
   const stats = rookieFighter?.stats || {};
   const progress = rookieFighter ? 
@@ -619,8 +641,9 @@ function Game() {
                 alt="Champion Fighter" 
                 className="w-full h-full object-contain p-1"
                 onError={(e) => {
-                  console.error('Failed to load champion fighter image');
+                  console.error('Failed to load champion fighter image - showing emoji fallback');
                   e.target.style.display = 'none';
+                  e.target.parentElement.innerHTML = '<div class="text-6xl">🏆</div>';
                 }}
               />
             </div>
@@ -1086,11 +1109,13 @@ function Game() {
                       alt="Fighter Stage" 
                       className="w-full h-full object-contain p-2"
                       onError={(e) => {
-                        console.error('Failed to load fighter stage image:', getFighterStageImage());
-                        e.target.src = `${process.env.PUBLIC_URL || ''}/Images/Fighter_Game/fighter_stage_1_Rookie.png`;
+                        console.error('Failed to load fighter stage image - showing emoji fallback');
+                        e.target.style.display = 'none';
+                        const emoji = getFighterStageEmoji();
+                        e.target.parentElement.innerHTML = `<div class="text-8xl">${emoji}</div>`;
                       }}
                       onLoad={(e) => {
-                        console.log('Fighter stage image loaded:', getFighterStageImage());
+                        console.log('Fighter stage image loaded successfully');
                       }}
                     />
                     {!isTransferred && (
