@@ -64,6 +64,13 @@ export function AuthProvider({ children }) {
     return sendEmailVerification(currentUser);
   }
 
+  // Get Firebase ID token for API authentication
+  async function getAuthToken() {
+    if (!auth) throw new Error('Firebase Auth not initialized. Please configure .env file.');
+    if (!currentUser) throw new Error('No user logged in');
+    return currentUser.getIdToken();
+  }
+
   useEffect(() => {
     // If Firebase auth is not initialized, just set loading to false
     if (!auth) {
@@ -87,7 +94,8 @@ export function AuthProvider({ children }) {
     loginWithGoogle,
     logout,
     resetPassword,
-    resendVerificationEmail
+    resendVerificationEmail,
+    getAuthToken
   };
 
   return (

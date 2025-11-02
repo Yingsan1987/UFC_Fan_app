@@ -97,3 +97,4 @@ The system is now correctly configured to work with your actual collection names
 **No more "No data available" message - your real fighters will be displayed!** 🥊
 
 
+

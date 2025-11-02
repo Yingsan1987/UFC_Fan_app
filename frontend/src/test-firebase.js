@@ -28,3 +28,4 @@ console.log('\n✅ If all values show correctly, Firebase is configured!');
 console.log('⚠️  If you see "undefined", restart your dev server!');
 
 
+

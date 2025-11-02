@@ -44,10 +44,20 @@ router.get('/', optionalAuth, async (req, res) => {
       Forum.countDocuments(),
     ]);
 
-    // Add userLiked and userDisliked flags
+    // Add userLiked, userDisliked flags, and calculate real comment count
     const userId = req.user ? req.user.uid : null;
-    const forumsWithUserState = items.map(forum => {
+    const forumsWithUserState = await Promise.all(items.map(async forum => {
       const forumObj = forum.toObject();
+      
+      // Calculate actual comment count from ForumComment collection
+      const actualCommentCount = await ForumComment.countDocuments({ forumId: forum._id });
+      forumObj.commentCount = actualCommentCount;
+      
+      // Update the database if the count is different (fix legacy data)
+      if (forum.commentCount !== actualCommentCount) {
+        await Forum.findByIdAndUpdate(forum._id, { commentCount: actualCommentCount });
+      }
+      
       if (userId) {
         forumObj.userLiked = forum.likedBy.includes(userId);
         forumObj.userDisliked = forum.dislikedBy.includes(userId);
@@ -56,7 +66,7 @@ router.get('/', optionalAuth, async (req, res) => {
         forumObj.userDisliked = false;
       }
       return forumObj;
-    });
+    }));
 
     res.json({
       forums: forumsWithUserState,

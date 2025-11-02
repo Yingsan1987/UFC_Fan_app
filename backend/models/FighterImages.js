@@ -24,3 +24,4 @@ fighterImagesSchema.pre('save', function(next) {
 module.exports = mongoose.model('FighterImages', fighterImagesSchema, 'ufc_fighter_images');
 
 
+

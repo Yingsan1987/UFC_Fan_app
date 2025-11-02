@@ -78,3 +78,4 @@ async function testFighterCountFix() {
 testFighterCountFix();
 
 
+

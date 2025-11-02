@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
 const { Server } = require('socket.io');
+const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 const chatSocket = require('./sockets/chatSocket');
 
@@ -34,6 +35,7 @@ app.use('/api/chat', require('./routes/chat'));
 app.use('/api/news', require('./routes/news'));
 app.use('/api/stripe', require('./routes/stripe'));
 app.use('/api/forums', require('./routes/forums'));
+app.use('/api/game', require('./routes/game'));
 
 // Chat socket
 chatSocket(io);

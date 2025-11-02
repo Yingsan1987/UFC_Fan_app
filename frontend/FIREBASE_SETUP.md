@@ -92,3 +92,4 @@ Replace the placeholder values with your actual Firebase configuration values.
 - [Vite Environment Variables](https://vitejs.dev/guide/env-and-mode.html)
 
 
+
