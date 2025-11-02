@@ -68,45 +68,91 @@ function Game() {
     }
   ];
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchGameStatus();
-    }
-  }, [currentUser]);
-
   const fetchGameStatus = async () => {
+    if (!currentUser) {
+      console.log('⏭️ Skipping game status fetch - no user logged in');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      console.log('📊 Fetching game status...');
       const token = await getAuthToken();
       const response = await axios.get(`${API_URL}/game/status`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('✅ Game status received:', response.data);
       setGameStatus(response.data);
     } catch (error) {
-      console.error('Error fetching game status:', error);
-      showMessage('Failed to load game status', 'error');
+      console.error('❌ Error fetching game status:', error);
+      console.error('Error details:', error.response?.data);
+      
+      // Don't show error message if it's just that the game isn't initialized yet
+      if (error.response?.status !== 404) {
+        showMessage('Failed to load game status', 'error');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (currentUser) {
+      fetchGameStatus();
+    } else {
+      setLoading(false);
+    }
+  }, [currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const initializeGame = async () => {
+    console.log('🎮 Initializing game...', { selectedWeightClass, currentUser });
+    
+    if (!currentUser) {
+      showMessage('Please sign in to start the game', 'error');
+      return;
+    }
+
     try {
       setActionLoading(true);
+      console.log('🔑 Getting auth token...');
       const token = await getAuthToken();
+      console.log('✅ Token received');
+      
+      console.log('📡 Making API call to:', `${API_URL}/game/initialize`);
       const response = await axios.post(
         `${API_URL}/game/initialize`,
         { weightClass: selectedWeightClass },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      console.log('✅ Game initialized successfully:', response.data);
       setGameStatus({ 
         initialized: true, 
         ...response.data 
       });
       showMessage('Game initialized! Start training your fighter!', 'success');
     } catch (error) {
-      console.error('Error initializing game:', error);
-      showMessage(error.response?.data?.message || 'Failed to initialize game', 'error');
+      console.error('❌ Error initializing game:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      let errorMessage = 'Failed to initialize game';
+      
+      if (error.message.includes('Firebase Auth not initialized')) {
+        errorMessage = 'Authentication not configured. Please check Firebase setup.';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please sign in again.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (!error.response) {
+        errorMessage = 'Cannot connect to server. Please check if the backend is running.';
+      }
+      
+      showMessage(errorMessage, 'error');
     } finally {
       setActionLoading(false);
     }

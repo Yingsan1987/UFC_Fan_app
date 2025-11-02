@@ -5,41 +5,60 @@ const GameProgress = require('../models/GameProgress');
 const TrainingSession = require('../models/TrainingSession');
 const Fighter = require('../models/Fighter');
 const User = require('../models/User');
-const { verifyToken } = require('../middleware/authMiddleware');
+const { requireAuth } = require('../middleware/authMiddleware');
 
 // Initialize game for a user (create placeholder fighter and game progress)
-router.post('/initialize', verifyToken, async (req, res) => {
+router.post('/initialize', requireAuth, async (req, res) => {
   try {
+    console.log('🎮 Initialize game request received');
+    console.log('User:', req.user);
+    console.log('Body:', req.body);
+
     const firebaseUid = req.user.uid;
     const { weightClass } = req.body;
 
+    if (!firebaseUid) {
+      console.error('❌ No firebaseUid in request');
+      return res.status(401).json({ message: 'Authentication failed - no user ID' });
+    }
+
     // Check if user already has a game progress
+    console.log('Checking if game already initialized...');
     let gameProgress = await GameProgress.findOne({ firebaseUid });
     
     if (gameProgress) {
+      console.log('⚠️ Game already initialized');
       return res.status(400).json({ message: 'Game already initialized for this user' });
     }
 
     // Find or create user in database
+    console.log('Finding or creating user...');
     let user = await User.findOne({ firebaseUid });
     if (!user) {
+      console.log('Creating new user in database...');
       user = new User({
         firebaseUid,
         email: req.user.email,
-        displayName: req.user.name || req.user.email
+        displayName: req.user.name || req.user.email || 'Player'
       });
       await user.save();
+      console.log('✅ User created:', user._id);
+    } else {
+      console.log('✅ User found:', user._id);
     }
 
     // Create placeholder fighter
+    console.log('Creating placeholder fighter...');
     const placeholderFighter = new PlaceholderFighter({
       userId: user._id,
       firebaseUid,
       selectedWeightClass: weightClass || 'Lightweight'
     });
     await placeholderFighter.save();
+    console.log('✅ Placeholder fighter created:', placeholderFighter._id);
 
     // Create game progress
+    console.log('Creating game progress...');
     gameProgress = new GameProgress({
       userId: user._id,
       firebaseUid,
@@ -49,24 +68,32 @@ router.post('/initialize', verifyToken, async (req, res) => {
       }
     });
     await gameProgress.save();
+    console.log('✅ Game progress created:', gameProgress._id);
 
     // Update user with game progress reference
     user.gameProgress = gameProgress._id;
     await user.save();
+    console.log('✅ User updated with game progress reference');
 
+    console.log('🎉 Game initialization complete!');
     res.json({
       message: 'Game initialized successfully',
       placeholderFighter,
       gameProgress
     });
   } catch (error) {
-    console.error('Error initializing game:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('❌ Error initializing game:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
 // Get user's game status
-router.get('/status', verifyToken, async (req, res) => {
+router.get('/status', requireAuth, async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
 
@@ -98,7 +125,7 @@ router.get('/status', verifyToken, async (req, res) => {
 });
 
 // Perform training action
-router.post('/train', verifyToken, async (req, res) => {
+router.post('/train', requireAuth, async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
     const { trainingType } = req.body;
@@ -174,7 +201,7 @@ router.post('/train', verifyToken, async (req, res) => {
 });
 
 // Get available fighters for transfer (based on weight class and upcoming events)
-router.get('/available-fighters', verifyToken, async (req, res) => {
+router.get('/available-fighters', requireAuth, async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
     const placeholderFighter = await PlaceholderFighter.findOne({ firebaseUid, isTransferred: false });
@@ -207,7 +234,7 @@ router.get('/available-fighters', verifyToken, async (req, res) => {
 });
 
 // Transfer to real fighter
-router.post('/transfer', verifyToken, async (req, res) => {
+router.post('/transfer', requireAuth, async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
     const { fighterId } = req.body;
@@ -259,7 +286,7 @@ router.post('/transfer', verifyToken, async (req, res) => {
 });
 
 // Get training history
-router.get('/training-history', verifyToken, async (req, res) => {
+router.get('/training-history', requireAuth, async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
     const limit = parseInt(req.query.limit) || 20;
