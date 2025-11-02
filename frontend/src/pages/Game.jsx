@@ -295,19 +295,28 @@ function Game() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      console.log('✅ Training response received:', response.data);
-      console.log('⚡ New energy:', response.data.rookieFighter?.energy);
-      console.log('📊 New stats:', response.data.rookieFighter?.stats);
-      console.log('📈 Training sessions:', response.data.rookieFighter?.trainingSessions);
+      console.log('═══════════════════════════════════════');
+      console.log('✅ TRAINING COMPLETE - BACKEND RESPONSE:');
+      console.log('═══════════════════════════════════════');
+      console.log('⚡ Energy:', response.data.rookieFighter?.energy);
+      console.log('📈 Training Sessions:', response.data.rookieFighter?.trainingSessions);
+      console.log('📊 Stats:', response.data.rookieFighter?.stats);
+      console.log('💪 Attribute Updated:', response.data.attribute);
+      console.log('🎯 XP Gained:', response.data.statGained);
+      console.log('───────────────────────────────────────');
       
       // Force complete state update to trigger re-render
-      setGameStatus({
+      const newGameStatus = {
         initialized: true,
         rookieFighter: response.data.rookieFighter,
         gameProgress: response.data.gameProgress
-      });
+      };
       
-      console.log('🔄 Game status updated');
+      console.log('🔄 SETTING NEW GAME STATUS:', newGameStatus);
+      setGameStatus(newGameStatus);
+      
+      console.log('✅ State update called - component should re-render');
+      console.log('═══════════════════════════════════════');
       
       showMessage(`${response.data.message}`, 'success');
     } catch (error) {
@@ -536,6 +545,16 @@ function Game() {
   const winsNeeded = gameProgress?.winsNeededForNextLevel || 5;
   const championWins = gameProgress?.championWins || 0;
   const isRetired = gameProgress?.isRetired || false;
+
+  // DEBUG LOGS - Log current state every render
+  console.log('🎮 [GAME STATE]', {
+    energy: rookieFighter?.energy,
+    trainingSessions: rookieFighter?.trainingSessions,
+    trainingGoal: rookieFighter?.trainingGoal,
+    stats: rookieFighter?.stats,
+    progress: progress,
+    progressPercent: progressPercent
+  });
 
   return (
     <div className="max-w-7xl mx-auto">
