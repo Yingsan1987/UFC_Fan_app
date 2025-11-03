@@ -414,7 +414,6 @@ const Events = () => {
               );
             })}
           </div>
-          </div>
 
           {/* Big Visual Divider */}
           <div className="my-16 relative">
