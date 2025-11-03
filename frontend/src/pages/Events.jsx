@@ -178,159 +178,182 @@ const Events = () => {
         )}
       </div>
 
-      {/* Upcoming Events Section */}
+      {/* Upcoming Events Section - PROMINENT */}
       {upcomingEvents.length > 0 && (
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-red-600" />
-              <h2 className="text-2xl font-bold text-gray-900">Upcoming Fights</h2>
+        <div className="mb-16">
+          {/* Section Header - Big and Bold */}
+          <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-t-2xl p-8 text-white shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <Trophy className="w-10 h-10 text-yellow-400" />
+                  <h2 className="text-4xl font-bold">UPCOMING FIGHTS</h2>
+                </div>
+                <p className="text-red-100 text-lg">Don't miss these exciting matchups!</p>
+              </div>
+              <div className="bg-yellow-400 text-red-900 px-6 py-3 rounded-full font-bold text-2xl shadow-lg">
+                {upcomingEvents.length}
+              </div>
             </div>
-            <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">
-              {upcomingEvents.length} Event{upcomingEvents.length !== 1 ? 's' : ''}
-            </span>
           </div>
+          
+          {/* Events Container with Dark Background */}
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-b-2xl p-8 shadow-2xl">
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             {upcomingEvents.map((event, eventIdx) => {
               const fights = getAllFights(event);
               const mainFight = fights[0]; // First fight is main event
               
               return (
-                <div key={eventIdx} className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg shadow-lg border-2 border-red-300 overflow-hidden">
-                  {/* Event Header */}
-                  <div className="bg-gradient-to-r from-red-600 to-red-800 p-6 text-white">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold mb-2">{event.eventName}</h3>
-                        <div className="flex items-center gap-4 text-red-100">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            <span className="text-sm">{event.eventDate || 'TBD'}</span>
-                          </div>
-                          {event.location && (
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4" />
-                              <span className="text-sm">{event.location}</span>
-                            </div>
-                          )}
+                <div key={eventIdx} className="bg-white rounded-2xl shadow-2xl border-4 border-yellow-400 overflow-hidden transform hover:scale-[1.02] transition-transform">
+                  {/* Event Header - UFC Style */}
+                  <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 p-8 text-black relative">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+                    
+                    <div className="relative">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="bg-black text-white px-4 py-2 rounded-lg font-bold text-sm">
+                          UFC
+                        </div>
+                        <div className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                          FIGHT NIGHT
                         </div>
                       </div>
-                      <div className="bg-yellow-400 text-red-900 px-4 py-2 rounded-full font-bold text-sm">
-                        UPCOMING
+                      <h3 className="text-3xl font-black mb-3 text-gray-900 drop-shadow-lg">{event.eventName}</h3>
+                      <div className="flex items-center gap-6 text-gray-900 font-semibold">
+                        <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-lg">
+                          <Calendar className="w-5 h-5" />
+                          <span className="text-lg">{event.eventDate || 'TBD'}</span>
+                        </div>
+                        {event.location && (
+                          <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-lg">
+                            <MapPin className="w-5 h-5" />
+                            <span className="text-lg">{event.location}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Fight Card */}
-                  <div className="p-6">
+                  <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100">
                     {mainFight && (
-                      <div className="mb-6">
-                        <div className="flex items-center gap-2 mb-4">
-                          <Trophy className="w-5 h-5 text-yellow-600" />
-                          <h4 className="text-lg font-bold text-gray-900">{mainFight.cardLabel}</h4>
+                      <div className="mb-8">
+                        <div className="bg-gradient-to-r from-red-600 to-red-800 text-white py-3 px-6 rounded-lg mb-4 inline-flex items-center gap-2">
+                          <Trophy className="w-6 h-6 text-yellow-400" />
+                          <h4 className="text-xl font-bold uppercase">{mainFight.cardLabel}</h4>
                         </div>
-                        <div className="bg-white rounded-lg p-6 shadow-md border-2 border-yellow-400">
+                        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 shadow-xl border-4 border-red-500">
                           <div className="flex items-center justify-between">
                             {/* Fighter 1 */}
-                            <div className="flex items-center gap-4 flex-1">
+                            <div className="flex flex-col items-center gap-3 flex-1">
                               {mainFight.fighter1Image ? (
                                 <img 
                                   src={mainFight.fighter1Image}
                                   alt={mainFight.fighter1}
-                                  className="w-16 h-16 rounded-full object-cover border-4 border-red-500"
+                                  className="w-32 h-32 rounded-full object-cover border-6 border-red-600 shadow-2xl"
                                   onError={(e) => {
-                                    e.target.src = `https://via.placeholder.com/64/ef4444/ffffff?text=${mainFight.fighter1?.[0] || '?'}`;
+                                    e.target.src = `https://via.placeholder.com/128/ef4444/ffffff?text=${mainFight.fighter1?.[0] || '?'}`;
                                   }}
                                 />
                               ) : (
-                                <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-xl border-4 border-red-600">
+                                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-5xl border-6 border-red-600 shadow-2xl">
                                   {mainFight.fighter1?.[0] || '?'}
                                 </div>
                               )}
-                              <div>
-                                <p className="font-bold text-lg text-gray-900">{mainFight.fighter1}</p>
-                                <p className="text-sm text-gray-600">Red Corner</p>
+                              <div className="text-center">
+                                <p className="font-black text-2xl text-gray-900 uppercase">{mainFight.fighter1}</p>
+                                <p className="text-sm text-red-600 font-bold mt-1">RED CORNER</p>
                               </div>
                             </div>
 
                             {/* VS */}
-                            <div className="px-6">
-                              <div className="text-3xl font-bold text-red-600">VS</div>
+                            <div className="px-8">
+                              <div className="bg-gradient-to-br from-red-600 to-red-800 text-white font-black text-5xl px-6 py-4 rounded-xl shadow-xl transform rotate-3">
+                                VS
+                              </div>
                             </div>
 
                             {/* Fighter 2 */}
-                            <div className="flex items-center gap-4 flex-1 justify-end text-right">
-                              <div>
-                                <p className="font-bold text-lg text-gray-900">{mainFight.fighter2}</p>
-                                <p className="text-sm text-gray-600">Blue Corner</p>
-                              </div>
+                            <div className="flex flex-col items-center gap-3 flex-1">
                               {mainFight.fighter2Image ? (
                                 <img 
                                   src={mainFight.fighter2Image}
                                   alt={mainFight.fighter2}
-                                  className="w-16 h-16 rounded-full object-cover border-4 border-blue-500"
+                                  className="w-32 h-32 rounded-full object-cover border-6 border-blue-600 shadow-2xl"
                                   onError={(e) => {
-                                    e.target.src = `https://via.placeholder.com/64/3b82f6/ffffff?text=${mainFight.fighter2?.[0] || '?'}`;
+                                    e.target.src = `https://via.placeholder.com/128/3b82f6/ffffff?text=${mainFight.fighter2?.[0] || '?'}`;
                                   }}
                                 />
                               ) : (
-                                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xl border-4 border-blue-600">
+                                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-5xl border-6 border-blue-600 shadow-2xl">
                                   {mainFight.fighter2?.[0] || '?'}
                                 </div>
                               )}
+                              <div className="text-center">
+                                <p className="font-black text-2xl text-gray-900 uppercase">{mainFight.fighter2}</p>
+                                <p className="text-sm text-blue-600 font-bold mt-1">BLUE CORNER</p>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Other Fights */}
+                    {/* Other Fights - Grid Layout */}
                     {fights.length > 1 && (
-                      <div>
-                        <div className="flex items-center gap-2 mb-3">
-                          <Users className="w-5 h-5 text-gray-600" />
-                          <h4 className="font-semibold text-gray-700">Full Fight Card ({fights.length} fights)</h4>
+                      <div className="mt-8">
+                        <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white py-3 px-6 rounded-lg mb-4 inline-flex items-center gap-2">
+                          <Users className="w-6 h-6" />
+                          <h4 className="text-xl font-bold uppercase">Full Fight Card</h4>
+                          <span className="ml-2 bg-white/20 px-3 py-1 rounded-full text-sm">{fights.length} Fights</span>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {fights.slice(1).map((fight, idx) => (
-                            <div key={idx} className="bg-white rounded-lg p-4 border border-gray-200 hover:border-red-400 transition-colors">
-                              <div className="text-xs font-semibold text-red-600 mb-2">{fight.cardLabel}</div>
-                              <div className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-2">
+                            <div key={idx} className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-5 border-2 border-gray-300 hover:border-red-500 hover:shadow-xl transition-all">
+                              <div className="text-xs font-bold text-red-600 mb-3 uppercase tracking-wider">{fight.cardLabel}</div>
+                              <div className="flex items-center justify-center gap-3">
+                                {/* Fighter 1 */}
+                                <div className="flex flex-col items-center flex-1">
                                   {fight.fighter1Image ? (
                                     <img 
                                       src={fight.fighter1Image}
                                       alt={fight.fighter1}
-                                      className="w-8 h-8 rounded-full object-cover"
+                                      className="w-16 h-16 rounded-full object-cover border-3 border-red-500 mb-2 shadow-lg"
                                       onError={(e) => {
-                                        e.target.src = `https://via.placeholder.com/32/999999/ffffff?text=${fight.fighter1?.[0] || '?'}`;
+                                        e.target.src = `https://via.placeholder.com/64/ef4444/ffffff?text=${fight.fighter1?.[0] || '?'}`;
                                       }}
                                     />
                                   ) : (
-                                    <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs">
+                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white text-xl font-bold border-3 border-red-600 mb-2 shadow-lg">
                                       {fight.fighter1?.[0] || '?'}
                                     </div>
                                   )}
-                                  <span className="font-medium text-gray-900 truncate">{fight.fighter1}</span>
+                                  <span className="font-bold text-sm text-gray-900 text-center leading-tight">{fight.fighter1}</span>
                                 </div>
-                                <span className="font-bold text-red-600 px-2">VS</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-gray-900 truncate">{fight.fighter2}</span>
+                                
+                                {/* VS */}
+                                <div className="font-black text-red-600 text-xl">VS</div>
+                                
+                                {/* Fighter 2 */}
+                                <div className="flex flex-col items-center flex-1">
                                   {fight.fighter2Image ? (
                                     <img 
                                       src={fight.fighter2Image}
                                       alt={fight.fighter2}
-                                      className="w-8 h-8 rounded-full object-cover"
+                                      className="w-16 h-16 rounded-full object-cover border-3 border-blue-500 mb-2 shadow-lg"
                                       onError={(e) => {
-                                        e.target.src = `https://via.placeholder.com/32/999999/ffffff?text=${fight.fighter2?.[0] || '?'}`;
+                                        e.target.src = `https://via.placeholder.com/64/3b82f6/ffffff?text=${fight.fighter2?.[0] || '?'}`;
                                       }}
                                     />
                                   ) : (
-                                    <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs">
+                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xl font-bold border-3 border-blue-600 mb-2 shadow-lg">
                                       {fight.fighter2?.[0] || '?'}
                                     </div>
                                   )}
+                                  <span className="font-bold text-sm text-gray-900 text-center leading-tight">{fight.fighter2}</span>
                                 </div>
                               </div>
                             </div>
@@ -344,15 +367,18 @@ const Events = () => {
             })}
           </div>
 
-          {/* Divider */}
-          <div className="my-12 relative">
+          </div>
+          </div>
+
+          {/* Big Visual Divider */}
+          <div className="my-16 relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t-2 border-gray-300"></div>
+              <div className="w-full border-t-4 border-gray-400"></div>
             </div>
             <div className="relative flex justify-center">
-              <span className="bg-white px-6 py-2 text-sm font-semibold text-gray-600 rounded-full border-2 border-gray-300">
-                Past Events
-              </span>
+              <div className="bg-white px-8 py-4 rounded-full border-4 border-gray-400 shadow-xl">
+                <span className="text-xl font-black text-gray-700 uppercase tracking-wider">Past Events</span>
+              </div>
             </div>
           </div>
         </div>
