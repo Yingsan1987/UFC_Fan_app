@@ -125,7 +125,16 @@ export default function Prediction() {
     const prediction = getPrediction(eventIndex, fightIndex);
     
     return (
-      <div className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-red-400 transition-all">
+      <div className="bg-white rounded-lg p-5 border-2 border-gray-200 hover:border-red-400 transition-all shadow-md hover:shadow-xl">
+        {/* Weight Class Badge */}
+        {fight.weightClass && (
+          <div className="text-center mb-3">
+            <div className="inline-block bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 py-1 rounded-full text-xs font-bold uppercase">
+              {fight.weightClass}
+            </div>
+          </div>
+        )}
+        
         <div className="flex items-center justify-between gap-4">
           {/* Red Corner Fighter */}
           <FighterCard 
@@ -236,17 +245,18 @@ export default function Prediction() {
                   {/* Main Card Section */}
                   {mainCard.length > 0 && (
                     <div className="mb-8">
-                      <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-red-600">
-                        <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                          <span className="text-red-600">MAIN CARD</span>
-                        </h3>
-                        <span className="text-sm text-gray-600 font-semibold">
+                      <div className="bg-gradient-to-r from-red-600 to-red-800 text-white py-3 px-6 rounded-lg mb-6 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Trophy className="w-6 h-6 text-yellow-400" />
+                          <h3 className="text-2xl font-black uppercase">Main Card</h3>
+                        </div>
+                        <span className="bg-white/20 px-4 py-1 rounded-full text-sm font-bold">
                           {mainCard.filter((_, idx) => getPrediction(eventIndex, idx)).length}/{mainCard.length} Predicted
                         </span>
                       </div>
                       
-                      {/* Grid Layout - 2 fights per row */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Grid Layout - 3 fights per row for desktop, UFC poster style */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {mainCard.map((fight, fightIndex) => (
                           <FightCard 
                             key={fightIndex}
@@ -262,17 +272,18 @@ export default function Prediction() {
                   {/* Prelims Section */}
                   {prelims.length > 0 && (
                     <div>
-                      <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-blue-600">
-                        <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                          <span className="text-blue-600">PRELIMS</span>
-                        </h3>
-                        <span className="text-sm text-gray-600 font-semibold">
+                      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-3 px-6 rounded-lg mb-6 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Users className="w-6 h-6" />
+                          <h3 className="text-2xl font-black uppercase">Prelims</h3>
+                        </div>
+                        <span className="bg-white/20 px-4 py-1 rounded-full text-sm font-bold">
                           {prelims.filter((_, idx) => getPrediction(eventIndex, idx + mainCard.length)).length}/{prelims.length} Predicted
                         </span>
                       </div>
                       
-                      {/* Grid Layout - 2 fights per row */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Grid Layout - 3 fights per row for desktop, UFC poster style */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {prelims.map((fight, fightIndex) => (
                           <FightCard 
                             key={fightIndex + mainCard.length}
