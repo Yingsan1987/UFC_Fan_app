@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X } from 'lucide-react';
+import { Search, X, Calendar, MapPin, Users, Trophy } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
@@ -9,25 +9,50 @@ const Events = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [fighterImages, setFighterImages] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/events`);
         
-        // Sort events by date (latest first) - parse the DATE string and sort
-        const sortedEvents = response.data.sort((a, b) => {
+        // Fetch past events
+        const eventsResponse = await axios.get(`${API_URL}/events`);
+        const sortedEvents = eventsResponse.data.sort((a, b) => {
           const dateA = new Date(a.DATE);
           const dateB = new Date(b.DATE);
-          return dateB - dateA; // Latest first
+          return dateB - dateA;
         });
-        
         setEvents(sortedEvents);
         setFilteredEvents(sortedEvents);
+        
+        // Fetch upcoming events with fight cards
+        try {
+          const upcomingResponse = await axios.get(`${API_URL}/fancoins/events/upcoming`);
+          setUpcomingEvents(upcomingResponse.data);
+        } catch (err) {
+          console.log('No upcoming events found:', err);
+        }
+        
+        // Fetch fighter images
+        try {
+          const imagesResponse = await axios.get(`${API_URL}/fighters/images`);
+          // Create a map of fighter name -> image URL
+          const imageMap = {};
+          imagesResponse.data.forEach(fighter => {
+            if (fighter.name && fighter.image_url) {
+              imageMap[fighter.name.toLowerCase()] = fighter.image_url;
+            }
+          });
+          setFighterImages(imageMap);
+        } catch (err) {
+          console.log('Could not load fighter images:', err);
+        }
+        
         setError(null);
       } catch (err) {
         setError('Failed to load events');
@@ -37,7 +62,7 @@ const Events = () => {
       }
     };
 
-    fetchEvents();
+    fetchData();
   }, []);
 
   // Filter events based on search term
@@ -68,8 +93,39 @@ const Events = () => {
         day: 'numeric'
       });
     } catch {
-      return dateString; // Return original string if parsing fails
+      return dateString;
     }
+  };
+
+  // Get fighter image URL by name
+  const getFighterImage = (fighterName) => {
+    if (!fighterName) return null;
+    const imagePath = fighterImages[fighterName.toLowerCase()];
+    return imagePath || null;
+  };
+
+  // Get all fights from an event
+  const getAllFights = (event) => {
+    const fights = [];
+    if (!event.fightCard) return fights;
+    
+    const cardTypes = ['mainEvent', 'coMainEvent', 'mainCard', 'preliminaryCard', 'earlyPreliminaryCard'];
+    cardTypes.forEach(cardType => {
+      if (event.fightCard[cardType] && event.fightCard[cardType].length > 0) {
+        event.fightCard[cardType].forEach(fight => {
+          fights.push({
+            ...fight,
+            cardType: cardType,
+            cardLabel: cardType === 'mainEvent' ? 'Main Event' :
+                      cardType === 'coMainEvent' ? 'Co-Main Event' :
+                      cardType === 'mainCard' ? 'Main Card' :
+                      cardType === 'preliminaryCard' ? 'Preliminary Card' :
+                      'Early Prelims'
+          });
+        });
+      }
+    });
+    return fights;
   };
 
   if (loading) {
@@ -92,7 +148,7 @@ const Events = () => {
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">UFC Events</h1>
-        <p className="text-gray-600 mb-6">Latest UFC events and fight cards</p>
+        <p className="text-gray-600 mb-6">Upcoming fights and latest UFC events</p>
         
         {/* Search Bar */}
         <div className="relative max-w-md">
@@ -132,6 +188,186 @@ const Events = () => {
           </div>
         )}
       </div>
+
+      {/* Upcoming Events Section */}
+      {upcomingEvents.length > 0 && (
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Trophy className="w-8 h-8 text-red-600" />
+              <h2 className="text-2xl font-bold text-gray-900">Upcoming Fights</h2>
+            </div>
+            <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">
+              {upcomingEvents.length} Event{upcomingEvents.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          <div className="space-y-6">
+            {upcomingEvents.map((event) => {
+              const fights = getAllFights(event);
+              const mainFight = fights.find(f => f.cardType === 'mainEvent') || fights[0];
+              
+              return (
+                <div key={event._id} className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg shadow-lg border-2 border-red-300 overflow-hidden">
+                  {/* Event Header */}
+                  <div className="bg-gradient-to-r from-red-600 to-red-800 p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-bold mb-2">{event.eventName}</h3>
+                        <div className="flex items-center gap-4 text-red-100">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            <span className="text-sm">{formatDate(event.eventDate)}</span>
+                          </div>
+                          {event.location && (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-4 h-4" />
+                              <span className="text-sm">{event.location}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="bg-yellow-400 text-red-900 px-4 py-2 rounded-full font-bold text-sm">
+                        UPCOMING
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fight Card */}
+                  <div className="p-6">
+                    {mainFight && (
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Trophy className="w-5 h-5 text-yellow-600" />
+                          <h4 className="text-lg font-bold text-gray-900">{mainFight.cardLabel}</h4>
+                        </div>
+                        <div className="bg-white rounded-lg p-6 shadow-md border-2 border-yellow-400">
+                          <div className="flex items-center justify-between">
+                            {/* Fighter 1 */}
+                            <div className="flex items-center gap-4 flex-1">
+                              {getFighterImage(mainFight.fighter1) ? (
+                                <img 
+                                  src={getFighterImage(mainFight.fighter1)}
+                                  alt={mainFight.fighter1}
+                                  className="w-16 h-16 rounded-full object-cover border-4 border-red-500"
+                                  onError={(e) => {
+                                    e.target.src = `https://via.placeholder.com/64/ef4444/ffffff?text=${mainFight.fighter1?.[0] || '?'}`;
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-xl border-4 border-red-600">
+                                  {mainFight.fighter1?.[0] || '?'}
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-bold text-lg text-gray-900">{mainFight.fighter1}</p>
+                                <p className="text-sm text-gray-600">Fighter</p>
+                              </div>
+                            </div>
+
+                            {/* VS */}
+                            <div className="px-6">
+                              <div className="text-3xl font-bold text-red-600">VS</div>
+                            </div>
+
+                            {/* Fighter 2 */}
+                            <div className="flex items-center gap-4 flex-1 justify-end text-right">
+                              <div>
+                                <p className="font-bold text-lg text-gray-900">{mainFight.fighter2}</p>
+                                <p className="text-sm text-gray-600">Fighter</p>
+                              </div>
+                              {getFighterImage(mainFight.fighter2) ? (
+                                <img 
+                                  src={getFighterImage(mainFight.fighter2)}
+                                  alt={mainFight.fighter2}
+                                  className="w-16 h-16 rounded-full object-cover border-4 border-blue-500"
+                                  onError={(e) => {
+                                    e.target.src = `https://via.placeholder.com/64/3b82f6/ffffff?text=${mainFight.fighter2?.[0] || '?'}`;
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xl border-4 border-blue-600">
+                                  {mainFight.fighter2?.[0] || '?'}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Other Fights */}
+                    {fights.length > 1 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Users className="w-5 h-5 text-gray-600" />
+                          <h4 className="font-semibold text-gray-700">Full Fight Card ({fights.length} fights)</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {fights.slice(1).map((fight, idx) => (
+                            <div key={idx} className="bg-white rounded-lg p-4 border border-gray-200 hover:border-red-400 transition-colors">
+                              <div className="text-xs font-semibold text-red-600 mb-2">{fight.cardLabel}</div>
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                  {getFighterImage(fight.fighter1) ? (
+                                    <img 
+                                      src={getFighterImage(fight.fighter1)}
+                                      alt={fight.fighter1}
+                                      className="w-8 h-8 rounded-full object-cover"
+                                      onError={(e) => {
+                                        e.target.src = `https://via.placeholder.com/32/999999/ffffff?text=${fight.fighter1?.[0] || '?'}`;
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs">
+                                      {fight.fighter1?.[0] || '?'}
+                                    </div>
+                                  )}
+                                  <span className="font-medium text-gray-900 truncate">{fight.fighter1}</span>
+                                </div>
+                                <span className="font-bold text-red-600 px-2">VS</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-900 truncate">{fight.fighter2}</span>
+                                  {getFighterImage(fight.fighter2) ? (
+                                    <img 
+                                      src={getFighterImage(fight.fighter2)}
+                                      alt={fight.fighter2}
+                                      className="w-8 h-8 rounded-full object-cover"
+                                      onError={(e) => {
+                                        e.target.src = `https://via.placeholder.com/32/999999/ffffff?text=${fight.fighter2?.[0] || '?'}`;
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs">
+                                      {fight.fighter2?.[0] || '?'}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Divider */}
+          <div className="my-12 relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t-2 border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-white px-6 py-2 text-sm font-semibold text-gray-600 rounded-full border-2 border-gray-300">
+                Past Events
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {filteredEvents.length === 0 ? (
         <div className="text-center py-12">

@@ -1287,4 +1287,17 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Get all fighter images (for Events page)
+router.get('/images', async (req, res) => {
+  try {
+    console.log('🖼️ Fetching all fighter images...');
+    const images = await FighterImages.find().select('name image_url');
+    console.log(`✅ Found ${images.length} fighter images`);
+    res.json(images);
+  } catch (error) {
+    console.error('❌ Error fetching fighter images:', error);
+    res.status(500).json({ error: 'Failed to fetch fighter images', message: error.message });
+  }
+});
+
 module.exports = router;
