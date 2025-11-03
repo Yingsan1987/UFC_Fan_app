@@ -49,7 +49,8 @@ router.get('/', async (req, res) => {
         fighter1Image: imageMap[redFighterName.toLowerCase()] || null,
         fighter2Image: imageMap[blueFighterName.toLowerCase()] || null,
         redProfileLink: fight.red_fighter?.profile_link,
-        blueProfileLink: fight.blue_fighter?.profile_link
+        blueProfileLink: fight.blue_fighter?.profile_link,
+        weightClass: fight.weight_class || null
       });
     });
     

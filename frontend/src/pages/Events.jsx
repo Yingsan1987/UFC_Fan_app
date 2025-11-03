@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, Calendar, MapPin, Users, Trophy } from 'lucide-react';
+import { Search, X, Calendar, MapPin, Users, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
@@ -14,6 +14,7 @@ const Events = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [expandedEvents, setExpandedEvents] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -36,6 +37,11 @@ const Events = () => {
           const upcomingResponse = await axios.get(`${API_URL}/upcoming-events`);
           console.log('📅 Upcoming events loaded:', upcomingResponse.data);
           setUpcomingEvents(upcomingResponse.data);
+          
+          // Expand first event by default
+          if (upcomingResponse.data.length > 0) {
+            setExpandedEvents({ 0: true });
+          }
           
           // Extract fighter images from the response
           const imageMap = {};
@@ -82,6 +88,13 @@ const Events = () => {
 
   const clearSearch = () => {
     setSearchTerm('');
+  };
+
+  const toggleEvent = (index) => {
+    setExpandedEvents(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
   };
 
   const formatDate = (dateString) => {
@@ -204,46 +217,73 @@ const Events = () => {
             {upcomingEvents.map((event, eventIdx) => {
               const fights = getAllFights(event);
               const mainFight = fights[0]; // First fight is main event
+              const isExpanded = expandedEvents[eventIdx];
               
               return (
-                <div key={eventIdx} className="bg-white rounded-2xl shadow-2xl border-4 border-yellow-400 overflow-hidden transform hover:scale-[1.02] transition-transform">
-                  {/* Event Header - UFC Style */}
-                  <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 p-8 text-black relative">
+                <div key={eventIdx} className="bg-white rounded-2xl shadow-2xl border-4 border-yellow-400 overflow-hidden">
+                  {/* Collapsible Event Header - UFC Style */}
+                  <button
+                    onClick={() => toggleEvent(eventIdx)}
+                    className="w-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 p-8 text-black relative hover:from-yellow-500 hover:via-yellow-600 hover:to-orange-600 transition-all"
+                  >
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
                     
-                    <div className="relative">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="bg-black text-white px-4 py-2 rounded-lg font-bold text-sm">
-                          UFC
+                    <div className="relative flex items-center justify-between">
+                      <div className="text-left flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="bg-black text-white px-4 py-2 rounded-lg font-bold text-sm">
+                            UFC
+                          </div>
+                          <div className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                            FIGHT NIGHT
+                          </div>
                         </div>
-                        <div className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm">
-                          FIGHT NIGHT
+                        <h3 className="text-3xl font-black mb-3 text-gray-900 drop-shadow-lg">{event.eventName}</h3>
+                        <div className="flex items-center gap-6 text-gray-900 font-semibold">
+                          <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-lg">
+                            <Calendar className="w-5 h-5" />
+                            <span className="text-lg">{event.eventDate || 'TBD'}</span>
+                          </div>
+                          {event.location && (
+                            <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-lg">
+                              <MapPin className="w-5 h-5" />
+                              <span className="text-lg">{event.location}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-lg">
+                            <Users className="w-5 h-5" />
+                            <span className="text-lg">{fights.length} Fights</span>
+                          </div>
                         </div>
                       </div>
-                      <h3 className="text-3xl font-black mb-3 text-gray-900 drop-shadow-lg">{event.eventName}</h3>
-                      <div className="flex items-center gap-6 text-gray-900 font-semibold">
-                        <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-lg">
-                          <Calendar className="w-5 h-5" />
-                          <span className="text-lg">{event.eventDate || 'TBD'}</span>
-                        </div>
-                        {event.location && (
-                          <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-lg">
-                            <MapPin className="w-5 h-5" />
-                            <span className="text-lg">{event.location}</span>
-                          </div>
+                      
+                      {/* Expand/Collapse Icon */}
+                      <div className="ml-4">
+                        {isExpanded ? (
+                          <ChevronUp className="w-12 h-12 text-gray-900" />
+                        ) : (
+                          <ChevronDown className="w-12 h-12 text-gray-900" />
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
 
-                  {/* Fight Card */}
-                  <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100">
+                  {/* Collapsible Fight Card */}
+                  {isExpanded && (
+                  <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100 border-t-4 border-yellow-600">
                     {mainFight && (
                       <div className="mb-8">
-                        <div className="bg-gradient-to-r from-red-600 to-red-800 text-white py-3 px-6 rounded-lg mb-4 inline-flex items-center gap-2">
-                          <Trophy className="w-6 h-6 text-yellow-400" />
-                          <h4 className="text-xl font-bold uppercase">{mainFight.cardLabel}</h4>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="bg-gradient-to-r from-red-600 to-red-800 text-white py-3 px-6 rounded-lg inline-flex items-center gap-2">
+                            <Trophy className="w-6 h-6 text-yellow-400" />
+                            <h4 className="text-xl font-bold uppercase">{mainFight.cardLabel}</h4>
+                          </div>
+                          {mainFight.weightClass && (
+                            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-3 px-6 rounded-lg font-bold text-lg uppercase">
+                              {mainFight.weightClass}
+                            </div>
+                          )}
                         </div>
                         <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 shadow-xl border-4 border-red-500">
                           <div className="flex items-center justify-between">
@@ -313,7 +353,14 @@ const Events = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {fights.slice(1).map((fight, idx) => (
                             <div key={idx} className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-5 border-2 border-gray-300 hover:border-red-500 hover:shadow-xl transition-all">
-                              <div className="text-xs font-bold text-red-600 mb-3 uppercase tracking-wider">{fight.cardLabel}</div>
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="text-xs font-bold text-red-600 uppercase tracking-wider">{fight.cardLabel}</div>
+                                {fight.weightClass && (
+                                  <div className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase">
+                                    {fight.weightClass}
+                                  </div>
+                                )}
+                              </div>
                               <div className="flex items-center justify-center gap-3">
                                 {/* Fighter 1 */}
                                 <div className="flex flex-col items-center flex-1">
@@ -362,6 +409,7 @@ const Events = () => {
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               );
             })}
