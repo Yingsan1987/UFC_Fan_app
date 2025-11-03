@@ -30,27 +30,28 @@ const Events = () => {
         setEvents(sortedEvents);
         setFilteredEvents(sortedEvents);
         
-        // Fetch upcoming events with fight cards
+        // Fetch upcoming events from ufc_upcoming_events collection
+        // This endpoint already combines with fighter images
         try {
-          const upcomingResponse = await axios.get(`${API_URL}/fancoins/events/upcoming`);
+          const upcomingResponse = await axios.get(`${API_URL}/upcoming-events`);
+          console.log('📅 Upcoming events loaded:', upcomingResponse.data);
           setUpcomingEvents(upcomingResponse.data);
-        } catch (err) {
-          console.log('No upcoming events found:', err);
-        }
-        
-        // Fetch fighter images
-        try {
-          const imagesResponse = await axios.get(`${API_URL}/fighters/images`);
-          // Create a map of fighter name -> image URL
+          
+          // Extract fighter images from the response
           const imageMap = {};
-          imagesResponse.data.forEach(fighter => {
-            if (fighter.name && fighter.image_url) {
-              imageMap[fighter.name.toLowerCase()] = fighter.image_url;
-            }
+          upcomingResponse.data.forEach(event => {
+            event.fights?.forEach(fight => {
+              if (fight.fighter1 && fight.fighter1Image) {
+                imageMap[fight.fighter1.toLowerCase()] = fight.fighter1Image;
+              }
+              if (fight.fighter2 && fight.fighter2Image) {
+                imageMap[fight.fighter2.toLowerCase()] = fight.fighter2Image;
+              }
+            });
           });
           setFighterImages(imageMap);
         } catch (err) {
-          console.log('Could not load fighter images:', err);
+          console.log('No upcoming events found:', err);
         }
         
         setError(null);
@@ -104,28 +105,16 @@ const Events = () => {
     return imagePath || null;
   };
 
-  // Get all fights from an event
+  // Get all fights from an event (from ufc_upcoming_events structure)
   const getAllFights = (event) => {
-    const fights = [];
-    if (!event.fightCard) return fights;
+    if (!event.fights || !Array.isArray(event.fights)) return [];
     
-    const cardTypes = ['mainEvent', 'coMainEvent', 'mainCard', 'preliminaryCard', 'earlyPreliminaryCard'];
-    cardTypes.forEach(cardType => {
-      if (event.fightCard[cardType] && event.fightCard[cardType].length > 0) {
-        event.fightCard[cardType].forEach(fight => {
-          fights.push({
-            ...fight,
-            cardType: cardType,
-            cardLabel: cardType === 'mainEvent' ? 'Main Event' :
-                      cardType === 'coMainEvent' ? 'Co-Main Event' :
-                      cardType === 'mainCard' ? 'Main Card' :
-                      cardType === 'preliminaryCard' ? 'Preliminary Card' :
-                      'Early Prelims'
-          });
-        });
-      }
-    });
-    return fights;
+    // Add card labels - first fight is main event, rest are supporting
+    return event.fights.map((fight, index) => ({
+      ...fight,
+      cardType: index === 0 ? 'mainEvent' : index === 1 ? 'coMainEvent' : 'mainCard',
+      cardLabel: index === 0 ? 'Main Event' : index === 1 ? 'Co-Main Event' : 'Main Card'
+    }));
   };
 
   if (loading) {
@@ -203,12 +192,12 @@ const Events = () => {
           </div>
 
           <div className="space-y-6">
-            {upcomingEvents.map((event) => {
+            {upcomingEvents.map((event, eventIdx) => {
               const fights = getAllFights(event);
-              const mainFight = fights.find(f => f.cardType === 'mainEvent') || fights[0];
+              const mainFight = fights[0]; // First fight is main event
               
               return (
-                <div key={event._id} className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg shadow-lg border-2 border-red-300 overflow-hidden">
+                <div key={eventIdx} className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg shadow-lg border-2 border-red-300 overflow-hidden">
                   {/* Event Header */}
                   <div className="bg-gradient-to-r from-red-600 to-red-800 p-6 text-white">
                     <div className="flex items-center justify-between">
@@ -217,7 +206,7 @@ const Events = () => {
                         <div className="flex items-center gap-4 text-red-100">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4" />
-                            <span className="text-sm">{formatDate(event.eventDate)}</span>
+                            <span className="text-sm">{event.eventDate || 'TBD'}</span>
                           </div>
                           {event.location && (
                             <div className="flex items-center gap-2">
@@ -245,9 +234,9 @@ const Events = () => {
                           <div className="flex items-center justify-between">
                             {/* Fighter 1 */}
                             <div className="flex items-center gap-4 flex-1">
-                              {getFighterImage(mainFight.fighter1) ? (
+                              {mainFight.fighter1Image ? (
                                 <img 
-                                  src={getFighterImage(mainFight.fighter1)}
+                                  src={mainFight.fighter1Image}
                                   alt={mainFight.fighter1}
                                   className="w-16 h-16 rounded-full object-cover border-4 border-red-500"
                                   onError={(e) => {
@@ -261,7 +250,7 @@ const Events = () => {
                               )}
                               <div>
                                 <p className="font-bold text-lg text-gray-900">{mainFight.fighter1}</p>
-                                <p className="text-sm text-gray-600">Fighter</p>
+                                <p className="text-sm text-gray-600">Red Corner</p>
                               </div>
                             </div>
 
@@ -274,11 +263,11 @@ const Events = () => {
                             <div className="flex items-center gap-4 flex-1 justify-end text-right">
                               <div>
                                 <p className="font-bold text-lg text-gray-900">{mainFight.fighter2}</p>
-                                <p className="text-sm text-gray-600">Fighter</p>
+                                <p className="text-sm text-gray-600">Blue Corner</p>
                               </div>
-                              {getFighterImage(mainFight.fighter2) ? (
+                              {mainFight.fighter2Image ? (
                                 <img 
-                                  src={getFighterImage(mainFight.fighter2)}
+                                  src={mainFight.fighter2Image}
                                   alt={mainFight.fighter2}
                                   className="w-16 h-16 rounded-full object-cover border-4 border-blue-500"
                                   onError={(e) => {
@@ -309,9 +298,9 @@ const Events = () => {
                               <div className="text-xs font-semibold text-red-600 mb-2">{fight.cardLabel}</div>
                               <div className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-2">
-                                  {getFighterImage(fight.fighter1) ? (
+                                  {fight.fighter1Image ? (
                                     <img 
-                                      src={getFighterImage(fight.fighter1)}
+                                      src={fight.fighter1Image}
                                       alt={fight.fighter1}
                                       className="w-8 h-8 rounded-full object-cover"
                                       onError={(e) => {
@@ -328,9 +317,9 @@ const Events = () => {
                                 <span className="font-bold text-red-600 px-2">VS</span>
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium text-gray-900 truncate">{fight.fighter2}</span>
-                                  {getFighterImage(fight.fighter2) ? (
+                                  {fight.fighter2Image ? (
                                     <img 
-                                      src={getFighterImage(fight.fighter2)}
+                                      src={fight.fighter2Image}
                                       alt={fight.fighter2}
                                       className="w-8 h-8 rounded-full object-cover"
                                       onError={(e) => {
