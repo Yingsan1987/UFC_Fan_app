@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Trophy, Calendar, MapPin, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trophy, Calendar, MapPin, Check, Users } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";

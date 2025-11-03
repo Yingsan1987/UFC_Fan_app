@@ -414,8 +414,6 @@ const Events = () => {
               );
             })}
           </div>
-
-          </div>
           </div>
 
           {/* Big Visual Divider */}
