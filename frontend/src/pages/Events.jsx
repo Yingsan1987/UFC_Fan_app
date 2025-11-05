@@ -212,9 +212,8 @@ const Events = () => {
           
           {/* Events Container with Dark Background */}
           <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-b-2xl p-8 shadow-2xl">
-
-          <div className="space-y-8">
-            {upcomingEvents.map((event, eventIdx) => {
+            <div className="space-y-8">
+              {upcomingEvents.map((event, eventIdx) => {
               const fights = getAllFights(event);
               const mainFight = fights[0]; // First fight is main event
               const isExpanded = expandedEvents[eventIdx];
@@ -412,8 +411,8 @@ const Events = () => {
                   )}
                 </div>
               );
-            })}
-          </div>
+              })}
+            </div>
           </div>
         </div>
       )}
