@@ -16,6 +16,7 @@ import LiveChat from './pages/LiveChat';
 import Ranking from './pages/Ranking';
 import Prediction from './pages/Prediction';
 import Game from './pages/Game';
+import Profile from './pages/Profile';
 import AuthModal from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
 
@@ -70,6 +71,8 @@ function App() {
       setActiveTab('Live Chat');
     } else if (path === '/support') {
       setActiveTab('Support');
+    } else if (path === '/profile') {
+      setActiveTab('Profile');
     }
   }, [location.pathname]);
 
@@ -251,6 +254,17 @@ function App() {
                       </p>
                     </div>
                     <button
+                      onClick={() => {
+                        navigate('/profile');
+                        setShowUserMenu(false);
+                        setActiveTab('Profile');
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <User size={16} />
+                      My Profile
+                    </button>
+                    <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
@@ -294,6 +308,7 @@ function App() {
               />
             } />
             <Route path="/support" element={<Support />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="*" element={
               <div className="text-center py-12">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Page Not Found</h2>

@@ -202,7 +202,7 @@ router.get('/leaderboard', async (req, res) => {
     const leaderboard = await GameProgress.find()
       .sort({ fanCoin: -1, prestige: -1 }) // Primary: Fan Coins, Secondary: Prestige
       .limit(limit)
-      .populate('userId', 'displayName photoURL email')
+      .populate('userId', 'displayName username photoURL profileImage firebaseUid')
       .select('userId firebaseUid fanCoin totalWins totalLosses prestige fighterLevel');
 
     // Add rank to each entry
@@ -215,7 +215,8 @@ router.get('/leaderboard', async (req, res) => {
       prestige: entry.prestige,
       fighterLevel: entry.fighterLevel,
       displayName: entry.userId?.displayName || 'Anonymous',
-      photoURL: entry.userId?.photoURL || null
+      username: entry.userId?.username || entry.userId?.displayName || 'Anonymous',
+      photoURL: entry.userId?.photoURL || entry.userId?.profileImage || null
     }));
 
     res.json(rankedLeaderboard);

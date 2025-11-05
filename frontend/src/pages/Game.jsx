@@ -844,7 +844,7 @@ function Game() {
                       className={`hover:bg-gray-50 transition-colors ${
                         player.rank <= 3 ? 'bg-gradient-to-r from-yellow-50/30' : ''
                       } ${
-                        currentUser && player.userId?.email === currentUser.email 
+                        currentUser && (player.userId?._id === currentUser.uid || player.userId?.firebaseUid === currentUser.uid)
                           ? 'bg-blue-50 border-l-4 border-blue-500' 
                           : ''
                       }`}
@@ -863,15 +863,15 @@ function Game() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           {player.photoURL ? (
-                            <img src={player.photoURL} alt={player.displayName} className="w-10 h-10 rounded-full" />
+                            <img src={player.photoURL} alt={player.username || player.displayName} className="w-10 h-10 rounded-full" />
                           ) : (
                             <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
-                              {player.displayName?.[0] || 'U'}
+                              {(player.username || player.displayName)?.[0] || 'U'}
                             </div>
                           )}
                           <div>
-                            <div className="font-semibold text-gray-900">{player.displayName || 'Anonymous'}</div>
-                            {currentUser && player.userId?.email === currentUser.email && (
+                            <div className="font-semibold text-gray-900">{player.username || player.displayName || 'Anonymous'}</div>
+                            {currentUser && (player.userId?._id === currentUser.uid || player.userId?.firebaseUid === currentUser.uid) && (
                               <div className="text-xs text-blue-600 font-medium">You</div>
                             )}
                           </div>

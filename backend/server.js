@@ -38,6 +38,7 @@ app.use('/api/stripe', require('./routes/stripe'));
 app.use('/api/forums', require('./routes/forums'));
 app.use('/api/game', require('./routes/game'));
 app.use('/api/fancoins', require('./routes/fancoins'));
+app.use('/api/users', require('./routes/users'));
 
 // Chat socket
 chatSocket(io);

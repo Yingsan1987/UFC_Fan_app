@@ -15,9 +15,24 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  username: {
+    type: String,
+    default: function() {
+      return this.displayName || this.email.split('@')[0];
+    }
+  },
   photoURL: {
     type: String,
     default: null
+  },
+  profileImage: {
+    type: String,
+    default: '/images/avatars/avatar1.png'
+  },
+  bio: {
+    type: String,
+    default: '',
+    maxlength: 200
   },
   createdAt: {
     type: Date,
