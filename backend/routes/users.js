@@ -1,7 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const admin = require('../config/firebase');
+const admin = require('firebase-admin');
+
+// Check if Firebase is already initialized by middleware
+let firebaseInitialized = false;
+if (admin.apps.length > 0) {
+  firebaseInitialized = true;
+  console.log('✅ Firebase Admin already initialized');
+} else {
+  try {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+      firebaseInitialized = true;
+      console.log('✅ Firebase Admin initialized in users route');
+    }
+  } catch (error) {
+    console.log('⚠️  Firebase Admin not initialized - user profile features may be limited');
+  }
+}
 
 // Middleware to verify Firebase token
 const verifyToken = async (req, res, next) => {
@@ -14,6 +34,10 @@ const verifyToken = async (req, res, next) => {
   const token = authHeader.split('Bearer ')[1];
 
   try {
+    if (!firebaseInitialized) {
+      return res.status(500).json({ error: 'Authentication not configured' });
+    }
+    
     const decodedToken = await admin.auth().verifyIdToken(token);
     req.user = decodedToken;
     next();
@@ -34,9 +58,16 @@ router.get('/profile', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Check subscription status from Firebase custom claims
-    const firebaseUser = await admin.auth().getUser(req.user.uid);
-    const isPremium = firebaseUser.customClaims?.stripeRole === 'premium' || false;
+    // Check subscription status from Firebase custom claims if available
+    let isPremium = false;
+    if (firebaseInitialized) {
+      try {
+        const firebaseUser = await admin.auth().getUser(req.user.uid);
+        isPremium = firebaseUser.customClaims?.stripeRole === 'premium' || false;
+      } catch (error) {
+        console.log('Could not fetch Firebase user claims:', error.message);
+      }
+    }
 
     res.json({
       ...user.toObject(),
