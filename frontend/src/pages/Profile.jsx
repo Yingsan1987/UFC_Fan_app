@@ -16,7 +16,7 @@ const DEFAULT_AVATARS = [
 ];
 
 export default function Profile() {
-  const { currentUser, getIdToken } = useAuth();
+  const { currentUser, getAuthToken } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -39,7 +39,7 @@ export default function Profile() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const token = await getIdToken();
+      const token = await getAuthToken();
       const response = await axios.get(`${API_URL}/users/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -65,7 +65,7 @@ export default function Profile() {
     setSaving(true);
 
     try {
-      const token = await getIdToken();
+      const token = await getAuthToken();
       const response = await axios.put(`${API_URL}/users/profile`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
