@@ -819,13 +819,80 @@ function Game() {
           )}
 
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <Trophy className="w-6 h-6 text-yellow-500" />
+            <div className="p-4 md:p-6 border-b border-gray-200">
+              <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+                <Trophy className="w-5 h-5 md:w-6 md:h-6 text-yellow-500" />
                 Top 30 Rankings
               </h2>
             </div>
-            <div className="overflow-x-auto">
+            
+            {/* Mobile Card View */}
+            <div className="block md:hidden">
+              {leaderboard.map((player) => (
+                <div 
+                  key={player.rank}
+                  className={`p-4 border-b border-gray-200 ${
+                    player.rank <= 3 ? 'bg-gradient-to-r from-yellow-50/30' : ''
+                  } ${
+                    currentUser && (player.userId?._id === currentUser.uid || player.userId?.firebaseUid === currentUser.uid)
+                      ? 'bg-blue-50 border-l-4 border-blue-500' 
+                      : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm flex-shrink-0 ${
+                      player.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-white' :
+                      player.rank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-white' :
+                      player.rank === 3 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
+                      player.rank <= 10 ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {player.rank}
+                    </span>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {player.photoURL ? (
+                        <img src={player.photoURL} alt={player.username || player.displayName} className="w-10 h-10 rounded-full flex-shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                          {(player.username || player.displayName)?.[0] || 'U'}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-gray-900 truncate">{player.username || player.displayName || 'Anonymous'}</div>
+                        {currentUser && (player.userId?._id === currentUser.uid || player.userId?.firebaseUid === currentUser.uid) && (
+                          <div className="text-xs text-blue-600 font-medium">You</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Coins className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                      <span className="font-bold text-yellow-600">{player.fanCoin}</span>
+                      <span className="text-gray-500 text-xs">Coins</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-green-600 font-bold">{player.totalWins}W</span>
+                      {' - '}
+                      <span className="text-red-600 font-bold">{player.totalLosses}L</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        player.fighterLevel === 'Champion' ? 'bg-yellow-100 text-yellow-800' :
+                        player.fighterLevel === 'Main Card' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {player.fighterLevel || 'Preliminary Card'}
+                      </span>
+                      <span className="ml-2 text-gray-600">Prestige: {player.prestige}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
@@ -905,11 +972,13 @@ function Game() {
                 </tbody>
               </table>
             </div>
+
+            {/* Empty State */}
             {leaderboard.length === 0 && (
               <div className="text-center py-12 text-gray-500">
-                <Trophy className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">No rankings yet</p>
-                <p className="text-sm">Be the first to earn Fan Coins!</p>
+                <Trophy className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-base md:text-lg font-medium">No rankings yet</p>
+                <p className="text-xs md:text-sm">Be the first to earn Fan Coins!</p>
               </div>
             )}
           </div>
