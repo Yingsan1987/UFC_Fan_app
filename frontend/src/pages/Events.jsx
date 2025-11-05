@@ -414,20 +414,21 @@ const Events = () => {
               );
             })}
           </div>
-
-          {/* Big Visual Divider */}
-          <div className="my-16 relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t-4 border-gray-400"></div>
-            </div>
-            <div className="relative flex justify-center">
-              <div className="bg-white px-8 py-4 rounded-full border-4 border-gray-400 shadow-xl">
-                <span className="text-xl font-black text-gray-700 uppercase tracking-wider">Past Events</span>
-              </div>
-            </div>
           </div>
         </div>
       )}
+
+      {/* Big Visual Divider */}
+      <div className="my-16 relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t-4 border-gray-400"></div>
+        </div>
+        <div className="relative flex justify-center">
+          <div className="bg-white px-8 py-4 rounded-full border-4 border-gray-400 shadow-xl">
+            <span className="text-xl font-black text-gray-700 uppercase tracking-wider">Past Events</span>
+          </div>
+        </div>
+      </div>
 
       {filteredEvents.length === 0 ? (
         <div className="text-center py-12">
