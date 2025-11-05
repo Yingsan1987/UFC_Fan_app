@@ -33,6 +33,9 @@ import championImage from '../assets/images/fighter_game/fighter_stage_4_Champio
 
 const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
 
+// Admin/Test Account with Unlimited Energy
+const ADMIN_TESTER_EMAIL = 'yingsan1987@gmail.com';
+
 function Game() {
   const { currentUser, getAuthToken } = useAuth();
   const [gameStatus, setGameStatus] = useState(null);
@@ -272,7 +275,8 @@ function Game() {
   };
 
   const handleMiniGameComplete = async (xpGained) => {
-    const isPremium = gameProgress?.isPremium || false;
+    const isAdminTester = currentUser?.email === ADMIN_TESTER_EMAIL;
+    const isPremium = gameProgress?.isPremium || isAdminTester;
     const hasEnergy = rookieFighter && rookieFighter.energy > 0;
     
     // Premium users can play without energy but won't gain XP
@@ -1019,9 +1023,9 @@ function Game() {
           <div className="flex items-center gap-3">
             <Zap className="w-8 h-8 text-orange-500" />
             <div>
-              <p className="text-sm text-gray-600">Energy</p>
+              <p className="text-sm text-gray-600">Energy {currentUser?.email === ADMIN_TESTER_EMAIL && <span className="text-xs text-purple-600 font-bold">(∞ Admin)</span>}</p>
               <p className="text-2xl font-bold" key={rookieFighter?.energy}>
-                {rookieFighter?.energy ?? 3}/3
+                {currentUser?.email === ADMIN_TESTER_EMAIL ? '3' : (rookieFighter?.energy ?? 3)}/3
               </p>
             </div>
           </div>
@@ -1413,7 +1417,20 @@ function Game() {
                   </div>
                 ) : (
                   <>
-                {rookieFighter && rookieFighter.energy <= 0 && (
+                {currentUser?.email === ADMIN_TESTER_EMAIL && (
+                  <div className="border-l-4 p-4 mb-6 mt-4 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-500">
+                    <div className="flex items-center gap-2">
+                      <Star className="w-5 h-5 text-purple-600" />
+                      <p className="text-purple-800 font-bold">
+                        🎮 Admin Tester Mode Active
+                      </p>
+                    </div>
+                    <p className="text-purple-700 text-sm mt-1">
+                      Unlimited energy for testing! Train as much as you want. Energy counter is for display only.
+                    </p>
+                  </div>
+                )}
+                {rookieFighter && rookieFighter.energy <= 0 && currentUser?.email !== ADMIN_TESTER_EMAIL && (
                   <div className={`border-l-4 p-4 mb-6 mt-4 ${
                     gameProgress?.isPremium 
                       ? 'bg-purple-50 border-purple-500' 
@@ -1457,10 +1474,11 @@ function Game() {
                           </p>
                       <button
                         onClick={() => handleTraining(option.type)}
-                        disabled={actionLoading || (rookieFighter && rookieFighter.energy <= 0 && !gameProgress?.isPremium)}
+                        disabled={actionLoading || (rookieFighter && rookieFighter.energy <= 0 && !gameProgress?.isPremium && currentUser?.email !== ADMIN_TESTER_EMAIL)}
                         className={`w-full py-2 rounded-md font-bold transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed ${option.color} text-white hover:opacity-90`}
                       >
-                        {actionLoading ? 'Training...' : 
+                        {actionLoading ? 'Training...' :
+                         currentUser?.email === ADMIN_TESTER_EMAIL ? 'Train (∞ Admin)' :
                          rookieFighter && rookieFighter.energy <= 0 && gameProgress?.isPremium ? 'Premium Play (No XP)' :
                          rookieFighter && rookieFighter.energy <= 0 ? 'No Energy' :
                          'Train (1 Energy)'}

@@ -8,9 +8,29 @@
  *   node scripts/remove-premium-user.js user@example.com
  */
 
-const admin = require('../config/firebase');
+const admin = require('firebase-admin');
 const mongoose = require('mongoose');
 require('dotenv').config();
+
+// Initialize Firebase Admin if not already initialized
+try {
+  if (!admin.apps.length) {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+      console.log('✅ Firebase Admin initialized');
+    } else {
+      console.error('❌ FIREBASE_SERVICE_ACCOUNT not found in environment variables');
+      console.log('   Please set up Firebase service account in .env file');
+      process.exit(1);
+    }
+  }
+} catch (error) {
+  console.error('❌ Error initializing Firebase:', error.message);
+  process.exit(1);
+}
 
 const removePremiumUser = async (email) => {
   try {
