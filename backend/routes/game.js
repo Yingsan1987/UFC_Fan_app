@@ -346,5 +346,180 @@ router.get('/leaderboard', async (req, res) => {
   }
 });
 
+// Get upcoming fights filtered by weight class
+router.get('/upcoming-fights/:weightClass', async (req, res) => {
+  try {
+    const { weightClass } = req.params;
+    console.log(`🎯 Fetching upcoming fights for weight class: ${weightClass}`);
+    
+    const UpcomingEvent = require('../models/UpcomingEvent');
+    const FighterImages = require('../models/FighterImages');
+    
+    // Fetch all upcoming events
+    const upcomingFights = await UpcomingEvent.find({
+      weight_class: weightClass
+    });
+    
+    console.log(`✅ Found ${upcomingFights.length} fights in ${weightClass}`);
+    
+    // Fetch fighter images
+    const fighterImages = await FighterImages.find();
+    const imageMap = {};
+    fighterImages.forEach(img => {
+      if (img.name && img.image_url) {
+        imageMap[img.name.toLowerCase()] = img.image_url;
+      }
+    });
+    
+    // Group fights by event and format
+    const eventMap = {};
+    upcomingFights.forEach(fight => {
+      const eventKey = fight.event_title || 'Unknown Event';
+      
+      if (!eventMap[eventKey]) {
+        eventMap[eventKey] = {
+          eventName: fight.event_title,
+          eventDate: fight.event_date,
+          location: fight.event_location,
+          eventLink: fight.event_link,
+          fights: []
+        };
+      }
+      
+      const redFighterName = fight.red_fighter?.name || '';
+      const blueFighterName = fight.blue_fighter?.name || '';
+      
+      eventMap[eventKey].fights.push({
+        _id: fight._id,
+        fighter1: redFighterName,
+        fighter2: blueFighterName,
+        fighter1Image: imageMap[redFighterName.toLowerCase()] || null,
+        fighter2Image: imageMap[blueFighterName.toLowerCase()] || null,
+        redProfileLink: fight.red_fighter?.profile_link,
+        blueProfileLink: fight.blue_fighter?.profile_link,
+        weightClass: fight.weight_class,
+        // Store fight data for registration
+        fightData: {
+          eventTitle: fight.event_title,
+          eventDate: fight.event_date,
+          eventLocation: fight.event_location,
+          redFighter: fight.red_fighter,
+          blueFighter: fight.blue_fighter
+        }
+      });
+    });
+    
+    // Convert to array and sort by date
+    const events = Object.values(eventMap).sort((a, b) => {
+      const dateA = new Date(a.eventDate);
+      const dateB = new Date(b.eventDate);
+      return dateA - dateB;
+    });
+    
+    res.json({
+      weightClass,
+      totalFights: upcomingFights.length,
+      events
+    });
+  } catch (error) {
+    console.error('❌ Error fetching upcoming fights:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Register user to a live UFC fighter
+router.post('/register-fighter', requireAuth, async (req, res) => {
+  try {
+    const firebaseUid = req.user.uid;
+    const { fightId, selectedFighterSide } = req.body; // 'red' or 'blue'
+    
+    console.log('🎯 Fighter registration request:', { firebaseUid, fightId, selectedFighterSide });
+    
+    const UpcomingEvent = require('../models/UpcomingEvent');
+    
+    // Get user's rookie fighter and game progress
+    const rookieFighter = await RookieFighter.findOne({ firebaseUid });
+    const gameProgress = await GameProgress.findOne({ firebaseUid });
+    
+    if (!rookieFighter) {
+      return res.status(404).json({ message: 'No rookie fighter found' });
+    }
+    
+    // Check if eligible (12 training sessions completed)
+    if (!rookieFighter.isEligibleForTransfer()) {
+      return res.status(400).json({ 
+        message: 'Not eligible yet. Complete 12 training sessions first.',
+        currentSessions: rookieFighter.trainingSessions,
+        requiredSessions: rookieFighter.trainingGoal
+      });
+    }
+    
+    // Check if already transferred
+    if (rookieFighter.isTransferred) {
+      return res.status(400).json({ message: 'Already transferred to a real fighter' });
+    }
+    
+    // Get the fight details
+    const fight = await UpcomingEvent.findById(fightId);
+    if (!fight) {
+      return res.status(404).json({ message: 'Fight not found' });
+    }
+    
+    // Verify weight class matches
+    if (fight.weight_class !== rookieFighter.selectedWeightClass) {
+      return res.status(400).json({ 
+        message: 'Fighter weight class does not match your selected weight class' 
+      });
+    }
+    
+    // Get selected fighter details
+    const selectedFighter = selectedFighterSide === 'red' ? fight.red_fighter : fight.blue_fighter;
+    const opponentFighter = selectedFighterSide === 'red' ? fight.blue_fighter : fight.red_fighter;
+    
+    // Update rookie fighter with registration
+    rookieFighter.registeredFight = {
+      fightId: fight._id,
+      eventTitle: fight.event_title,
+      eventDate: fight.event_date,
+      eventLocation: fight.event_location,
+      selectedFighter: selectedFighter,
+      opponentFighter: opponentFighter,
+      selectedSide: selectedFighterSide,
+      registeredAt: new Date()
+    };
+    
+    await rookieFighter.save();
+    
+    // Update game progress
+    if (gameProgress) {
+      gameProgress.pendingFight = {
+        fightId: fight._id,
+        selectedFighter: selectedFighter.name,
+        eventTitle: fight.event_title,
+        eventDate: fight.event_date
+      };
+      await gameProgress.save();
+    }
+    
+    console.log(`✅ User registered to ${selectedFighter.name} vs ${opponentFighter.name}`);
+    
+    res.json({
+      message: `Successfully registered to ${selectedFighter.name}!`,
+      fight: {
+        eventTitle: fight.event_title,
+        eventDate: fight.event_date,
+        selectedFighter: selectedFighter.name,
+        opponent: opponentFighter.name,
+        weightClass: fight.weight_class
+      },
+      rookieFighter,
+      gameProgress
+    });
+  } catch (error) {
+    console.error('❌ Error registering fighter:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 module.exports = router;
 

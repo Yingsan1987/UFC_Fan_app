@@ -59,6 +59,10 @@ function Game() {
   const [currentTrainingType, setCurrentTrainingType] = useState(null);
   const [imageLoadError, setImageLoadError] = useState(false);
   const [showCareerLadder, setShowCareerLadder] = useState(true);
+  const [showFighterRegistration, setShowFighterRegistration] = useState(true);
+  const [upcomingFightsData, setUpcomingFightsData] = useState(null);
+  const [loadingFights, setLoadingFights] = useState(false);
+  const [selectedFightForReg, setSelectedFightForReg] = useState(null);
 
   const weightClasses = [
     'Flyweight', 'Bantamweight', 'Featherweight', 'Lightweight',
@@ -380,6 +384,55 @@ function Game() {
     setMessage({ text, type });
     setTimeout(() => setMessage({ text: '', type: '' }), 5000);
   };
+
+  // Fetch upcoming fights for user's weight class
+  const fetchUpcomingFights = async (weightClass) => {
+    try {
+      setLoadingFights(true);
+      console.log(`🎯 Fetching upcoming fights for ${weightClass}`);
+      const response = await axios.get(`${API_URL}/game/upcoming-fights/${encodeURIComponent(weightClass)}`);
+      console.log('✅ Upcoming fights loaded:', response.data);
+      setUpcomingFightsData(response.data);
+    } catch (error) {
+      console.error('Error fetching upcoming fights:', error);
+      showMessage('Failed to load upcoming fights', 'error');
+    } finally {
+      setLoadingFights(false);
+    }
+  };
+
+  // Register to a fighter
+  const handleFighterRegistration = async (fightId, fighterSide) => {
+    try {
+      setActionLoading(true);
+      console.log('📝 Registering fighter...', { fightId, fighterSide });
+      const token = await getAuthToken();
+      const response = await axios.post(
+        `${API_URL}/game/register-fighter`,
+        { fightId, selectedFighterSide: fighterSide },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      console.log('✅ Registration successful:', response.data);
+      showMessage(response.data.message, 'success');
+      setSelectedFightForReg(null);
+      
+      // Refresh game status to reflect registration
+      await fetchGameStatus();
+    } catch (error) {
+      console.error('❌ Error registering fighter:', error);
+      showMessage(error.response?.data?.message || 'Registration failed', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Fetch upcoming fights when eligible
+  useEffect(() => {
+    if (gameStatus?.initialized && rookieFighter?.isEligibleForTransfer && !rookieFighter?.isTransferred && rookieFighter?.selectedWeightClass) {
+      fetchUpcomingFights(rookieFighter.selectedWeightClass);
+    }
+  }, [gameStatus?.initialized, rookieFighter?.trainingSessions, rookieFighter?.isTransferred]);
 
   // Get fighter image based on current stage (using imports)
   const getFighterStageImage = () => {
@@ -1209,6 +1262,181 @@ function Game() {
                   <ArrowRight className="w-5 h-5" />
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Fighter Registration Section */}
+          {isEligible && !isTransferred && !rookieFighter?.registeredFight?.fightId && (
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-lg overflow-hidden border-2 border-blue-400">
+              <button
+                onClick={() => setShowFighterRegistration(!showFighterRegistration)}
+                className="w-full p-6 flex items-center justify-between hover:bg-blue-100/50 transition-colors"
+              >
+                <h2 className="text-xl font-bold flex items-center gap-2 text-blue-900">
+                  <Trophy className="w-6 h-6 text-blue-600" />
+                  Register to Live UFC Fighter
+                </h2>
+                {showFighterRegistration ? (
+                  <ChevronUp className="w-6 h-6 text-blue-600" />
+                ) : (
+                  <ChevronDown className="w-6 h-6 text-blue-600" />
+                )}
+              </button>
+
+              {showFighterRegistration && (
+                <div className="px-6 pb-6 border-t border-blue-200">
+                  <div className="mt-4 p-4 bg-blue-100 rounded-lg border-l-4 border-blue-600 mb-4">
+                    <p className="text-sm text-blue-900 font-medium">
+                      🎯 Complete your training! Choose a fighter from upcoming {rookieFighter?.selectedWeightClass} fights. 
+                      When they win in real UFC events, you'll earn Fan Coins and progress to the next level!
+                    </p>
+                  </div>
+
+                  {loadingFights ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                  ) : upcomingFightsData && upcomingFightsData.events && upcomingFightsData.events.length > 0 ? (
+                    <div className="space-y-4">
+                      {upcomingFightsData.events.map((event, eventIndex) => (
+                        <div key={eventIndex} className="bg-white rounded-lg p-4 border border-blue-200">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Calendar className="w-5 h-5 text-blue-600" />
+                            <div>
+                              <h3 className="font-bold text-gray-900">{event.eventName}</h3>
+                              <p className="text-xs text-gray-600">
+                                {new Date(event.eventDate).toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            {event.fights && event.fights.map((fight, fightIndex) => (
+                              <div key={fightIndex} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                  {/* Fighter 1 (Red Corner) */}
+                                  <button
+                                    onClick={() => setSelectedFightForReg({ fightId: fight._id, side: 'red', fight, event })}
+                                    className={`p-3 rounded-lg border-2 transition-all ${
+                                      selectedFightForReg?.fightId === fight._id && selectedFightForReg?.side === 'red'
+                                        ? 'border-red-500 bg-red-50'
+                                        : 'border-gray-300 hover:border-red-300 bg-white'
+                                    }`}
+                                  >
+                                    {fight.fighter1Image && (
+                                      <img 
+                                        src={fight.fighter1Image} 
+                                        alt={fight.fighter1}
+                                        className="w-12 h-12 rounded-full mx-auto mb-2 object-cover"
+                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                      />
+                                    )}
+                                    <p className="text-sm font-bold text-gray-900 text-center">{fight.fighter1}</p>
+                                    <p className="text-xs text-red-600 text-center mt-1">Red Corner</p>
+                                  </button>
+
+                                  {/* Fighter 2 (Blue Corner) */}
+                                  <button
+                                    onClick={() => setSelectedFightForReg({ fightId: fight._id, side: 'blue', fight, event })}
+                                    className={`p-3 rounded-lg border-2 transition-all ${
+                                      selectedFightForReg?.fightId === fight._id && selectedFightForReg?.side === 'blue'
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-300 hover:border-blue-300 bg-white'
+                                    }`}
+                                  >
+                                    {fight.fighter2Image && (
+                                      <img 
+                                        src={fight.fighter2Image} 
+                                        alt={fight.fighter2}
+                                        className="w-12 h-12 rounded-full mx-auto mb-2 object-cover"
+                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                      />
+                                    )}
+                                    <p className="text-sm font-bold text-gray-900 text-center">{fight.fighter2}</p>
+                                    <p className="text-xs text-blue-600 text-center mt-1">Blue Corner</p>
+                                  </button>
+                                </div>
+
+                                {selectedFightForReg?.fightId === fight._id && (
+                                  <button
+                                    onClick={() => handleFighterRegistration(fight._id, selectedFightForReg.side)}
+                                    disabled={actionLoading}
+                                    className={`w-full py-2 rounded-lg font-bold text-white transition-colors ${
+                                      selectedFightForReg.side === 'red'
+                                        ? 'bg-red-600 hover:bg-red-700'
+                                        : 'bg-blue-600 hover:bg-blue-700'
+                                    } disabled:bg-gray-400`}
+                                  >
+                                    {actionLoading ? 'Registering...' : `Register to ${selectedFightForReg.side === 'red' ? fight.fighter1 : fight.fighter2}`}
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-600">
+                      <p className="mb-2">🔍 No upcoming {rookieFighter?.selectedWeightClass} fights found</p>
+                      <p className="text-sm">Check back later when new events are scheduled!</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Show Registered Fight Status */}
+          {rookieFighter?.registeredFight?.fightId && !isTransferred && (
+            <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg shadow-lg p-6 border-2 border-green-500">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-green-500 rounded-full p-3">
+                  <Check className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-green-900">Registered!</h3>
+                  <p className="text-sm text-green-700">Your fighter is locked in</p>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg p-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Event:</span>
+                  <span className="text-sm font-bold text-gray-900">{rookieFighter.registeredFight.eventTitle}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Fighter:</span>
+                  <span className="text-sm font-bold text-green-600">{rookieFighter.registeredFight.selectedFighter?.name}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Opponent:</span>
+                  <span className="text-sm font-bold text-gray-900">{rookieFighter.registeredFight.opponentFighter?.name}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Event Date:</span>
+                  <span className="text-sm font-bold text-gray-900">
+                    {new Date(rookieFighter.registeredFight.eventDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                  <span className="text-sm text-gray-600">Status:</span>
+                  <span className="text-sm font-bold text-orange-600">⏳ Waiting for Results</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-green-800 mt-4 text-center">
+                💡 Results will be updated after the real UFC event concludes
+              </p>
             </div>
           )}
 

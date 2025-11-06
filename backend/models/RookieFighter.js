@@ -58,6 +58,35 @@ const rookieFighterSchema = new mongoose.Schema({
     default: 'Lightweight'
   },
   
+  // Registered Fight (for live UFC events)
+  registeredFight: {
+    fightId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'UpcomingEvent'
+    },
+    eventTitle: String,
+    eventDate: String,
+    eventLocation: String,
+    selectedFighter: {
+      name: String,
+      profile_link: String
+    },
+    opponentFighter: {
+      name: String,
+      profile_link: String
+    },
+    selectedSide: {
+      type: String,
+      enum: ['red', 'blue']
+    },
+    registeredAt: Date,
+    fightResult: {
+      type: String,
+      enum: ['pending', 'win', 'loss', 'draw', 'no_contest'],
+      default: 'pending'
+    }
+  },
+  
   // Metadata
   createdAt: {
     type: Date,

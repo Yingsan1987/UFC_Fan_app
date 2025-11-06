@@ -32,6 +32,17 @@ const gameProgressSchema = new mongoose.Schema({
     default: 0
   },
   
+  // Pending Fight (registered for upcoming event)
+  pendingFight: {
+    fightId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'UpcomingEvent'
+    },
+    selectedFighter: String,
+    eventTitle: String,
+    eventDate: String
+  },
+  
   // Fight History
   fightHistory: [{
     eventName: String,
