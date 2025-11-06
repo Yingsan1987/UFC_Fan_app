@@ -276,11 +276,11 @@ function Game() {
 
   const handleMiniGameComplete = async (xpGained) => {
     const isAdminTester = currentUser?.email === ADMIN_TESTER_EMAIL;
-    const isPremium = gameProgress?.isPremium || isAdminTester;
+    const isPremium = gameProgress?.isPremium || false; // Don't conflate admin with premium
     const hasEnergy = rookieFighter && rookieFighter.energy > 0;
     
-    // Premium users can play without energy but won't gain XP
-    if (!hasEnergy && isPremium) {
+    // Premium users (NOT admin testers) can play without energy but won't gain XP
+    if (!hasEnergy && isPremium && !isAdminTester) {
       showMessage('⭐ Premium Training (No Energy) - No XP gained but thanks for playing!', 'success');
       setActiveMiniGame(null);
       setCurrentTrainingType(null);

@@ -124,11 +124,17 @@ router.get('/status', requireAuth, async (req, res) => {
   }
 });
 
+// Admin/Test Account with Unlimited Energy
+const ADMIN_TESTER_EMAIL = 'yingsan1987@gmail.com';
+
 // Perform training action
 router.post('/train', requireAuth, async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
     const { trainingType, xpGained } = req.body;
+    
+    // Check if this is admin tester account
+    const isAdminTester = req.user.email === ADMIN_TESTER_EMAIL;
 
     const rookieFighter = await RookieFighter.findOne({ firebaseUid, isTransferred: false });
     
@@ -136,17 +142,20 @@ router.post('/train', requireAuth, async (req, res) => {
       return res.status(404).json({ message: 'No active Rookie Fighter found' });
     }
 
-    // Refresh energy and save if it was refreshed
-    const wasRefreshed = rookieFighter.refreshEnergy();
-    if (wasRefreshed) {
-      await rookieFighter.save();
-      console.log('✅ Energy refreshed to 3 for new day');
+    // Refresh energy and save if it was refreshed (skip for admin tester)
+    if (!isAdminTester) {
+      const wasRefreshed = rookieFighter.refreshEnergy();
+      if (wasRefreshed) {
+        await rookieFighter.save();
+        console.log('✅ Energy refreshed to 3 for new day');
+      }
     }
 
     console.log(`⚡ Current energy before training: ${rookieFighter.energy}`);
+    console.log(`🔑 Is Admin Tester: ${isAdminTester}`);
 
-    // Check if user has energy
-    if (rookieFighter.energy <= 0) {
+    // Check if user has energy (skip check for admin tester)
+    if (!isAdminTester && rookieFighter.energy <= 0) {
       return res.status(400).json({ 
         message: 'No energy remaining. Come back tomorrow!',
         energy: rookieFighter.energy
@@ -178,9 +187,13 @@ router.post('/train', requireAuth, async (req, res) => {
     rookieFighter.stats[attribute] = Math.min(100, rookieFighter.stats[attribute] + validatedXP);
     rookieFighter.trainingSessions += 1;
     
-    // Reduce energy
-    rookieFighter.energy -= 1;
-    console.log(`⚡ Energy after training: ${rookieFighter.energy}`);
+    // Reduce energy (skip for admin tester)
+    if (!isAdminTester) {
+      rookieFighter.energy -= 1;
+      console.log(`⚡ Energy after training: ${rookieFighter.energy}`);
+    } else {
+      console.log(`⚡ Admin Tester - Energy unchanged: ${rookieFighter.energy}`);
+    }
     
     // Save the updated fighter
     await rookieFighter.save();
