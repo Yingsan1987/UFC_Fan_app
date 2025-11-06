@@ -15,10 +15,28 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
   const [imageFile, setImageFile] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const emojiPickerRef = useRef(null);
 
   useEffect(() => {
     fetchNearestFight();
   }, []);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -57,6 +75,14 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
     setShowEmojiPicker(false);
   };
 
+  const handleMessageChange = (e) => {
+    setMessage(e.target.value);
+    // Hide emoji picker when user starts typing
+    if (showEmojiPicker) {
+      setShowEmojiPicker(false);
+    }
+  };
+
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -90,13 +116,17 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
   };
 
   const handleSendMessage = () => {
-    if (imagePreview) {
-      // Send message with image
-      sendMessage(imagePreview);
-      removeImage();
-    } else {
-      // Send regular text message
-      sendMessage();
+    if (message.trim() || imagePreview) {
+      // Call the parent sendMessage function with image data
+      if (imagePreview) {
+        sendMessage(imagePreview);
+      } else {
+        sendMessage(null);
+      }
+      // Clear image preview after sending
+      if (imagePreview) {
+        removeImage();
+      }
     }
   };
 
@@ -114,56 +144,34 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Upcoming Fight Card */}
+      {/* Upcoming Fight Card - Simplified */}
       {!loading && upcomingFight && (
-        <div className="bg-gradient-to-r from-red-600 to-red-800 rounded-lg shadow-lg overflow-hidden">
-          <div className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="bg-white/20 rounded-full px-4 py-1">
-                <span className="text-white text-sm font-bold">🔴 NEXT EVENT</span>
+        <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-lg shadow-md overflow-hidden">
+          <div className="p-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 rounded-full px-3 py-1">
+                  <span className="text-white text-xs font-bold">🔴 NEXT EVENT</span>
+                </div>
+                <h2 className="text-lg font-bold text-white">{upcomingFight.eventName}</h2>
               </div>
-            </div>
-            
-            <h2 className="text-2xl font-bold text-white mb-3">{upcomingFight.eventName}</h2>
-            
-            <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <div className="flex items-center gap-2 text-white">
-                <Calendar className="w-5 h-5" />
-                <span>
-                  {new Date(upcomingFight.eventDate).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-white">
-                <MapPin className="w-5 h-5" />
-                <span>{upcomingFight.location}</span>
-              </div>
-            </div>
-
-            {/* Featured Fights */}
-            {upcomingFight.fights && upcomingFight.fights.length > 0 && (
-              <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
-                <h3 className="text-white font-bold mb-3">Featured Fights:</h3>
-                <div className="space-y-2">
-                  {upcomingFight.fights.slice(0, 3).map((fight, index) => (
-                    <div key={index} className="flex items-center justify-between text-white text-sm">
-                      <span className="font-medium">{fight.fighter1}</span>
-                      <span className="text-white/60 mx-2">vs</span>
-                      <span className="font-medium">{fight.fighter2}</span>
-                      {fight.weightClass && (
-                        <span className="text-xs bg-white/20 px-2 py-1 rounded ml-2">
-                          {fight.weightClass}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+              
+              <div className="flex items-center gap-4 text-white text-sm">
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>
+                    {new Date(upcomingFight.eventDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  <span className="truncate max-w-[150px]">{upcomingFight.location}</span>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
@@ -288,7 +296,7 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
             </button>
 
             {/* Emoji Picker Button */}
-            <div className="relative">
+            <div className="relative" ref={emojiPickerRef}>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-yellow-600"
@@ -312,7 +320,7 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
             <textarea
               className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={handleMessageChange}
               onKeyPress={handleKeyPress}
               placeholder={currentUser ? "Type a message..." : "Sign in to chat..."}
               rows={1}
