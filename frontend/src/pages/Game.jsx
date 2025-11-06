@@ -429,10 +429,14 @@ function Game() {
 
   // Fetch upcoming fights when eligible
   useEffect(() => {
-    if (gameStatus?.initialized && rookieFighter?.isEligibleForTransfer && !rookieFighter?.isTransferred && rookieFighter?.selectedWeightClass) {
+    if (gameStatus?.initialized && 
+        rookieFighter && 
+        !rookieFighter.isTransferred && 
+        rookieFighter.trainingSessions >= (rookieFighter.trainingGoal || 12) && 
+        rookieFighter.selectedWeightClass) {
       fetchUpcomingFights(rookieFighter.selectedWeightClass);
     }
-  }, [gameStatus?.initialized, rookieFighter?.trainingSessions, rookieFighter?.isTransferred]);
+  }, [gameStatus?.initialized, rookieFighter?.trainingSessions, rookieFighter?.isTransferred, rookieFighter?.selectedWeightClass]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get fighter image based on current stage (using imports)
   const getFighterStageImage = () => {
