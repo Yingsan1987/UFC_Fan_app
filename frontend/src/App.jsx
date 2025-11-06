@@ -82,8 +82,14 @@ function App() {
   useEffect(() => {
     axios.get(`${API_URL}/fighters`).then(res => setFighters(res.data));
 
+    // Load chat history when connecting
+    socket.on("chatHistory", (messages) => {
+      setChatMessages(messages);
+    });
+
+    // Receive new chat messages
     socket.on("chatMessage", msg => {
-      setChatMessages(prev => [msg, ...prev]);
+      setChatMessages(prev => [...prev, msg]);
     });
 
     return () => socket.disconnect();
@@ -101,10 +107,15 @@ function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showUserMenu]);
 
-  const sendMessage = () => {
-    if (message.trim()) {
-      const userName = currentUser?.displayName || currentUser?.email || "Guest";
-      socket.emit("chatMessage", { user: userName, text: message });
+  const sendMessage = (imageData = null) => {
+    if (message.trim() || imageData) {
+      const userName = currentUser?.displayName || "Guest";
+      socket.emit("chatMessage", { 
+        user: userName, 
+        text: message,
+        image: imageData,
+        timestamp: new Date().toISOString()
+      });
       setMessage("");
     }
   };
