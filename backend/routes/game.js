@@ -299,7 +299,7 @@ router.post('/transfer', requireAuth, async (req, res) => {
       rookieFighterId: rookieFighter._id,
       realFighterId: fighterId
     };
-    gameProgress.fanCoin += 100; // Bonus for completing training
+    gameProgress.fanCoin += 3; // Bonus for completing training
     await gameProgress.save();
 
     res.json({

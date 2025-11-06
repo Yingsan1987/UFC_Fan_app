@@ -635,7 +635,7 @@ function Game() {
                     <h3 className="font-bold text-lg mb-1">Transfer to Real Fighter</h3>
                     <p className="text-gray-600 text-sm">
                       After 12 sessions, choose a real UFC fighter from your weight class. 
-                      Receive +100 Fan Coins bonus instantly!
+                      Receive +3 Fan Coins bonus instantly!
                     </p>
                   </div>
                 </div>
@@ -761,31 +761,6 @@ function Game() {
                 Progress through the ladder to earn more coins per win!
               </p>
             </div>
-            <div className="mt-4 p-4 bg-green-50 rounded-lg">
-              <h3 className="font-bold mb-2 text-green-900">📊 Total Earnings Per Career (Perfect Record):</h3>
-              <div className="space-y-1 text-sm text-green-800">
-                <div className="flex justify-between">
-                  <span>Transfer Bonus:</span>
-                  <span className="font-bold">+100 coins</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Preliminary (5 × 1):</span>
-                  <span className="font-bold">+5 coins</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Main Card (3 × 5):</span>
-                  <span className="font-bold">+15 coins</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Champion (5 × 30):</span>
-                  <span className="font-bold">+150 coins</span>
-                </div>
-                <div className="border-t-2 border-green-300 pt-2 mt-2 flex justify-between text-lg">
-                  <span className="font-bold">TOTAL PER CAREER:</span>
-                  <span className="font-bold text-green-600">270 coins 🪙</span>
-                </div>
-              </div>
-            </div>
           </div>
 
           {myRank && myRank.rank && (
@@ -854,13 +829,20 @@ function Game() {
                       {player.rank}
                     </span>
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {player.photoURL ? (
-                        <img src={player.photoURL} alt={player.username || player.displayName} className="w-10 h-10 rounded-full flex-shrink-0" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-                          {(player.username || player.displayName)?.[0] || 'U'}
-                        </div>
-                      )}
+                      {player.photoURL && player.photoURL.trim() !== '' ? (
+                        <img 
+                          src={player.photoURL} 
+                          alt={player.username || player.displayName} 
+                          className="w-10 h-10 rounded-full flex-shrink-0"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold flex-shrink-0 ${player.photoURL && player.photoURL.trim() !== '' ? 'hidden' : ''}`}>
+                        {(player.username || player.displayName)?.[0]?.toUpperCase() || 'U'}
+                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold text-gray-900 truncate">{player.username || player.displayName || 'Anonymous'}</div>
                         {currentUser && (player.userId?._id === currentUser.uid || player.userId?.firebaseUid === currentUser.uid) && (
@@ -933,13 +915,20 @@ function Game() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          {player.photoURL ? (
-                            <img src={player.photoURL} alt={player.username || player.displayName} className="w-10 h-10 rounded-full" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
-                              {(player.username || player.displayName)?.[0] || 'U'}
-                            </div>
-                          )}
+                          {player.photoURL && player.photoURL.trim() !== '' ? (
+                            <img 
+                              src={player.photoURL} 
+                              alt={player.username || player.displayName} 
+                              className="w-10 h-10 rounded-full"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div className={`w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold ${player.photoURL && player.photoURL.trim() !== '' ? 'hidden' : ''}`}>
+                            {(player.username || player.displayName)?.[0]?.toUpperCase() || 'U'}
+                          </div>
                           <div>
                             <div className="font-semibold text-gray-900">{player.username || player.displayName || 'Anonymous'}</div>
                             {currentUser && (player.userId?._id === currentUser.uid || player.userId?.firebaseUid === currentUser.uid) && (
