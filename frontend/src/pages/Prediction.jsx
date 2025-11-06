@@ -8,11 +8,20 @@ export default function Prediction() {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedEvents, setExpandedEvents] = useState({});
-  const [predictions, setPredictions] = useState({});
+  const [predictions, setPredictions] = useState(() => {
+    // Load predictions from localStorage on mount
+    const saved = localStorage.getItem('ufc_predictions');
+    return saved ? JSON.parse(saved) : {};
+  });
 
   useEffect(() => {
     fetchUpcomingEvents();
   }, []);
+
+  // Save predictions to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('ufc_predictions', JSON.stringify(predictions));
+  }, [predictions]);
 
   const fetchUpcomingEvents = async () => {
     try {
@@ -41,10 +50,15 @@ export default function Prediction() {
 
   const handlePrediction = (eventIndex, fightIndex, winner) => {
     const key = `${eventIndex}-${fightIndex}`;
-    setPredictions(prev => ({
-      ...prev,
-      [key]: winner
-    }));
+    setPredictions(prev => {
+      const updated = {
+        ...prev,
+        [key]: winner
+      };
+      // Show confirmation
+      console.log('✅ Prediction saved:', { fight: key, winner });
+      return updated;
+    });
   };
 
   const getPrediction = (eventIndex, fightIndex) => {
@@ -125,17 +139,17 @@ export default function Prediction() {
     const prediction = getPrediction(eventIndex, fightIndex);
     
     return (
-      <div className="bg-white rounded-lg p-3 md:p-5 border-2 border-gray-200 hover:border-red-400 transition-all shadow-md hover:shadow-xl">
+      <div className="bg-white rounded-lg p-2 sm:p-3 md:p-4 lg:p-5 border-2 border-gray-200 hover:border-red-400 transition-all shadow-md hover:shadow-xl w-full">
         {/* Weight Class Badge */}
         {fight.weightClass && (
-          <div className="text-center mb-2 md:mb-3">
-            <div className="inline-block bg-gradient-to-r from-blue-600 to-blue-800 text-white px-2 py-0.5 md:px-4 md:py-1 rounded-full text-xs font-bold uppercase">
+          <div className="text-center mb-1 sm:mb-2 md:mb-3">
+            <div className="inline-block bg-gradient-to-r from-blue-600 to-blue-800 text-white px-2 py-0.5 sm:px-3 sm:py-1 md:px-4 md:py-1 rounded-full text-xs font-bold uppercase">
               {fight.weightClass}
             </div>
           </div>
         )}
         
-        <div className="flex items-center justify-between gap-2 md:gap-4">
+        <div className="flex items-center justify-between gap-1 sm:gap-2 md:gap-4">
           {/* Red Corner Fighter */}
           <FighterCard 
             fighter={fight.fighter1}
@@ -146,7 +160,7 @@ export default function Prediction() {
           />
           
           {/* VS */}
-          <div className="text-base md:text-2xl font-bold text-red-600 flex-shrink-0">VS</div>
+          <div className="text-sm sm:text-base md:text-xl lg:text-2xl font-bold text-red-600 flex-shrink-0 px-1">VS</div>
           
           {/* Blue Corner Fighter */}
           <FighterCard 
@@ -182,11 +196,11 @@ export default function Prediction() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6">
+    <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6">
       {/* Page Header */}
-      <div className="mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Fight Predictions</h1>
-        <p className="text-sm md:text-base text-gray-600">Make your predictions for upcoming UFC fights</p>
+      <div className="mb-4 md:mb-6 lg:mb-8">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">Fight Predictions</h1>
+        <p className="text-xs sm:text-sm md:text-base text-gray-600">Make your predictions for upcoming UFC fights</p>
       </div>
 
       {/* Events List */}
@@ -201,12 +215,12 @@ export default function Prediction() {
               {/* Collapsible Header */}
               <button
                 onClick={() => toggleEvent(eventIndex)}
-                className="w-full p-4 md:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors bg-gradient-to-r from-red-600 to-red-800 text-white hover:from-red-700 hover:to-red-900"
+                className="w-full p-3 sm:p-4 md:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors bg-gradient-to-r from-red-600 to-red-800 text-white hover:from-red-700 hover:to-red-900"
               >
-                <div className="flex items-center gap-2 md:gap-4 text-left flex-1 min-w-0">
-                  <Trophy className="w-6 h-6 md:w-8 md:h-8 text-yellow-400 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-base md:text-2xl font-bold truncate">{event.eventName}</h2>
+                <div className="flex items-center gap-2 md:gap-4 text-left flex-1 min-w-0 overflow-hidden">
+                  <Trophy className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-yellow-400 flex-shrink-0" />
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <h2 className="text-sm sm:text-base md:text-2xl font-bold truncate">{event.eventName}</h2>
                     <div className="flex flex-wrap items-center gap-2 md:gap-4 text-red-100 mt-1">
                       <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
                         <Calendar className="w-3 h-3 md:w-4 md:h-4" />
@@ -241,22 +255,22 @@ export default function Prediction() {
 
               {/* Expandable Content */}
               {isExpanded && (
-                <div className="p-4 md:p-6 bg-gradient-to-br from-gray-50 to-gray-100">
+                <div className="p-3 sm:p-4 md:p-6 bg-gradient-to-br from-gray-50 to-gray-100">
                   {/* Main Card Section */}
                   {mainCard.length > 0 && (
-                    <div className="mb-6 md:mb-8">
-                      <div className="bg-gradient-to-r from-red-600 to-red-800 text-white py-2 px-4 md:py-3 md:px-6 rounded-lg mb-4 md:mb-6 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                          <Trophy className="w-5 h-5 md:w-6 md:h-6 text-yellow-400 flex-shrink-0" />
-                          <h3 className="text-lg md:text-2xl font-black uppercase">Main Card</h3>
+                    <div className="mb-4 sm:mb-6 md:mb-8">
+                      <div className="bg-gradient-to-r from-red-600 to-red-800 text-white py-2 px-3 sm:px-4 md:py-3 md:px-6 rounded-lg mb-3 sm:mb-4 md:mb-6 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2 md:gap-3 min-w-0">
+                          <Trophy className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-yellow-400 flex-shrink-0" />
+                          <h3 className="text-base sm:text-lg md:text-2xl font-black uppercase">Main Card</h3>
                         </div>
-                        <span className="bg-white/20 px-2 py-0.5 md:px-4 md:py-1 rounded-full text-xs md:text-sm font-bold flex-shrink-0">
+                        <span className="bg-white/20 px-2 py-0.5 sm:px-3 sm:py-1 md:px-4 md:py-1 rounded-full text-xs sm:text-sm font-bold flex-shrink-0">
                           {mainCard.filter((_, idx) => getPrediction(eventIndex, idx)).length}/{mainCard.length}
                         </span>
                       </div>
                       
-                      {/* Grid Layout - 3 fights per row for desktop, UFC poster style */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                      {/* Grid Layout - responsive */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 lg:gap-6">
                         {mainCard.map((fight, fightIndex) => (
                           <FightCard 
                             key={fightIndex}
@@ -272,18 +286,18 @@ export default function Prediction() {
                   {/* Prelims Section */}
                   {prelims.length > 0 && (
                     <div>
-                      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-2 px-4 md:py-3 md:px-6 rounded-lg mb-4 md:mb-6 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                          <Users className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" />
-                          <h3 className="text-lg md:text-2xl font-black uppercase">Prelims</h3>
+                      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-2 px-3 sm:px-4 md:py-3 md:px-6 rounded-lg mb-3 sm:mb-4 md:mb-6 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2 md:gap-3 min-w-0">
+                          <Users className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 flex-shrink-0" />
+                          <h3 className="text-base sm:text-lg md:text-2xl font-black uppercase">Prelims</h3>
                         </div>
-                        <span className="bg-white/20 px-2 py-0.5 md:px-4 md:py-1 rounded-full text-xs md:text-sm font-bold flex-shrink-0">
+                        <span className="bg-white/20 px-2 py-0.5 sm:px-3 sm:py-1 md:px-4 md:py-1 rounded-full text-xs sm:text-sm font-bold flex-shrink-0">
                           {prelims.filter((_, idx) => getPrediction(eventIndex, idx + mainCard.length)).length}/{prelims.length}
                         </span>
                       </div>
                       
-                      {/* Grid Layout - 3 fights per row for desktop, UFC poster style */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                      {/* Grid Layout - responsive */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 lg:gap-6">
                         {prelims.map((fight, fightIndex) => (
                           <FightCard 
                             key={fightIndex + mainCard.length}
