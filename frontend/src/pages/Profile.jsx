@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Calendar, Shield, Edit2, Save, X, Crown, CheckCircle } from 'lucide-react';
+import { User, Calendar, Shield, Edit2, Save, X, Crown, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
@@ -25,6 +25,7 @@ export default function Profile() {
   const [success, setSuccess] = useState('');
   
   const [formData, setFormData] = useState({
+    displayName: '',
     username: '',
     profileImage: '',
     bio: ''
@@ -46,6 +47,7 @@ export default function Profile() {
       
       setProfile(response.data);
       setFormData({
+        displayName: response.data.displayName || '',
         username: response.data.username || '',
         profileImage: response.data.profileImage || 'avatar1',
         bio: response.data.bio || ''
@@ -85,6 +87,7 @@ export default function Profile() {
 
   const handleCancel = () => {
     setFormData({
+      displayName: profile.displayName || '',
       username: profile.username || '',
       profileImage: profile.profileImage || 'avatar1',
       bio: profile.bio || ''
@@ -181,11 +184,10 @@ export default function Profile() {
 
             {/* User Info */}
             <div className="flex-1 text-white">
-              <h2 className="text-2xl font-bold mb-1">{formData.username || profile?.displayName}</h2>
-              <div className="flex items-center gap-2 text-red-100 mb-3">
-                <Mail className="w-4 h-4" />
-                <span className="text-sm">{currentUser.email}</span>
-              </div>
+              <h2 className="text-2xl font-bold mb-2">{formData.displayName || profile?.displayName || 'UFC Fan'}</h2>
+              {formData.username && (
+                <p className="text-red-100 text-sm mb-3">@{formData.username}</p>
+              )}
               
               {/* Subscription Badge */}
               {profile?.isPremium ? (
@@ -210,10 +212,28 @@ export default function Profile() {
           <h3 className="text-xl font-bold text-gray-900 mb-6">Edit Profile</h3>
           
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Display Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Display Name
+              </label>
+              <input
+                type="text"
+                value={formData.displayName}
+                onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                placeholder="Enter your display name"
+                minLength={2}
+                maxLength={30}
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">2-30 characters, your public name</p>
+            </div>
+
             {/* Username */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Username
+                Username <span className="text-gray-400">(optional)</span>
               </label>
               <input
                 type="text"
@@ -223,7 +243,6 @@ export default function Profile() {
                 placeholder="Enter your username"
                 minLength={3}
                 maxLength={20}
-                required
               />
               <p className="mt-1 text-xs text-gray-500">3-20 characters, displayed on leaderboards</p>
             </div>
@@ -307,15 +326,11 @@ export default function Profile() {
             <div className="space-y-3">
               <div>
                 <p className="text-sm text-gray-500">Display Name</p>
-                <p className="text-gray-900 font-medium">{profile?.displayName}</p>
+                <p className="text-gray-900 font-medium">{profile?.displayName || 'Not set'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Username</p>
-                <p className="text-gray-900 font-medium">{profile?.username}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Email</p>
-                <p className="text-gray-900 font-medium">{currentUser.email}</p>
+                <p className="text-gray-900 font-medium">{profile?.username ? `@${profile.username}` : 'Not set'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Bio</p>

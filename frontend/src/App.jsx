@@ -234,11 +234,11 @@ function App() {
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
-                      {currentUser.displayName?.[0] || currentUser.email?.[0] || 'U'}
+                      {currentUser.displayName?.[0]?.toUpperCase() || 'U'}
                     </div>
                   )}
                   <span className="text-sm font-medium hidden sm:block">
-                    {currentUser.displayName || currentUser.email}
+                    {currentUser.displayName || 'UFC Fan'}
                   </span>
                 </button>
 
@@ -247,10 +247,10 @@ function App() {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
                     <div className="px-4 py-2 border-b border-gray-200">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {currentUser.displayName || 'User'}
+                        {currentUser.displayName || 'UFC Fan'}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {currentUser.email}
+                      <p className="text-xs text-gray-500">
+                        {currentUser.emailVerified ? '✓ Verified' : '⚠ Unverified'}
                       </p>
                     </div>
                     <button

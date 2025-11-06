@@ -83,7 +83,12 @@ router.get('/profile', verifyToken, async (req, res) => {
 // UPDATE user profile
 router.put('/profile', verifyToken, async (req, res) => {
   try {
-    const { username, profileImage, bio } = req.body;
+    const { displayName, username, profileImage, bio } = req.body;
+
+    // Validate displayName
+    if (displayName && (displayName.length < 2 || displayName.length > 30)) {
+      return res.status(400).json({ error: 'Display name must be between 2 and 30 characters' });
+    }
 
     // Validate username
     if (username && (username.length < 3 || username.length > 20)) {
@@ -108,6 +113,7 @@ router.put('/profile', verifyToken, async (req, res) => {
     }
 
     const updateFields = {};
+    if (displayName) updateFields.displayName = displayName;
     if (username) updateFields.username = username;
     if (profileImage) updateFields.profileImage = profileImage;
     if (bio !== undefined) updateFields.bio = bio;

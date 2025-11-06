@@ -826,7 +826,7 @@ function Game() {
                   <div>
                     <h3 className="text-xl font-bold">Your Ranking</h3>
                     <p className="text-blue-100">
-                      {currentUser?.displayName || currentUser?.email}
+                      {currentUser?.displayName || 'UFC Fan'}
                     </p>
                   </div>
                 </div>
