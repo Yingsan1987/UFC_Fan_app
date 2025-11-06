@@ -98,3 +98,4 @@ rookieFighterSchema.methods.isEligibleForTransfer = function() {
 
 module.exports = mongoose.model('RookieFighter', rookieFighterSchema);
 
+

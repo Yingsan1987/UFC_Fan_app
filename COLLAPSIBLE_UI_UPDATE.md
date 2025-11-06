@@ -327,3 +327,4 @@ The fighter preview panel is structured to easily integrate with live UFC event 
 **Last Updated:** November 2, 2025  
 **Version:** 2.1.0 (Collapsible UI)
 
+

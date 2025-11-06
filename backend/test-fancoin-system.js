@@ -281,3 +281,4 @@ async function testFanCoinSystem() {
 // Run tests
 testFanCoinSystem();
 
+

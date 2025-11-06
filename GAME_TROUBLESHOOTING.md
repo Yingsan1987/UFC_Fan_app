@@ -374,3 +374,4 @@ If you're still stuck:
 **Last Updated:** November 2, 2025  
 **Version:** 1.0.1 (with fixes)
 
+
