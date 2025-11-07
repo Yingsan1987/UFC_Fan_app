@@ -427,3 +427,4 @@ For questions or support, visit `/support` page in the app.
 This game system is part of the UFC Fan App and follows the same licensing terms as the main application.
 
 
+

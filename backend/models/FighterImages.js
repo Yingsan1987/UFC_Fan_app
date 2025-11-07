@@ -26,3 +26,4 @@ module.exports = mongoose.model('FighterImages', fighterImagesSchema, 'ufc_fight
 
 
 
+

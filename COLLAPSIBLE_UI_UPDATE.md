@@ -328,3 +328,4 @@ The fighter preview panel is structured to easily integrate with live UFC event 
 **Version:** 2.1.0 (Collapsible UI)
 
 
+
