@@ -23,7 +23,8 @@ const Events = () => {
         
         // Fetch past events
         const eventsResponse = await axios.get(`${API_URL}/events`);
-        const sortedEvents = eventsResponse.data.sort((a, b) => {
+        console.log("📊 Past events response:", eventsResponse.data);
+        const sortedEvents = (eventsResponse.data || []).sort((a, b) => {
           const dateA = new Date(a.DATE);
           const dateB = new Date(b.DATE);
           return dateB - dateA;
@@ -35,17 +36,18 @@ const Events = () => {
         // This endpoint already combines with fighter images
         try {
           const upcomingResponse = await axios.get(`${API_URL}/upcoming-events`);
-          console.log('📅 Upcoming events loaded:', upcomingResponse.data);
-          setUpcomingEvents(upcomingResponse.data);
+          console.log('📅 Upcoming events response:', upcomingResponse.data);
+          const upcomingData = upcomingResponse.data || [];
+          setUpcomingEvents(upcomingData);
           
           // Expand first event by default
-          if (upcomingResponse.data.length > 0) {
+          if (upcomingData.length > 0) {
             setExpandedEvents({ 0: true });
           }
           
           // Extract fighter images from the response
           const imageMap = {};
-          upcomingResponse.data.forEach(event => {
+          upcomingData.forEach(event => {
             event.fights?.forEach(fight => {
               if (fight.fighter1 && fight.fighter1Image) {
                 imageMap[fight.fighter1.toLowerCase()] = fight.fighter1Image;
@@ -57,13 +59,16 @@ const Events = () => {
           });
           setFighterImages(imageMap);
         } catch (err) {
-          console.log('No upcoming events found:', err);
+          console.warn('⚠️ No upcoming events found or API error:', err.message);
+          setUpcomingEvents([]);
         }
         
         setError(null);
       } catch (err) {
         setError('Failed to load events');
-        console.error('Error fetching events:', err);
+        console.error('❌ Error fetching events:', err);
+        setEvents([]);
+        setFilteredEvents([]);
       } finally {
         setLoading(false);
       }
@@ -238,16 +243,16 @@ const Events = () => {
                             FIGHT NIGHT
                           </div>
                         </div>
-                        <h3 className="text-lg md:text-3xl font-black mb-2 md:mb-3 text-gray-900 drop-shadow-lg truncate">{event.eventName}</h3>
+                        <h3 className="text-lg md:text-3xl font-black mb-2 md:mb-3 text-gray-900 drop-shadow-lg truncate">{event?.eventName || 'Untitled Event'}</h3>
                         <div className="flex flex-wrap items-center gap-2 md:gap-6 text-gray-900 font-semibold text-xs md:text-base">
                           <div className="flex items-center gap-1 md:gap-2 bg-black/20 px-2 py-1 md:px-3 md:py-1 rounded-lg">
                             <Calendar className="w-3 h-3 md:w-5 md:h-5" />
-                            <span className="text-xs md:text-lg">{event.eventDate || 'TBD'}</span>
+                            <span className="text-xs md:text-lg">{event?.eventDate || 'TBD'}</span>
                           </div>
-                          {event.location && (
+                          {event?.location && (
                             <div className="flex items-center gap-1 md:gap-2 bg-black/20 px-2 py-1 md:px-3 md:py-1 rounded-lg">
                               <MapPin className="w-3 h-3 md:w-5 md:h-5" />
-                              <span className="text-xs md:text-lg truncate max-w-[120px] md:max-w-none">{event.location}</span>
+                              <span className="text-xs md:text-lg truncate max-w-[120px] md:max-w-none">{event?.location}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-1 md:gap-2 bg-black/20 px-2 py-1 md:px-3 md:py-1 rounded-lg">
@@ -276,11 +281,11 @@ const Events = () => {
                         <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-4">
                           <div className="bg-gradient-to-r from-red-600 to-red-800 text-white py-2 px-3 md:py-3 md:px-6 rounded-lg inline-flex items-center gap-1 md:gap-2">
                             <Trophy className="w-4 h-4 md:w-6 md:h-6 text-yellow-400" />
-                            <h4 className="text-sm md:text-xl font-bold uppercase">{mainFight.cardLabel}</h4>
+                            <h4 className="text-sm md:text-xl font-bold uppercase">{mainFight?.cardLabel || 'Main Event'}</h4>
                           </div>
-                          {mainFight.weightClass && (
+                          {mainFight?.weightClass && (
                             <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-2 px-3 md:py-3 md:px-6 rounded-lg font-bold text-xs md:text-lg uppercase">
-                              {mainFight.weightClass}
+                              {mainFight?.weightClass}
                             </div>
                           )}
                         </div>
@@ -288,22 +293,22 @@ const Events = () => {
                           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-2">
                             {/* Fighter 1 */}
                             <div className="flex flex-col items-center gap-2 md:gap-3 flex-1">
-                              {mainFight.fighter1Image ? (
+                              {mainFight?.fighter1Image ? (
                                 <img 
-                                  src={mainFight.fighter1Image}
-                                  alt={mainFight.fighter1}
+                                  src={mainFight?.fighter1Image}
+                                  alt={mainFight?.fighter1 || 'Fighter 1'}
                                   className="w-20 h-20 md:w-32 md:h-32 rounded-full object-cover border-4 md:border-6 border-red-600 shadow-2xl"
                                   onError={(e) => {
-                                    e.target.src = `https://via.placeholder.com/128/ef4444/ffffff?text=${mainFight.fighter1?.[0] || '?'}`;
+                                    e.target.src = `https://via.placeholder.com/128/ef4444/ffffff?text=${mainFight?.fighter1?.[0] || '?'}`;
                                   }}
                                 />
                               ) : (
                                 <div className="w-20 h-20 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-3xl md:text-5xl border-4 md:border-6 border-red-600 shadow-2xl">
-                                  {mainFight.fighter1?.[0] || '?'}
+                                  {mainFight?.fighter1?.[0] || '?'}
                                 </div>
                               )}
                               <div className="text-center">
-                                <p className="font-black text-base md:text-2xl text-gray-900 uppercase break-words max-w-[150px] md:max-w-none">{mainFight.fighter1}</p>
+                                <p className="font-black text-base md:text-2xl text-gray-900 uppercase break-words max-w-[150px] md:max-w-none">{mainFight?.fighter1 || 'Fighter 1'}</p>
                                 <p className="text-xs md:text-sm text-red-600 font-bold mt-1">RED CORNER</p>
                               </div>
                             </div>
@@ -317,22 +322,22 @@ const Events = () => {
 
                             {/* Fighter 2 */}
                             <div className="flex flex-col items-center gap-2 md:gap-3 flex-1">
-                              {mainFight.fighter2Image ? (
+                              {mainFight?.fighter2Image ? (
                                 <img 
-                                  src={mainFight.fighter2Image}
-                                  alt={mainFight.fighter2}
+                                  src={mainFight?.fighter2Image}
+                                  alt={mainFight?.fighter2 || 'Fighter 2'}
                                   className="w-20 h-20 md:w-32 md:h-32 rounded-full object-cover border-4 md:border-6 border-blue-600 shadow-2xl"
                                   onError={(e) => {
-                                    e.target.src = `https://via.placeholder.com/128/3b82f6/ffffff?text=${mainFight.fighter2?.[0] || '?'}`;
+                                    e.target.src = `https://via.placeholder.com/128/3b82f6/ffffff?text=${mainFight?.fighter2?.[0] || '?'}`;
                                   }}
                                 />
                               ) : (
                                 <div className="w-20 h-20 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-3xl md:text-5xl border-4 md:border-6 border-blue-600 shadow-2xl">
-                                  {mainFight.fighter2?.[0] || '?'}
+                                  {mainFight?.fighter2?.[0] || '?'}
                                 </div>
                               )}
                               <div className="text-center">
-                                <p className="font-black text-base md:text-2xl text-gray-900 uppercase break-words max-w-[150px] md:max-w-none">{mainFight.fighter2}</p>
+                                <p className="font-black text-base md:text-2xl text-gray-900 uppercase break-words max-w-[150px] md:max-w-none">{mainFight?.fighter2 || 'Fighter 2'}</p>
                                 <p className="text-xs md:text-sm text-blue-600 font-bold mt-1">BLUE CORNER</p>
                               </div>
                             </div>
@@ -353,31 +358,31 @@ const Events = () => {
                           {fights.slice(1).map((fight, idx) => (
                             <div key={idx} className="bg-gradient-to-br from-white to-gray-50 rounded-lg md:rounded-xl p-3 md:p-5 border-2 border-gray-300 hover:border-red-500 hover:shadow-xl transition-all">
                               <div className="flex items-center justify-between mb-2 md:mb-3 gap-2">
-                                <div className="text-xs font-bold text-red-600 uppercase tracking-wider truncate">{fight.cardLabel}</div>
-                                {fight.weightClass && (
+                                <div className="text-xs font-bold text-red-600 uppercase tracking-wider truncate">{fight?.cardLabel || 'Main Card'}</div>
+                                {fight?.weightClass && (
                                   <div className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase flex-shrink-0">
-                                    {fight.weightClass}
+                                    {fight?.weightClass}
                                   </div>
                                 )}
                               </div>
                               <div className="flex items-center justify-center gap-2 md:gap-3">
                                 {/* Fighter 1 */}
                                 <div className="flex flex-col items-center flex-1 min-w-0">
-                                  {fight.fighter1Image ? (
+                                  {fight?.fighter1Image ? (
                                     <img 
-                                      src={fight.fighter1Image}
-                                      alt={fight.fighter1}
+                                      src={fight?.fighter1Image}
+                                      alt={fight?.fighter1 || 'Fighter 1'}
                                       className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover border-2 md:border-3 border-red-500 mb-1 md:mb-2 shadow-lg flex-shrink-0"
                                       onError={(e) => {
-                                        e.target.src = `https://via.placeholder.com/64/ef4444/ffffff?text=${fight.fighter1?.[0] || '?'}`;
+                                        e.target.src = `https://via.placeholder.com/64/ef4444/ffffff?text=${fight?.fighter1?.[0] || '?'}`;
                                       }}
                                     />
                                   ) : (
                                     <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white text-base md:text-xl font-bold border-2 md:border-3 border-red-600 mb-1 md:mb-2 shadow-lg flex-shrink-0">
-                                      {fight.fighter1?.[0] || '?'}
+                                      {fight?.fighter1?.[0] || '?'}
                                     </div>
                                   )}
-                                  <span className="font-bold text-xs md:text-sm text-gray-900 text-center leading-tight break-words max-w-full px-1">{fight.fighter1}</span>
+                                  <span className="font-bold text-xs md:text-sm text-gray-900 text-center leading-tight break-words max-w-full px-1">{fight?.fighter1 || 'Fighter 1'}</span>
                                 </div>
                                 
                                 {/* VS */}
@@ -385,21 +390,21 @@ const Events = () => {
                                 
                                 {/* Fighter 2 */}
                                 <div className="flex flex-col items-center flex-1 min-w-0">
-                                  {fight.fighter2Image ? (
+                                  {fight?.fighter2Image ? (
                                     <img 
-                                      src={fight.fighter2Image}
-                                      alt={fight.fighter2}
+                                      src={fight?.fighter2Image}
+                                      alt={fight?.fighter2 || 'Fighter 2'}
                                       className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover border-2 md:border-3 border-blue-500 mb-1 md:mb-2 shadow-lg flex-shrink-0"
                                       onError={(e) => {
-                                        e.target.src = `https://via.placeholder.com/64/3b82f6/ffffff?text=${fight.fighter2?.[0] || '?'}`;
+                                        e.target.src = `https://via.placeholder.com/64/3b82f6/ffffff?text=${fight?.fighter2?.[0] || '?'}`;
                                       }}
                                     />
                                   ) : (
                                     <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-base md:text-xl font-bold border-2 md:border-3 border-blue-600 mb-1 md:mb-2 shadow-lg flex-shrink-0">
-                                      {fight.fighter2?.[0] || '?'}
+                                      {fight?.fighter2?.[0] || '?'}
                                     </div>
                                   )}
-                                  <span className="font-bold text-xs md:text-sm text-gray-900 text-center leading-tight break-words max-w-full px-1">{fight.fighter2}</span>
+                                  <span className="font-bold text-xs md:text-sm text-gray-900 text-center leading-tight break-words max-w-full px-1">{fight?.fighter2 || 'Fighter 2'}</span>
                                 </div>
                               </div>
                             </div>
