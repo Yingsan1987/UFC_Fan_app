@@ -418,6 +418,7 @@ const Events = () => {
                                       </span>
                                     </div>
 
+                                    {/* VS */}
                                     <div className="font-black text-red-600 text-base md:text-xl flex-shrink-0">VS</div>
 
                                     {/* Fighter 2 */}
