@@ -270,7 +270,7 @@ const Events = () => {
 
                   {/* Collapsible Fight Card */}
                   {isExpanded && (
-                  <div className="p-4 md:p-8 bg-gradient-to-br from-gray-50 to-gray-100 border-t-2 md:border-t-4 border-yellow-600">
+                    <div className="p-4 md:p-8 bg-gradient-to-br from-gray-50 to-gray-100 border-t-2 md:border-t-4 border-yellow-600">
                     {mainFight && (
                       <div className="mb-6 md:mb-8">
                         <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-4">
@@ -407,8 +407,8 @@ const Events = () => {
                         </div>
                       </div>
                     )}
-                  </div>
-                )}
+                    </div>
+                  )}
                 </div>
               );
               })}
