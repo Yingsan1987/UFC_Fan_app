@@ -417,7 +417,7 @@ const Events = () => {
         </div>
       )}
 
-      {/* Big Visual Divider */}
+      {/* Big Visual Divider - Past Events Section */}
       <div className="my-16 relative">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t-4 border-gray-400"></div>
