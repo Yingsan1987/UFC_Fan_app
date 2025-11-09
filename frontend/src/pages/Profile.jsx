@@ -3,7 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import { User, Calendar, Shield, Edit2, Save, X, Crown, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
+// Use localhost in development, production URL as fallback
+const API_URL = import.meta.env.VITE_API_URL || 
+  (window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : 'https://ufc-fan-app-backend.onrender.com/api');
 
 // Default avatar options
 const DEFAULT_AVATARS = [
@@ -16,7 +20,7 @@ const DEFAULT_AVATARS = [
 ];
 
 export default function Profile() {
-  const { currentUser, getAuthToken } = useAuth();
+  const { currentUser, getAuthToken, updateUserProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -32,8 +36,16 @@ export default function Profile() {
   });
 
   useEffect(() => {
+    console.log('👤 Profile component mounted');
+    console.log('Current user:', currentUser);
+    console.log('Has getAuthToken?', typeof getAuthToken === 'function');
+    console.log('Has updateUserProfile?', typeof updateUserProfile === 'function');
+    
     if (currentUser) {
+      console.log('✅ User is logged in, fetching profile...');
       fetchProfile();
+    } else {
+      console.log('⚠️ No user logged in');
     }
   }, [currentUser]);
 
@@ -67,19 +79,58 @@ export default function Profile() {
     setSaving(true);
 
     try {
-      const token = await getAuthToken();
+      console.log('🔄 Starting profile update...');
+      console.log('Current user:', currentUser);
+      console.log('Form data:', formData);
+      
+      // Get auth token
+      let token;
+      try {
+        token = await getAuthToken();
+        console.log('✅ Auth token obtained');
+      } catch (authError) {
+        console.error('❌ Failed to get auth token:', authError);
+        throw new Error('Authentication failed. Please log in again.');
+      }
+      
       const response = await axios.put(`${API_URL}/users/profile`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      console.log('✅ Backend profile updated:', response.data.user);
       setProfile(response.data.user);
+      
+      // Update Firebase Auth profile to reflect the display name change
+      if (formData.displayName && formData.displayName !== currentUser?.displayName) {
+        try {
+          console.log('🔄 Updating Firebase Auth display name from', currentUser?.displayName, 'to', formData.displayName);
+          await updateUserProfile(formData.displayName);
+          console.log('✅ Firebase Auth profile updated with display name');
+        } catch (firebaseError) {
+          console.warn('⚠️ Could not update Firebase profile:', firebaseError.message);
+          // Don't fail the whole update if Firebase update fails
+        }
+      }
+      
+      // Refresh profile from backend to ensure everything is in sync
+      await fetchProfile();
+      
       setSuccess('Profile updated successfully! 🎉');
       setEditMode(false);
       
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      console.error('Error updating profile:', error);
-      setError(error.response?.data?.error || 'Failed to update profile');
+      console.error('❌ Error updating profile:', error);
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response?.data);
+      
+      const errorMessage = error.message || 
+                          error.response?.data?.error || 
+                          error.response?.data?.message ||
+                          'Failed to update profile';
+      
+      setError(errorMessage);
+      console.error('Displayed error:', errorMessage);
     } finally {
       setSaving(false);
     }

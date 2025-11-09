@@ -159,33 +159,46 @@ const ADMIN_TESTER_EMAIL = 'yingsan1987@gmail.com';
 // Perform training action
 router.post('/train', requireAuth, async (req, res) => {
   try {
+    console.log('🎮 Training request received');
+    console.log('User:', req.user);
+    
     const firebaseUid = req.user.uid;
     const { trainingType, xpGained } = req.body;
     
     // Check if this is admin tester account
     const isAdminTester = req.user.email === ADMIN_TESTER_EMAIL;
+    console.log('🔑 Is Admin Tester:', isAdminTester, '(email:', req.user.email, ')');
 
     let rookieFighter = await RookieFighter.findOne({ firebaseUid, isTransferred: false });
     
     // If no rookieFighter exists, create one (data recovery)
     if (!rookieFighter) {
       console.log('⚠️ No RookieFighter found during training. Creating new RookieFighter...');
+      console.log('Firebase UID:', firebaseUid);
+      console.log('User email:', req.user.email);
       
       // Check if game is initialized
       const gameProgress = await GameProgress.findOne({ firebaseUid });
       if (!gameProgress) {
+        console.log('❌ No game progress found for this user');
         return res.status(404).json({ message: 'Game not initialized. Please initialize the game first.' });
       }
+      console.log('✅ Game progress found:', gameProgress._id);
       
       // Find or create user
       let user = await User.findOne({ firebaseUid });
       if (!user) {
+        console.log('📝 Creating new user in database...');
+        console.log('User data:', { firebaseUid, email: req.user.email, displayName: req.user.displayName || req.user.name });
         user = new User({
           firebaseUid,
           email: req.user.email,
-          displayName: req.user.name || req.user.email || 'Player'
+          displayName: req.user.displayName || req.user.name || req.user.email || 'Player'
         });
         await user.save();
+        console.log('✅ User created:', user._id);
+      } else {
+        console.log('✅ User found:', user._id);
       }
       
       rookieFighter = new RookieFighter({
@@ -196,8 +209,18 @@ router.post('/train', requireAuth, async (req, res) => {
         lastEnergyRefresh: new Date()
       });
       await rookieFighter.save();
-      console.log('✅ RookieFighter created for training');
+      console.log('✅ RookieFighter created for training:', rookieFighter._id);
     }
+
+    // Double-check rookieFighter exists after creation attempt
+    if (!rookieFighter) {
+      console.error('❌ CRITICAL: RookieFighter still null after creation attempt!');
+      return res.status(500).json({ message: 'Failed to create or retrieve RookieFighter' });
+    }
+    
+    console.log('✅ RookieFighter ready for training');
+    console.log('Fighter energy:', rookieFighter.energy);
+    console.log('Fighter sessions:', rookieFighter.trainingSessions);
 
     // Refresh energy and save if it was refreshed (skip for admin tester)
     if (!isAdminTester) {
@@ -272,6 +295,10 @@ router.post('/train', requireAuth, async (req, res) => {
     const gameProgress = await GameProgress.findOne({ firebaseUid });
     await gameProgress.save();
 
+    console.log('📤 Sending response with updated data...');
+    console.log('Response rookieFighter energy:', rookieFighter.energy);
+    console.log('Response rookieFighter sessions:', rookieFighter.trainingSessions);
+    
     res.json({
       message: `Training complete! +${validatedXP} ${attribute}. Energy: ${rookieFighter.energy}/3`,
       statGained: validatedXP,
@@ -279,9 +306,12 @@ router.post('/train', requireAuth, async (req, res) => {
       rookieFighter,
       gameProgress
     });
+    
+    console.log('✅ Training response sent successfully');
   } catch (error) {
-    console.error('Error during training:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('❌ Error during training:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ message: error.message || 'Server error', error: error.message });
   }
 });
 

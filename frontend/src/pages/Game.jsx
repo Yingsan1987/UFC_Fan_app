@@ -31,7 +31,11 @@ import preliminaryImage from '../assets/images/fighter_game/fighter_stage_2_Prel
 import mainCardImage from '../assets/images/fighter_game/fighter_stage_3_Main_Event.png';
 import championImage from '../assets/images/fighter_game/fighter_stage_4_Champion.png';
 
-const API_URL = import.meta.env.VITE_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
+// Use localhost in development, production URL as fallback
+const API_URL = import.meta.env.VITE_API_URL || 
+  (window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : 'https://ufc-fan-app-backend.onrender.com/api');
 
 // Admin/Test Account with Unlimited Energy
 const ADMIN_TESTER_EMAIL = 'yingsan1987@gmail.com';

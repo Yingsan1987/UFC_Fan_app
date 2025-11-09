@@ -2,53 +2,13 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const admin = require('firebase-admin');
+const { requireAuth } = require('../middleware/authMiddleware');
 
-// Check if Firebase is already initialized by middleware
-let firebaseInitialized = false;
-if (admin.apps.length > 0) {
-  firebaseInitialized = true;
-  console.log('✅ Firebase Admin already initialized');
-} else {
-  try {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-      firebaseInitialized = true;
-      console.log('✅ Firebase Admin initialized in users route');
-    }
-  } catch (error) {
-    console.log('⚠️  Firebase Admin not initialized - user profile features may be limited');
-  }
-}
-
-// Middleware to verify Firebase token
-const verifyToken = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized - No token provided' });
-  }
-
-  const token = authHeader.split('Bearer ')[1];
-
-  try {
-    if (!firebaseInitialized) {
-      return res.status(500).json({ error: 'Authentication not configured' });
-    }
-    
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = decodedToken;
-    next();
-  } catch (error) {
-    console.error('Token verification error:', error);
-    return res.status(401).json({ error: 'Unauthorized - Invalid token' });
-  }
-};
+// Check if Firebase Admin is initialized
+const firebaseInitialized = admin.apps.length > 0;
 
 // GET user profile
-router.get('/profile', verifyToken, async (req, res) => {
+router.get('/profile', requireAuth, async (req, res) => {
   try {
     const user = await User.findOne({ firebaseUid: req.user.uid })
       .populate('gameProgress')
@@ -81,7 +41,7 @@ router.get('/profile', verifyToken, async (req, res) => {
 });
 
 // UPDATE user profile
-router.put('/profile', verifyToken, async (req, res) => {
+router.put('/profile', requireAuth, async (req, res) => {
   try {
     const { displayName, username, profileImage, bio } = req.body;
 

@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Trophy, Calendar, MapPin, Check, Users } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
+// Use localhost in development, production URL as fallback
+const API_URL = import.meta.env.VITE_API_URL || 
+  (window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : 'https://ufc-fan-app-backend.onrender.com/api');
 
 export default function Prediction() {
   const [upcomingEvents, setUpcomingEvents] = useState([]);

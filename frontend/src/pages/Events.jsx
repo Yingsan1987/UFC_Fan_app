@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Search, X, Calendar, MapPin, Users, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = 'https://ufc-fan-app-backend.onrender.com/api';
+// Use localhost in development, production URL as fallback
+const API_URL = import.meta.env.VITE_API_URL || 
+  (window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : 'https://ufc-fan-app-backend.onrender.com/api');
 
 const safeLower = (v) => (v ?? '').toString().toLowerCase();
 const toTime = (d) => {

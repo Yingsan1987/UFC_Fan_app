@@ -66,9 +66,49 @@ export function AuthProvider({ children }) {
 
   // Get Firebase ID token for API authentication
   async function getAuthToken() {
+    if (!auth) {
+      console.error('❌ Firebase Auth not initialized');
+      throw new Error('Authentication not configured. Please contact the administrator.');
+    }
+    if (!currentUser) {
+      console.error('❌ No user logged in');
+      throw new Error('No user logged in. Please log in again.');
+    }
+    
+    try {
+      const token = await currentUser.getIdToken();
+      console.log('✅ Firebase token obtained successfully');
+      return token;
+    } catch (error) {
+      console.error('❌ Error getting ID token:', error);
+      throw new Error('Failed to get authentication token. Please log in again.');
+    }
+  }
+
+  // Update user profile (display name and photo URL)
+  async function updateUserProfile(displayName, photoURL) {
     if (!auth) throw new Error('Firebase Auth not initialized. Please configure .env file.');
     if (!currentUser) throw new Error('No user logged in');
-    return currentUser.getIdToken();
+    
+    const updates = {};
+    if (displayName !== undefined) updates.displayName = displayName;
+    if (photoURL !== undefined) updates.photoURL = photoURL;
+    
+    await updateProfile(currentUser, updates);
+    
+    // Force refresh the current user to reflect changes
+    await currentUser.reload();
+    setCurrentUser(auth.currentUser);
+    
+    console.log('✅ Firebase profile updated:', updates);
+    return auth.currentUser;
+  }
+
+  // Refresh current user data
+  async function refreshUser() {
+    if (!auth || !currentUser) return;
+    await currentUser.reload();
+    setCurrentUser(auth.currentUser);
   }
 
   useEffect(() => {
@@ -95,7 +135,9 @@ export function AuthProvider({ children }) {
     logout,
     resetPassword,
     resendVerificationEmail,
-    getAuthToken
+    getAuthToken,
+    updateUserProfile,
+    refreshUser
   };
 
   return (
