@@ -80,7 +80,12 @@ function App() {
     }
   }, [location.pathname]);
 
-  const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || "https://ufc-fan-app-backend.onrender.com");
+  // Socket.io connection - use localhost in development
+  const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 
+    (window.location.hostname === 'localhost' 
+      ? 'http://localhost:5000' 
+      : 'https://ufc-fan-app-backend.onrender.com');
+  const socket = io(socketUrl);
 
 
   useEffect(() => {
