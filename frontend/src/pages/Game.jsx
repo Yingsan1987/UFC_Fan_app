@@ -31,7 +31,7 @@ import preliminaryImage from '../assets/images/fighter_game/fighter_stage_2_Prel
 import mainCardImage from '../assets/images/fighter_game/fighter_stage_3_Main_Event.png';
 import championImage from '../assets/images/fighter_game/fighter_stage_4_Champion.png';
 
-const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
 
 // Admin/Test Account with Unlimited Energy
 const ADMIN_TESTER_EMAIL = 'yingsan1987@gmail.com';
@@ -109,6 +109,10 @@ function Game() {
     'Main Card': 5,
     'Champion': 30
   };
+
+  // Extract data reactively from gameStatus to ensure updates are reflected
+  const rookieFighter = gameStatus?.rookieFighter;
+  const gameProgress = gameStatus?.gameProgress;
 
   const fetchGameStatus = async () => {
     if (!currentUser) {
@@ -256,13 +260,18 @@ function Game() {
   };
 
   const handleTraining = (trainingType) => {
-    // Check energy for free users
-    const isPremium = gameProgress?.isPremium || false;
-    const hasEnergy = rookieFighter && rookieFighter.energy > 0;
+    // Check if admin tester (unlimited energy)
+    const isAdminTester = currentUser?.email === ADMIN_TESTER_EMAIL;
     
-    if (!hasEnergy && !isPremium) {
-      showMessage('⚡ No energy remaining! Upgrade to Premium to keep playing (no XP gain)', 'error');
-      return;
+    // Check energy for free users (skip for admin)
+    if (!isAdminTester) {
+      const isPremium = gameProgress?.isPremium || false;
+      const hasEnergy = rookieFighter && rookieFighter.energy > 0;
+      
+      if (!hasEnergy && !isPremium) {
+        showMessage('⚡ No energy remaining! Upgrade to Premium to keep playing (no XP gain)', 'error');
+        return;
+      }
     }
     
     // Launch the appropriate mini-game
@@ -283,9 +292,20 @@ function Game() {
     const isPremium = gameProgress?.isPremium || false; // Don't conflate admin with premium
     const hasEnergy = rookieFighter && rookieFighter.energy > 0;
     
+    // Admin tester can always train with full XP (unlimited energy)
+    if (isAdminTester) {
+      console.log('🔥 Admin Tester training - unlimited energy mode');
+    }
     // Premium users (NOT admin testers) can play without energy but won't gain XP
-    if (!hasEnergy && isPremium && !isAdminTester) {
+    else if (!hasEnergy && isPremium) {
       showMessage('⭐ Premium Training (No Energy) - No XP gained but thanks for playing!', 'success');
+      setActiveMiniGame(null);
+      setCurrentTrainingType(null);
+      return;
+    }
+    // Regular users with no energy shouldn't reach here but just in case
+    else if (!hasEnergy && !isPremium) {
+      showMessage('⚡ No energy remaining!', 'error');
       setActiveMiniGame(null);
       setCurrentTrainingType(null);
       return;
@@ -306,12 +326,21 @@ function Game() {
       console.log('═══════════════════════════════════════');
       console.log('✅ TRAINING COMPLETE - BACKEND RESPONSE:');
       console.log('═══════════════════════════════════════');
+      console.log('Full Response:', response.data);
       console.log('⚡ Energy:', response.data.rookieFighter?.energy);
-      console.log('📈 Training Sessions:', response.data.rookieFighter?.trainingSessions);
+      console.log('📈 Training Sessions:', response.data.rookieFighter?.trainingSessions, '/', response.data.rookieFighter?.trainingGoal);
       console.log('📊 Stats:', response.data.rookieFighter?.stats);
       console.log('💪 Attribute Updated:', response.data.attribute);
       console.log('🎯 XP Gained:', response.data.statGained);
+      console.log('👤 Admin User:', currentUser?.email === ADMIN_TESTER_EMAIL);
       console.log('───────────────────────────────────────');
+      
+      // Ensure we have valid data before updating
+      if (!response.data.rookieFighter) {
+        console.error('❌ No rookieFighter in response!');
+        showMessage('Training completed but data missing - please refresh', 'error');
+        return;
+      }
       
       // Force complete state update to trigger re-render
       const newGameStatus = {
@@ -321,12 +350,21 @@ function Game() {
       };
       
       console.log('🔄 SETTING NEW GAME STATUS:', newGameStatus);
+      console.log('🔄 Previous rookieFighter sessions:', gameStatus?.rookieFighter?.trainingSessions);
+      console.log('🔄 New rookieFighter sessions:', newGameStatus.rookieFighter?.trainingSessions);
+      
       setGameStatus(newGameStatus);
       
       console.log('✅ State update called - component should re-render');
       console.log('═══════════════════════════════════════');
       
       showMessage(`${response.data.message}`, 'success');
+      
+      // Fetch fresh game status after a short delay to ensure backend is updated
+      setTimeout(async () => {
+        console.log('🔄 Fetching fresh game status after training...');
+        await fetchGameStatus();
+      }, 500);
     } catch (error) {
       console.error('❌ Error during training:', error);
       showMessage(error.response?.data?.message || 'Training failed', 'error');
@@ -586,10 +624,6 @@ function Game() {
     );
   }
 
-  // Extract data reactively from gameStatus to ensure updates are reflected
-  const rookieFighter = gameStatus?.rookieFighter;
-  const gameProgress = gameStatus?.gameProgress;
-  
   const isTransferred = rookieFighter?.isTransferred;
   const stats = rookieFighter?.stats || {};
   const progress = rookieFighter ? 
@@ -609,12 +643,15 @@ function Game() {
 
   // DEBUG LOGS - Log current state every render
   console.log('🎮 [GAME STATE]', {
+    rookieFighter: rookieFighter,
+    gameProgress: gameProgress,
     energy: rookieFighter?.energy,
     trainingSessions: rookieFighter?.trainingSessions,
     trainingGoal: rookieFighter?.trainingGoal,
     stats: rookieFighter?.stats,
     progress: progress,
-    progressPercent: progressPercent
+    progressPercent: progressPercent,
+    isAdminTester: currentUser?.email === ADMIN_TESTER_EMAIL
   });
 
   return (
@@ -1678,6 +1715,13 @@ function Game() {
                     )}
                   </div>
                 )}
+                {!rookieFighter && currentUser?.email !== ADMIN_TESTER_EMAIL && (
+                  <div className="border-l-4 p-4 mb-6 mt-4 bg-yellow-50 border-yellow-500">
+                    <p className="text-yellow-800 font-medium">
+                      ⚠️ Loading game data... If this persists, try refreshing the page.
+                    </p>
+                  </div>
+                )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       {trainingOptions.map((option) => (
@@ -1695,13 +1739,19 @@ function Game() {
                           </p>
                       <button
                         onClick={() => handleTraining(option.type)}
-                        disabled={actionLoading || (rookieFighter && rookieFighter.energy <= 0 && !gameProgress?.isPremium && currentUser?.email !== ADMIN_TESTER_EMAIL)}
+                        disabled={
+                          actionLoading || 
+                          (currentUser?.email !== ADMIN_TESTER_EMAIL && 
+                           !gameProgress?.isPremium && 
+                           (!rookieFighter || rookieFighter.energy <= 0))
+                        }
                         className={`w-full py-2 rounded-md font-bold transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed ${option.color} text-white hover:opacity-90`}
                       >
                         {actionLoading ? 'Training...' :
                          currentUser?.email === ADMIN_TESTER_EMAIL ? 'Train (∞ Admin)' :
-                         rookieFighter && rookieFighter.energy <= 0 && gameProgress?.isPremium ? 'Premium Play (No XP)' :
-                         rookieFighter && rookieFighter.energy <= 0 ? 'No Energy' :
+                         !rookieFighter ? 'Loading...' :
+                         rookieFighter.energy <= 0 && gameProgress?.isPremium ? 'Premium Play (No XP)' :
+                         rookieFighter.energy <= 0 ? 'No Energy' :
                          'Train (1 Energy)'}
                       </button>
                         </div>

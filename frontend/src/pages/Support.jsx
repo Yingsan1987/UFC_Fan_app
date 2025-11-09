@@ -4,9 +4,13 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import axios from 'axios';
 
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+// Only load Stripe if the publishable key is available
+const stripePromise = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY 
+  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
+  : null;
 
-const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
+
 
 // Payment Form Component using Stripe Elements
 const PaymentForm = ({ paymentType, selectedCoffee, subscriptionPlan, onSuccess, onCancel }) => {
@@ -65,7 +69,7 @@ const PaymentForm = ({ paymentType, selectedCoffee, subscriptionPlan, onSuccess,
       } else if (paymentType === 'subscription') {
         // Handle subscription payment
         const response = await axios.post(`${API_URL}/stripe/create-subscription`, {
-          priceId: process.env.REACT_APP_STRIPE_PRICE_ID, // You'll need to set this
+          priceId: import.meta.env.VITE_STRIPE_PRICE_ID, // You'll need to set this
           customerEmail: paymentData.email,
           customerName: paymentData.name,
           metadata: {
@@ -296,6 +300,14 @@ const Support = () => {
     <div className="max-w-4xl mx-auto p-6">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Support UFC Fan App</h1>
+        
+        {!stripePromise && (
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded mb-4">
+            <p className="font-semibold">⚠️ Payment system not configured</p>
+            <p className="text-sm">Stripe keys are missing. Payment features are currently unavailable.</p>
+          </div>
+        )}
+        
         <p className="text-lg text-gray-600 mb-2">
           Love the app? Help keep it running and get exclusive benefits!
         </p>

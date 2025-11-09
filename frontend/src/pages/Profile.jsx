@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { User, Calendar, Shield, Edit2, Save, X, Crown, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
 
 // Default avatar options
 const DEFAULT_AVATARS = [

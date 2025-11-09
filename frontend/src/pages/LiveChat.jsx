@@ -4,7 +4,7 @@ import { Calendar, MapPin, Send, Image as ImageIcon, Smile, X } from 'lucide-rea
 import axios from 'axios';
 import EmojiPicker from 'emoji-picker-react';
 
-const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
 
 export default function LiveChat({ chatMessages, message, setMessage, sendMessage }) {
   const { currentUser } = useAuth();

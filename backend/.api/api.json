@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "apis": [
+    {
+      "identifier": "sportradar-mma",
+      "source": "@sportradar-mma/v2#dm3jcnfmd4nh8rp",
+      "integrity": "sha512-l8oSFqXfcGU4Y45QUNljE2wGgJRCMIso7xJplG2+AverxqFOfzxf4ZkHyToxobfhx8EInt4Eayq0ghoMswqJGA==",
+      "installerVersion": "6.1.3"
+    }
+  ]
+}

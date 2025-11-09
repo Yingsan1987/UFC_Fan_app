@@ -20,7 +20,7 @@ import Profile from './pages/Profile';
 import AuthModal from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
 
-const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
 
 
 function App() {
@@ -76,7 +76,7 @@ function App() {
     }
   }, [location.pathname]);
 
-  const socket = io(process.env.REACT_APP_API_URL?.replace('/api', '') || "https://ufc-fan-app-backend.onrender.com");
+  const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || "https://ufc-fan-app-backend.onrender.com");
 
 
   useEffect(() => {

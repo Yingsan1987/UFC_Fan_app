@@ -1,10 +1,21 @@
 const express = require('express');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
+
+// Only initialize Stripe if the secret key is available
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 // Create payment intent for one-time payments (coffee purchases)
 router.post('/create-payment-intent', async (req, res) => {
   try {
+    // Check if Stripe is configured
+    if (!stripe) {
+      return res.status(503).json({ 
+        error: 'Payment system not configured. Please contact the administrator.' 
+      });
+    }
+
     const { amount, currency = 'usd', metadata = {} } = req.body;
 
     if (!amount || amount <= 0) {
@@ -36,6 +47,13 @@ router.post('/create-payment-intent', async (req, res) => {
 // Create subscription for premium membership
 router.post('/create-subscription', async (req, res) => {
   try {
+    // Check if Stripe is configured
+    if (!stripe) {
+      return res.status(503).json({ 
+        error: 'Payment system not configured. Please contact the administrator.' 
+      });
+    }
+
     const { priceId, customerEmail, customerName, metadata = {} } = req.body;
 
     if (!priceId) {
@@ -83,6 +101,13 @@ router.post('/create-subscription', async (req, res) => {
 // Create price for subscription (you'll need to create this in Stripe Dashboard)
 router.post('/create-price', async (req, res) => {
   try {
+    // Check if Stripe is configured
+    if (!stripe) {
+      return res.status(503).json({ 
+        error: 'Payment system not configured. Please contact the administrator.' 
+      });
+    }
+
     const { amount, currency = 'usd', interval = 'month', productName = 'UFC Fan App Premium' } = req.body;
 
     if (!amount || amount <= 0) {
@@ -116,6 +141,13 @@ router.post('/create-price', async (req, res) => {
 // Get subscription status
 router.get('/subscription/:subscriptionId', async (req, res) => {
   try {
+    // Check if Stripe is configured
+    if (!stripe) {
+      return res.status(503).json({ 
+        error: 'Payment system not configured. Please contact the administrator.' 
+      });
+    }
+
     const { subscriptionId } = req.params;
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     
@@ -134,6 +166,13 @@ router.get('/subscription/:subscriptionId', async (req, res) => {
 // Cancel subscription
 router.post('/cancel-subscription', async (req, res) => {
   try {
+    // Check if Stripe is configured
+    if (!stripe) {
+      return res.status(503).json({ 
+        error: 'Payment system not configured. Please contact the administrator.' 
+      });
+    }
+
     const { subscriptionId } = req.body;
     
     const subscription = await stripe.subscriptions.update(subscriptionId, {
@@ -152,6 +191,13 @@ router.post('/cancel-subscription', async (req, res) => {
 
 // Webhook endpoint for handling Stripe events
 router.post('/webhook', express.raw({type: 'application/json'}), (req, res) => {
+  // Check if Stripe is configured
+  if (!stripe) {
+    return res.status(503).json({ 
+      error: 'Payment system not configured. Please contact the administrator.' 
+    });
+  }
+
   const sig = req.headers['stripe-signature'];
   let event;
 

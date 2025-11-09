@@ -15,7 +15,7 @@ import Home from './pages/Home';
 import Ranking from './pages/Ranking';
 import Prediction from './pages/Prediction';
 
-const API_URL = process.env.REACT_APP_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL || "https://ufc-fan-app-backend.onrender.com/api";
 
 function AppNoAuth() {
   const [fighters, setFighters] = useState([]);
@@ -50,7 +50,7 @@ function AppNoAuth() {
     }
   }, [location.pathname]);
 
-  const socket = io(process.env.REACT_APP_API_URL?.replace('/api', '') || "https://ufc-fan-app-backend.onrender.com");
+  const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || "https://ufc-fan-app-backend.onrender.com");
 
   useEffect(() => {
     axios.get(`${API_URL}/fighters`).then(res => setFighters(res.data));

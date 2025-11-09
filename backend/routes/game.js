@@ -105,12 +105,41 @@ router.get('/status', requireAuth, async (req, res) => {
       return res.json({ initialized: false });
     }
 
-    const rookieFighter = await RookieFighter.findOne({ firebaseUid });
+    let rookieFighter = await RookieFighter.findOne({ firebaseUid });
     
-    // Refresh energy if needed
-    if (rookieFighter && !rookieFighter.isTransferred) {
-      rookieFighter.refreshEnergy();
+    // If game is initialized but no rookieFighter exists, create one (data recovery)
+    if (!rookieFighter && gameProgress) {
+      console.log('⚠️ Game initialized but no RookieFighter found. Creating new RookieFighter...');
+      
+      // Find or create user
+      let user = await User.findOne({ firebaseUid });
+      if (!user) {
+        user = new User({
+          firebaseUid,
+          email: req.user.email,
+          displayName: req.user.name || req.user.email || 'Player'
+        });
+        await user.save();
+      }
+      
+      rookieFighter = new RookieFighter({
+        userId: user._id,
+        firebaseUid,
+        selectedWeightClass: 'Lightweight',
+        energy: 3,
+        lastEnergyRefresh: new Date()
+      });
       await rookieFighter.save();
+      console.log('✅ RookieFighter created for existing game');
+    }
+    
+    // Refresh energy if needed (for non-transferred fighters)
+    if (rookieFighter && !rookieFighter.isTransferred) {
+      const wasRefreshed = rookieFighter.refreshEnergy();
+      if (wasRefreshed) {
+        await rookieFighter.save();
+        console.log('✅ Energy refreshed for user');
+      }
     }
 
     res.json({
@@ -136,10 +165,38 @@ router.post('/train', requireAuth, async (req, res) => {
     // Check if this is admin tester account
     const isAdminTester = req.user.email === ADMIN_TESTER_EMAIL;
 
-    const rookieFighter = await RookieFighter.findOne({ firebaseUid, isTransferred: false });
+    let rookieFighter = await RookieFighter.findOne({ firebaseUid, isTransferred: false });
     
+    // If no rookieFighter exists, create one (data recovery)
     if (!rookieFighter) {
-      return res.status(404).json({ message: 'No active Rookie Fighter found' });
+      console.log('⚠️ No RookieFighter found during training. Creating new RookieFighter...');
+      
+      // Check if game is initialized
+      const gameProgress = await GameProgress.findOne({ firebaseUid });
+      if (!gameProgress) {
+        return res.status(404).json({ message: 'Game not initialized. Please initialize the game first.' });
+      }
+      
+      // Find or create user
+      let user = await User.findOne({ firebaseUid });
+      if (!user) {
+        user = new User({
+          firebaseUid,
+          email: req.user.email,
+          displayName: req.user.name || req.user.email || 'Player'
+        });
+        await user.save();
+      }
+      
+      rookieFighter = new RookieFighter({
+        userId: user._id,
+        firebaseUid,
+        selectedWeightClass: 'Lightweight',
+        energy: 3,
+        lastEnergyRefresh: new Date()
+      });
+      await rookieFighter.save();
+      console.log('✅ RookieFighter created for training');
     }
 
     // Refresh energy and save if it was refreshed (skip for admin tester)
