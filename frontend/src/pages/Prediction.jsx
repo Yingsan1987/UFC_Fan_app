@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import html2canvas from 'html2canvas';
+import { useAuth } from '../context/AuthContext';
 
 // Use localhost in development, production URL as fallback
 const API_URL =
@@ -63,17 +64,21 @@ const slugify = (value) =>
     .replace(/-+$/, '') || 'ufc-predictions';
 
 export default function Prediction() {
+  const { currentUser, getAuthToken } = useAuth();
+  const predictionsKey = useMemo(
+    () => (currentUser?.uid ? `ufc_predictions_${currentUser.uid}` : 'ufc_predictions_guest'),
+    [currentUser]
+  );
+  const historyKey = useMemo(
+    () => (currentUser?.uid ? `ufc_prediction_history_${currentUser.uid}` : 'ufc_prediction_history_guest'),
+    [currentUser]
+  );
+
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedEvents, setExpandedEvents] = useState({});
-  const [predictions, setPredictions] = useState(() => {
-    const saved = localStorage.getItem('ufc_predictions');
-    return saved ? JSON.parse(saved) : {};
-  });
-  const [predictionHistory, setPredictionHistory] = useState(() => {
-    const saved = localStorage.getItem('ufc_prediction_history');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [predictions, setPredictions] = useState({});
+  const [predictionHistory, setPredictionHistory] = useState([]);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [sharePayload, setSharePayload] = useState(null);
   const [shareImage, setShareImage] = useState(null);
@@ -81,6 +86,7 @@ export default function Prediction() {
   const [shareError, setShareError] = useState(null);
   const shareCardRef = useRef(null);
   const [expandedHistory, setExpandedHistory] = useState({});
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
@@ -104,12 +110,138 @@ export default function Prediction() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('ufc_predictions', JSON.stringify(predictions));
-  }, [predictions]);
+    try {
+      const savedPredictions = localStorage.getItem(predictionsKey);
+      setPredictions(savedPredictions ? JSON.parse(savedPredictions) : {});
+    } catch (error) {
+      console.warn('Unable to load saved predictions:', error);
+      setPredictions({});
+    }
+  }, [predictionsKey]);
 
   useEffect(() => {
-    localStorage.setItem('ufc_prediction_history', JSON.stringify(predictionHistory));
-  }, [predictionHistory]);
+    try {
+      localStorage.setItem(predictionsKey, JSON.stringify(predictions));
+    } catch (error) {
+      console.warn('Unable to persist predictions:', error);
+    }
+  }, [predictions, predictionsKey]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setPredictionHistory([]);
+      setExpandedHistory({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadHistory = async () => {
+      setHistoryLoading(true);
+      try {
+        const token = await getAuthToken();
+        const response = await axios.get(`${API_URL}/predictions`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!cancelled) {
+          const entries = Array.isArray(response.data)
+            ? response.data.map((entry) => ({
+                id: entry._id || entry.id,
+                eventName: entry.eventName,
+                eventDate: entry.eventDate,
+                location: entry.location,
+                savedAt: entry.savedAt,
+                picks: Array.isArray(entry.picks)
+                  ? entry.picks.map((pick) => ({
+                      fightLabel: pick.fightLabel,
+                      prediction: pick.prediction,
+                      cardType: pick.cardType,
+                      fighter1: pick.fighter1,
+                      fighter2: pick.fighter2,
+                      weightClass: pick.weightClass,
+                      predictedCorner: pick.predictedCorner,
+                    }))
+                  : [],
+              }))
+            : [];
+
+          setPredictionHistory(entries);
+          setExpandedHistory({});
+
+          try {
+            localStorage.setItem(historyKey, JSON.stringify(entries));
+          } catch (storageError) {
+            console.warn('Unable to cache prediction history:', storageError);
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load prediction history:', error);
+        }
+      } finally {
+        if (!cancelled) {
+          setHistoryLoading(false);
+        }
+      }
+    };
+
+    loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser, getAuthToken, historyKey]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    try {
+      localStorage.setItem(historyKey, JSON.stringify(predictionHistory));
+    } catch (error) {
+      console.warn('Unable to persist prediction history:', error);
+    }
+  }, [predictionHistory, historyKey, currentUser]);
+  const normalizeHistoryEntry = (entry) => ({
+    id: entry._id || entry.id,
+    eventName: entry.eventName,
+    eventDate: entry.eventDate,
+    location: entry.location,
+    savedAt: entry.savedAt,
+    picks: Array.isArray(entry.picks)
+      ? entry.picks.map((pick) => ({
+          fightLabel: pick.fightLabel,
+          prediction: pick.prediction,
+          cardType: pick.cardType,
+          fighter1: pick.fighter1,
+          fighter2: pick.fighter2,
+          fighter1Image: pick.fighter1Image,
+          fighter2Image: pick.fighter2Image,
+          weightClass: pick.weightClass,
+          predictedCorner: pick.predictedCorner,
+        }))
+      : [],
+  });
+
+  const saveHistoryEntryToServer = async (entry) => {
+    const token = await getAuthToken();
+    const response = await axios.post(
+      `${API_URL}/predictions`,
+      {
+        eventName: entry.eventName,
+        eventDate: entry.eventDate,
+        location: entry.location,
+        savedAt: entry.savedAt,
+        picks: entry.picks,
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return normalizeHistoryEntry(response.data || {});
+  };
+
 
   useEffect(() => {
     if (!isShareModalOpen || !isGeneratingShareImage || !sharePayload) return;
@@ -184,7 +316,7 @@ export default function Prediction() {
     return name[0].toUpperCase();
   };
 
-  const handleSubmitPredictions = (event, eventIndex) => {
+  const handleSubmitPredictions = async (event, eventIndex) => {
     const fights = Array.isArray(event?.fights) ? event.fights : [];
     const { mainCard } = groupFights(fights);
     const mainCardLength = mainCard.length;
@@ -232,24 +364,38 @@ export default function Prediction() {
     setIsShareModalOpen(true);
     setIsGeneratingShareImage(true);
 
-    const historyEntry = {
-      id: `${payload.eventName}-${payload.generatedAt}`,
-      eventName: payload.eventName,
-      eventDate: payload.eventDate,
-      location: payload.location,
-      savedAt: payload.generatedAt,
-      picks: picksMade.map((pick) => ({
-        fightLabel: pick.fightLabel,
-        prediction: pick.prediction,
-        cardType: pick.cardType,
-      })),
-    };
+    if (currentUser) {
+      const historyEntry = {
+        eventName: payload.eventName,
+        eventDate: payload.eventDate,
+        location: payload.location,
+        savedAt: payload.generatedAt,
+        picks: picksMade.map((pick) => ({
+          fightLabel: pick.fightLabel,
+          prediction: pick.prediction,
+          cardType: pick.cardType,
+          fighter1: pick.fighter1,
+          fighter2: pick.fighter2,
+          fighter1Image: pick.fighter1Image ?? null,
+          fighter2Image: pick.fighter2Image ?? null,
+          weightClass: pick.weightClass,
+          predictedCorner: pick.predictedCorner,
+        })),
+      };
 
-    setPredictionHistory((prev) => {
-      const withoutDuplicate = prev.filter((item) => item.id !== historyEntry.id);
-      const updated = [historyEntry, ...withoutDuplicate].slice(0, 20);
-      return updated;
-    });
+      try {
+        const savedEntry = await saveHistoryEntryToServer(historyEntry);
+        setPredictionHistory((prev) => {
+          const withoutDuplicate = prev.filter((item) => item.id !== savedEntry.id);
+          return [savedEntry, ...withoutDuplicate].slice(0, 50);
+        });
+      } catch (error) {
+        console.error('Failed to save prediction history:', error);
+        alert('We could not save your prediction history. Please try again.');
+      }
+    } else {
+      alert('Sign in to save your prediction history for later.');
+    }
   };
 
   const handleDownloadShareImage = () => {
@@ -350,11 +496,29 @@ export default function Prediction() {
     </div>
   );
 
-  const handleClearHistory = () => {
-    const confirmed = window.confirm('Clear your saved prediction history?');
+  const handleClearHistory = async () => {
+    if (!currentUser) {
+      alert('Sign in to manage your saved prediction history.');
+      return;
+    }
+
+    const confirmed = window.confirm('Clear all saved prediction history for your account?');
     if (!confirmed) return;
-    setPredictionHistory([]);
-    localStorage.removeItem('ufc_prediction_history');
+    try {
+      const token = await getAuthToken();
+      await axios.delete(`${API_URL}/predictions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPredictionHistory([]);
+      try {
+        localStorage.removeItem(historyKey);
+      } catch (storageError) {
+        console.warn('Unable to clear cached prediction history:', storageError);
+      }
+    } catch (error) {
+      console.error('Failed to clear prediction history:', error);
+      alert('We could not clear your history. Please try again.');
+    }
   };
 
   const toggleHistoryEntry = (entryId) => {
@@ -362,6 +526,26 @@ export default function Prediction() {
       ...prev,
       [entryId]: !prev[entryId],
     }));
+  };
+
+  const handleDeleteHistoryEntry = async (entryId) => {
+    if (!currentUser) {
+      alert('Sign in to manage your saved prediction history.');
+      return;
+    }
+
+    const confirmed = window.confirm('Remove this saved prediction entry?');
+    if (!confirmed) return;
+    try {
+      const token = await getAuthToken();
+      await axios.delete(`${API_URL}/predictions/${entryId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPredictionHistory((prev) => prev.filter((entry) => entry.id !== entryId));
+    } catch (error) {
+      console.error('Failed to delete prediction history entry:', error);
+      alert('We could not remove that entry. Please try again.');
+    }
   };
 
   const FighterCard = ({ fighter, fighterImage, onSelect, isSelected, corner }) => {
@@ -681,70 +865,97 @@ export default function Prediction() {
           </ul>
         </div>
 
-        {predictionHistory.length > 0 && (
+        {(currentUser || predictionHistory.length > 0) && (
           <div className="mt-8 bg-white rounded-lg shadow-lg border border-gray-200 p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">📁 Saved Prediction History</h3>
                 <p className="text-sm text-gray-600">
-                  Your last {predictionHistory.length} prediction cards are stored locally so you can verify them after fight night.
+                  {currentUser
+                    ? 'History is synced to your UFC Fan App account. Review previous prediction cards or clean them up.'
+                    : 'Sign in to start saving prediction cards across sessions.'}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleClearHistory}
-                className="self-start inline-flex items-center justify-center rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-gray-400 hover:text-gray-800"
+                className="self-start inline-flex items-center justify-center rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-gray-400 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={!currentUser || predictionHistory.length === 0}
               >
-                Clear History
+                Clear All History
               </button>
             </div>
 
-            <div className="space-y-4">
-              {predictionHistory.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="rounded-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-white p-4 sm:p-5"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                    <div>
-                      <h4 className="text-base font-semibold text-gray-900">{entry.eventName}</h4>
-                      <div className="text-xs uppercase tracking-widest text-gray-500">
-                        {entry.eventDate ? formatEventDate(entry.eventDate) : 'Date TBA'}
-                        {entry.location ? ` • ${entry.location}` : ''}
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-10 text-sm text-gray-500">
+                Loading your saved predictions...
+              </div>
+            ) : predictionHistory.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-sm text-gray-500">
+                {currentUser
+                  ? 'You have not saved any prediction cards yet. Submit your picks to start building a history.'
+                  : 'Sign in to start saving prediction cards.'}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {predictionHistory.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="rounded-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-white p-4 sm:p-5"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                      <div>
+                        <h4 className="text-base font-semibold text-gray-900">{entry.eventName}</h4>
+                        <div className="text-xs uppercase tracking-widest text-gray-500">
+                          {entry.eventDate ? formatEventDate(entry.eventDate) : 'Date TBA'}
+                          {entry.location ? ` • ${entry.location}` : ''}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="hidden md:block text-xs uppercase tracking-widest text-gray-500">
+                          Saved {formatGeneratedAt(entry.savedAt)}
+                        </div>
+                        <div className="rounded-full bg-gray-900 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-white">
+                          {entry.picks.length} picks
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteHistoryEntry(entry.id)}
+                          className="inline-flex items-center rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
                       </div>
                     </div>
-                    <div className="text-xs uppercase tracking-widest text-gray-500">
+                    <div className="md:hidden text-xs uppercase tracking-widest text-gray-500">
                       Saved {formatGeneratedAt(entry.savedAt)}
                     </div>
-                    <div className="rounded-full bg-gray-900 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-white">
-                      {entry.picks.length} picks
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {(expandedHistory[entry.id] ? entry.picks : entry.picks.slice(0, 6)).map((pick, idx) => (
+                        <div
+                          key={`${entry.id}-pick-${idx}`}
+                          className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
+                        >
+                          <span className="truncate">{pick.fightLabel}</span>
+                          <span className="ml-2 font-semibold text-gray-900">{pick.prediction}</span>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    {(expandedHistory[entry.id] ? entry.picks : entry.picks.slice(0, 6)).map((pick, idx) => (
-                      <div
-                        key={`${entry.id}-pick-${idx}`}
-                        className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
+                    {entry.picks.length > 6 && (
+                      <button
+                        type="button"
+                        onClick={() => toggleHistoryEntry(entry.id)}
+                        className="mt-3 inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-800"
                       >
-                        <span className="truncate">{pick.fightLabel}</span>
-                        <span className="ml-2 font-semibold text-gray-900">{pick.prediction}</span>
-                      </div>
-                    ))}
+                        {expandedHistory[entry.id]
+                          ? 'Show fewer picks'
+                          : `Show all ${entry.picks.length} picks`}
+                      </button>
+                    )}
                   </div>
-                  {entry.picks.length > 6 && (
-                    <button
-                      type="button"
-                      onClick={() => toggleHistoryEntry(entry.id)}
-                      className="mt-3 inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-800"
-                    >
-                      {expandedHistory[entry.id]
-                        ? 'Show fewer picks'
-                        : `Show all ${entry.picks.length} picks`}
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -40,6 +40,7 @@ app.use('/api/game', require('./routes/game'));
 app.use('/api/fancoins', require('./routes/fancoins'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/sportradar', require('./routes/sportradar'));
+app.use('/api/predictions', require('./routes/predictions'));
 
 // Chat socket
 chatSocket(io);
