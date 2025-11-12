@@ -6,6 +6,7 @@ const TrainingSession = require('../models/TrainingSession');
 const Fighter = require('../models/Fighter');
 const User = require('../models/User');
 const { requireAuth } = require('../middleware/authMiddleware');
+const { createFuzzyFinder } = require('../utils/nameMatcher');
 
 // Initialize game for a user (create placeholder fighter and game progress)
 router.post('/initialize', requireAuth, async (req, res) => {
@@ -451,12 +452,14 @@ router.get('/upcoming-fights/:weightClass', async (req, res) => {
     
     // Fetch fighter images
     const fighterImages = await FighterImages.find();
-    const imageMap = {};
-    fighterImages.forEach(img => {
-      if (img.name && img.image_url) {
-        imageMap[img.name.toLowerCase()] = img.image_url;
-      }
-    });
+    const findImage = createFuzzyFinder(
+      fighterImages
+        .filter((img) => img?.name && (img?.image_url || img?.image_path))
+        .map((img) => ({
+          name: img.name,
+          value: img.image_url || img.image_path,
+        }))
+    );
     
     // Group fights by event and format
     const eventMap = {};
@@ -480,8 +483,8 @@ router.get('/upcoming-fights/:weightClass', async (req, res) => {
         _id: fight._id,
         fighter1: redFighterName,
         fighter2: blueFighterName,
-        fighter1Image: imageMap[redFighterName.toLowerCase()] || null,
-        fighter2Image: imageMap[blueFighterName.toLowerCase()] || null,
+        fighter1Image: findImage(redFighterName),
+        fighter2Image: findImage(blueFighterName),
         redProfileLink: fight.red_fighter?.profile_link,
         blueProfileLink: fight.blue_fighter?.profile_link,
         weightClass: fight.weight_class,

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const UpcomingEvent = require('../models/UpcomingEvent');
 const FighterImages = require('../models/FighterImages');
+const { createFuzzyFinder } = require('../utils/nameMatcher');
 
 // Get upcoming events with fighter images
 router.get('/', async (req, res) => {
@@ -15,14 +16,15 @@ router.get('/', async (req, res) => {
     // Fetch all fighter images
     const fighterImages = await FighterImages.find();
     console.log(`🖼️ Found ${fighterImages.length} fighter images`);
-    
-    // Create image map for quick lookup
-    const imageMap = {};
-    fighterImages.forEach(img => {
-      if (img.name && img.image_url) {
-        imageMap[img.name.toLowerCase()] = img.image_url;
-      }
-    });
+
+    const findImage = createFuzzyFinder(
+      fighterImages
+        .filter((img) => img?.name && (img?.image_url || img?.image_path))
+        .map((img) => ({
+          name: img.name,
+          value: img.image_url || img.image_path,
+        }))
+    );
     
     // Group fights by event
     const eventMap = {};
@@ -46,8 +48,8 @@ router.get('/', async (req, res) => {
       eventMap[eventKey].fights.push({
         fighter1: redFighterName,
         fighter2: blueFighterName,
-        fighter1Image: imageMap[redFighterName.toLowerCase()] || null,
-        fighter2Image: imageMap[blueFighterName.toLowerCase()] || null,
+        fighter1Image: findImage(redFighterName),
+        fighter2Image: findImage(blueFighterName),
         redProfileLink: fight.red_fighter?.profile_link,
         blueProfileLink: fight.blue_fighter?.profile_link,
         weightClass: fight.weight_class || null
