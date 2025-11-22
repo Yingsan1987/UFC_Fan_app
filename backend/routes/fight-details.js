@@ -1,5 +1,7 @@
 const express = require('express');
 const FightResults = require('../models/FightDetails');
+const FighterImages = require('../models/FighterImages');
+const { createFuzzyFinder } = require('../utils/nameMatcher');
 const router = express.Router();
 
 // Get fight details by event name
@@ -22,7 +24,44 @@ router.get('/:eventName', async (req, res) => {
       });
     }
     
-    res.json(fightDetails);
+    // Fetch fighter images and add fuzzy matching
+    const { isValidImageUrl } = require('../utils/nameMatcher');
+    const fighterImages = await FighterImages.find();
+    const findImage = createFuzzyFinder(
+      fighterImages
+        .filter((img) => {
+          const imageUrl = img?.image_url || img?.image_path;
+          return img?.name && imageUrl && isValidImageUrl(imageUrl);
+        })
+        .map((img) => ({
+          name: img.name,
+          value: img.image_url || img.image_path,
+        })),
+      { threshold: 0.90 } // 90% similarity threshold for fuzzy matching
+    );
+    
+    // Parse fighter names from BOUT field and add images
+    const fightsWithImages = fightDetails.map(fight => {
+      const bout = fight.BOUT || '';
+      const parts = bout.split(/\s+vs\.?\s+/i);
+      
+      let fighter1Name = parts[0]?.trim() || '';
+      let fighter2Name = parts[1]?.trim() || '';
+      
+      // Try to get images using fuzzy matching
+      const fighter1Image = fighter1Name ? findImage(fighter1Name) : null;
+      const fighter2Image = fighter2Name ? findImage(fighter2Name) : null;
+      
+      return {
+        ...fight.toObject(),
+        fighter1Name,
+        fighter2Name,
+        fighter1Image,
+        fighter2Image
+      };
+    });
+    
+    res.json(fightsWithImages);
   } catch (error) {
     console.error('❌ Error fetching fight details:', error);
     res.status(500).json({ error: 'Failed to fetch fight details' });

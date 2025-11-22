@@ -147,32 +147,32 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-6">
       {/* Upcoming Fight Card - Simplified */}
       {!loading && upcomingFight && (
         <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-lg shadow-md overflow-hidden">
-          <div className="p-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-3">
-                <div className="bg-white/20 rounded-full px-3 py-1">
+          <div className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <div className="bg-white/20 rounded-full px-2 py-0.5 sm:px-3 sm:py-1 flex-shrink-0">
                   <span className="text-white text-xs font-bold">🔴 NEXT EVENT</span>
                 </div>
-                <h2 className="text-lg font-bold text-white">{upcomingFight.eventName}</h2>
+                <h2 className="text-sm sm:text-base md:text-lg font-bold text-white truncate min-w-0">{upcomingFight.eventName}</h2>
               </div>
               
-              <div className="flex items-center gap-4 text-white text-sm">
+              <div className="flex items-center gap-3 sm:gap-4 text-white text-xs sm:text-sm w-full sm:w-auto">
                 <div className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  <span>
+                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap">
                     {new Date(upcomingFight.eventDate).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric'
                     })}
                   </span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  <span className="truncate max-w-[150px]">{upcomingFight.location}</span>
+                <div className="flex items-center gap-1 min-w-0">
+                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="truncate max-w-[120px] sm:max-w-[150px]">{upcomingFight.location}</span>
                 </div>
               </div>
             </div>
@@ -182,17 +182,17 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
 
       {/* Chat Section */}
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-4">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+        <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-3 sm:p-4">
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 flex-wrap">
             💬 Live Chat
-            <span className="text-sm font-normal text-gray-300">
+            <span className="text-xs sm:text-sm font-normal text-gray-300">
               {chatMessages.length} messages
             </span>
           </h2>
         </div>
 
         {/* Messages Area */}
-        <div className="h-[500px] overflow-y-auto p-4 bg-gray-50">
+        <div className="h-[400px] sm:h-[500px] md:h-[600px] overflow-y-auto p-3 sm:p-4 bg-gray-50">
           {chatMessages.length === 0 ? (
             <div className="flex items-center justify-center h-full text-gray-400">
               <div className="text-center">
@@ -230,24 +230,24 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
                       
                       {/* Message bubble */}
                       <div
-                        className={`rounded-lg px-4 py-2 ${
+                        className={`rounded-lg px-3 py-2 sm:px-4 sm:py-2 ${
                           isOwnMessage
                             ? 'bg-blue-600 text-white rounded-tr-none'
                             : 'bg-white border border-gray-200 text-gray-900 rounded-tl-none'
-                        } shadow-sm`}
+                        } shadow-sm max-w-full`}
                       >
                         {/* Image if present */}
                         {m.image && (
                           <img
                             src={m.image}
                             alt="Shared"
-                            className="rounded-lg mb-2 max-w-full max-h-64 object-cover"
+                            className="rounded-lg mb-2 max-w-full max-h-48 sm:max-h-64 object-cover"
                           />
                         )}
                         
                         {/* Text message */}
                         {m.text && (
-                          <p className="text-sm whitespace-pre-wrap break-words">
+                          <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">
                             {m.text}
                           </p>
                         )}
@@ -281,7 +281,7 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
         )}
 
         {/* Input Area */}
-        <div className="bg-white border-t border-gray-200 p-4">
+        <div className="bg-white border-t border-gray-200 p-3 sm:p-4">
           <div className="flex items-end gap-2">
             {/* Image Upload Button */}
             <input
@@ -293,28 +293,30 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-blue-600"
+              className="p-2 sm:p-2.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-blue-600 touch-manipulation"
               title="Upload image"
+              aria-label="Upload image"
             >
-              <ImageIcon className="w-5 h-5" />
+              <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
 
             {/* Emoji Picker Button */}
             <div className="relative" ref={emojiPickerRef}>
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-yellow-600"
+                className="p-2 sm:p-2.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-yellow-600 touch-manipulation"
                 title="Add emoji"
+                aria-label="Add emoji"
               >
-                <Smile className="w-5 h-5" />
+                <Smile className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
               
               {showEmojiPicker && (
-                <div className="absolute bottom-12 left-0 z-50">
+                <div className="absolute bottom-12 sm:bottom-14 left-0 z-50">
                   <EmojiPicker
                     onEmojiClick={handleEmojiClick}
-                    width={320}
-                    height={400}
+                    width={Math.min(320, window.innerWidth - 32)}
+                    height={Math.min(400, window.innerHeight - 200)}
                   />
                 </div>
               )}
@@ -322,7 +324,7 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
 
             {/* Message Input */}
             <textarea
-              className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[44px]"
               value={message}
               onChange={handleMessageChange}
               onKeyPress={handleKeyPress}
@@ -335,10 +337,11 @@ export default function LiveChat({ chatMessages, message, setMessage, sendMessag
             <button
               onClick={handleSendMessage}
               disabled={!currentUser || (!message.trim() && !imagePreview)}
-              className="bg-red-600 text-white p-3 rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="bg-red-600 text-white p-2.5 sm:p-3 rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
               title="Send message"
+              aria-label="Send message"
             >
-              <Send className="w-5 h-5" />
+              <Send className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
 

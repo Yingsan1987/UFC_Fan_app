@@ -58,12 +58,28 @@ export default function Profile() {
       });
       
       setProfile(response.data);
+      // Ensure profileImage defaults to avatar1 if not set
+      const defaultProfileImage = response.data.profileImage || 'avatar1';
       setFormData({
         displayName: response.data.displayName || '',
         username: response.data.username || '',
-        profileImage: response.data.profileImage || 'avatar1',
+        profileImage: defaultProfileImage,
         bio: response.data.bio || ''
       });
+      
+      // If profileImage is not set in backend, save default
+      if (!response.data.profileImage) {
+        try {
+          const updateResponse = await axios.put(
+            `${API_URL}/users/profile`,
+            { profileImage: 'avatar1' },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          setProfile(updateResponse.data.user);
+        } catch (err) {
+          console.warn('Could not set default profile image:', err);
+        }
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
       setError('Failed to load profile');
@@ -148,9 +164,13 @@ export default function Profile() {
   };
 
   const getAvatarDisplay = (avatarId) => {
-    const avatar = DEFAULT_AVATARS.find(a => a.id === avatarId) || DEFAULT_AVATARS[0];
+    // Ensure we always have a valid avatar ID, default to avatar1
+    const validAvatarId = avatarId && DEFAULT_AVATARS.find(a => a.id === avatarId) 
+      ? avatarId 
+      : 'avatar1';
+    const avatar = DEFAULT_AVATARS.find(a => a.id === validAvatarId) || DEFAULT_AVATARS[0];
     return (
-      <div className={`w-full h-full rounded-full bg-gradient-to-br ${avatar.color} flex items-center justify-center text-6xl`}>
+      <div className={`w-full h-full rounded-full bg-gradient-to-br ${avatar.color} flex items-center justify-center text-4xl sm:text-5xl md:text-6xl`}>
         {avatar.emoji}
       </div>
     );

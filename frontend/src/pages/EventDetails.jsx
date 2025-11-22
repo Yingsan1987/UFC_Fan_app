@@ -3,7 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Calendar, MapPin, ExternalLink, CheckCircle } from 'lucide-react';
 
-const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
+// Use localhost in development, production URL as fallback
+const API_URL = import.meta.env.VITE_API_URL || 
+  (window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : 'https://ufc-fan-app-backend.onrender.com/api');
 
 const EventDetails = () => {
   const { eventName } = useParams();
@@ -62,10 +66,6 @@ const EventDetails = () => {
     }
   };
 
-  const getFighterImage = (fighterName) => {
-    // Placeholder for fighter images - you can replace this with actual image URLs
-    return `https://via.placeholder.com/80x80/ef4444/ffffff?text=${fighterName ? fighterName.charAt(0) : '?'}`;
-  };
 
   const parseBout = (boutString) => {
     if (!boutString) return { fighter1: 'TBD', fighter2: 'TBD' };
@@ -219,7 +219,11 @@ const EventDetails = () => {
         ) : (
           <div className="grid gap-3">
             {getUniqueFights(fightDetails).map((fight, index) => {
-              const { fighter1, fighter2 } = parseBout(fight.BOUT);
+              // Use parsed names from backend or fallback to parsing BOUT
+              const fighter1 = fight.fighter1Name || parseBout(fight.BOUT).fighter1;
+              const fighter2 = fight.fighter2Name || parseBout(fight.BOUT).fighter2;
+              const fighter1Image = fight.fighter1Image || null;
+              const fighter2Image = fight.fighter2Image || null;
               
               return (
                 <div
@@ -230,7 +234,7 @@ const EventDetails = () => {
                     {/* Fight Header */}
                     <div className="text-center mb-2">
                       <h3 className="text-xs font-bold text-gray-900 mb-1">
-                        {fight.BOUT || 'TBD vs TBD'}
+                        {fight.BOUT || `${fighter1} vs ${fighter2}`}
                       </h3>
                       {fight.WEIGHTCLASS && (
                         <p className="text-xs text-gray-600 mb-1">{fight.WEIGHTCLASS}</p>
@@ -269,11 +273,20 @@ const EventDetails = () => {
                     <div className="flex items-center justify-between">
                       {/* Fighter 1 */}
                       <div className="flex items-center space-x-2 flex-1">
-                        <img
-                          src={getFighterImage(fighter1)}
-                          alt={fighter1}
-                          className={`w-8 h-8 rounded-full ${getFighterBorderWidth(fight.OUTCOME, true)} ${getFighterBorderColor(fight.OUTCOME, true)} flex-shrink-0`}
-                        />
+                        {fighter1Image ? (
+                          <img
+                            src={fighter1Image}
+                            alt={fighter1}
+                            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover ${getFighterBorderWidth(fight.OUTCOME, true)} ${getFighterBorderColor(fight.OUTCOME, true)} flex-shrink-0`}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-sm sm:text-base ${getFighterBorderWidth(fight.OUTCOME, true)} ${getFighterBorderColor(fight.OUTCOME, true)} flex-shrink-0 ${fighter1Image ? 'hidden' : ''}`}>
+                          {fighter1 ? fighter1.charAt(0).toUpperCase() : '?'}
+                        </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center space-x-1">
                             <h4 className="font-bold text-xs text-gray-900 truncate">
@@ -303,11 +316,20 @@ const EventDetails = () => {
                             )}
                           </div>
                         </div>
-                        <img
-                          src={getFighterImage(fighter2)}
-                          alt={fighter2}
-                          className={`w-8 h-8 rounded-full ${getFighterBorderWidth(fight.OUTCOME, false)} ${getFighterBorderColor(fight.OUTCOME, false)} flex-shrink-0`}
-                        />
+                        {fighter2Image ? (
+                          <img
+                            src={fighter2Image}
+                            alt={fighter2}
+                            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover ${getFighterBorderWidth(fight.OUTCOME, false)} ${getFighterBorderColor(fight.OUTCOME, false)} flex-shrink-0`}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-sm sm:text-base ${getFighterBorderWidth(fight.OUTCOME, false)} ${getFighterBorderColor(fight.OUTCOME, false)} flex-shrink-0 ${fighter2Image ? 'hidden' : ''}`}>
+                          {fighter2 ? fighter2.charAt(0).toUpperCase() : '?'}
+                        </div>
                       </div>
                     </div>
                     

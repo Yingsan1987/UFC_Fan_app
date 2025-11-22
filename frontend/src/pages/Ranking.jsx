@@ -101,14 +101,14 @@ export default function Ranking() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
-          <Trophy className="w-12 h-12 text-yellow-500" />
-          <div>
-            <h1 className="text-4xl font-black text-gray-900">UFC RANKINGS</h1>
-            <p className="text-gray-600 text-lg">Official fighter rankings across all weight divisions</p>
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+          <Trophy className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-yellow-500 flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900">UFC RANKINGS</h1>
+            <p className="text-gray-600 text-sm sm:text-base md:text-lg">Official fighter rankings across all weight divisions</p>
           </div>
         </div>
       </div>
@@ -131,30 +131,30 @@ export default function Ranking() {
               {/* Collapsible Header */}
               <button
                 onClick={() => toggleWeightClass(ranking.name)}
-                className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                className="w-full p-3 sm:p-4 md:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors touch-manipulation"
               >
-                <div className="flex items-center gap-6 flex-1">
+                <div className="flex items-center gap-3 sm:gap-4 md:gap-6 flex-1 min-w-0">
                   {/* Belt Icon */}
-                  <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${getBeltColor(index)} flex items-center justify-center shadow-xl`}>
-                    <Trophy className="w-8 h-8 text-white" />
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex-shrink-0 rounded-full bg-gradient-to-br ${getBeltColor(index)} flex items-center justify-center shadow-xl`}>
+                    <Trophy className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
                   </div>
 
                   {/* Weight Class Info */}
-                  <div className="text-left">
-                    <h2 className="text-2xl font-black text-gray-900 mb-1">
+                  <div className="text-left min-w-0 flex-1">
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 mb-1 break-words">
                       {displayName}
                     </h2>
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+                    <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-wrap">
+                      <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
                         Week {ranking.week}/{ranking.year}
                       </span>
                       {topFighter && (
-                        <span className="text-sm font-bold text-red-600">
+                        <span className="text-xs sm:text-sm font-bold text-red-600 truncate">
                           #1: {topFighter.competitor?.name}
                         </span>
                       )}
                       {ranking.competitor_rankings && (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">
                           {ranking.competitor_rankings.length} ranked fighters
                         </span>
                       )}
@@ -163,19 +163,19 @@ export default function Ranking() {
                 </div>
 
                 {/* Expand/Collapse Icon */}
-                <div className="ml-4">
+                <div className="ml-2 sm:ml-4 flex-shrink-0">
                   {isExpanded ? (
-                    <ChevronUp className="w-8 h-8 text-gray-600" />
+                    <ChevronUp className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-gray-600" />
                   ) : (
-                    <ChevronDown className="w-8 h-8 text-gray-600" />
+                    <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-gray-600" />
                   )}
                 </div>
               </button>
 
               {/* Expanded Content - Rankings List */}
               {isExpanded && ranking.competitor_rankings && ranking.competitor_rankings.length > 0 && (
-                <div className="border-t-2 border-gray-200 bg-gradient-to-br from-gray-50 to-white p-6">
-                  <div className="space-y-3">
+                <div className="border-t-2 border-gray-200 bg-gradient-to-br from-gray-50 to-white p-3 sm:p-4 md:p-6">
+                  <div className="space-y-2 sm:space-y-3">
                     {ranking.competitor_rankings.map((competitorRanking, idx) => {
                       const competitor = competitorRanking.competitor;
                       const isChampion = competitorRanking.rank === 1;
@@ -188,13 +188,13 @@ export default function Ranking() {
                       return (
                         <div
                           key={competitor?.id || idx}
-                          className={`bg-white rounded-xl p-4 border-2 ${
+                          className={`bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border-2 ${
                             isChampion ? 'border-yellow-400 bg-gradient-to-r from-yellow-50 to-orange-50' : 'border-gray-200'
                           } hover:shadow-lg transition-all`}
                         >
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
                             {/* Rank Badge */}
-                            <div className={`w-16 h-16 flex-shrink-0 rounded-full flex items-center justify-center font-black text-2xl ${
+                            <div className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex-shrink-0 rounded-full flex items-center justify-center font-black text-lg sm:text-xl md:text-2xl ${
                               isChampion 
                                 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-white shadow-xl' 
                                 : 'bg-gradient-to-br from-gray-200 to-gray-300 text-gray-700'
@@ -203,7 +203,7 @@ export default function Ranking() {
                             </div>
 
                             {/* Fighter Image */}
-                            <div className="w-20 h-20 flex-shrink-0">
+                            <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 flex-shrink-0">
                               {competitor?.image_url ? (
                                 <img
                                   src={competitor.image_url}
@@ -214,7 +214,7 @@ export default function Ranking() {
                                   }}
                                 />
                               ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-700 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                                <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-700 rounded-lg flex items-center justify-center text-white font-bold text-base sm:text-lg md:text-xl">
                                   {competitor?.abbreviation || '?'}
                                 </div>
                               )}
@@ -222,23 +222,23 @@ export default function Ranking() {
 
                             {/* Fighter Info */}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="text-xl font-bold text-gray-900 truncate">
+                              <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                                <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-gray-900 truncate">
                                   {competitor?.name || 'Unknown Fighter'}
                                 </h3>
                                 {isChampion && (
-                                  <Trophy className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+                                  <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 flex-shrink-0" />
                                 )}
                               </div>
-                              <div className="flex items-center gap-4 flex-wrap text-sm">
+                              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-wrap text-xs sm:text-sm">
                                 <div className="flex items-center gap-1 text-gray-600">
-                                  <MapPin className="w-4 h-4" />
-                                  <span>{competitor?.country || 'Unknown'}</span>
+                                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                                  <span className="truncate">{competitor?.country || 'Unknown'}</span>
                                 </div>
                                 {competitor?.record && (
                                   <div className="flex items-center gap-1 text-gray-600">
-                                    <Target className="w-4 h-4" />
-                                    <span className="font-semibold">{competitor.record}</span>
+                                    <Target className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                                    <span className="font-semibold whitespace-nowrap">{competitor.record}</span>
                                   </div>
                                 )}
                               </div>
@@ -246,7 +246,7 @@ export default function Ranking() {
 
                             {/* Movement Indicator */}
                             <div className="flex-shrink-0 text-center">
-                              <div className={`text-2xl font-bold ${movementColor}`}>
+                              <div className={`text-xl sm:text-2xl font-bold ${movementColor}`}>
                                 {movementIcon}
                               </div>
                               {competitorRanking.movement !== 0 && (

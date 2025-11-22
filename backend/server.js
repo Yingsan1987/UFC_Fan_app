@@ -6,6 +6,7 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 const chatSocket = require('./sockets/chatSocket');
+const trainSocket = require('./sockets/trainSocket');
 
 dotenv.config();
 
@@ -37,13 +38,15 @@ app.use('/api/news', require('./routes/news'));
 app.use('/api/stripe', require('./routes/stripe'));
 app.use('/api/forums', require('./routes/forums'));
 app.use('/api/game', require('./routes/game'));
+app.use('/api/train-to-ufc', require('./routes/train-to-ufc'));
 app.use('/api/fancoins', require('./routes/fancoins'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/sportradar', require('./routes/sportradar'));
 app.use('/api/predictions', require('./routes/predictions'));
 
-// Chat socket
+// Sockets
 chatSocket(io);
+trainSocket(io);
 
 app.get('/', (req, res) => res.json({ 
   message: "UFC Fan App API running",

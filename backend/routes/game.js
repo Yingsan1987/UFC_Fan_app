@@ -143,6 +143,50 @@ router.get('/status', requireAuth, async (req, res) => {
       }
     }
 
+    // If there's a registered fight, ensure images are populated
+    if (rookieFighter?.registeredFight?.fightId && 
+        (!rookieFighter.registeredFight.selectedFighter?.image_url ||
+         !rookieFighter.registeredFight.opponentFighter?.image_url)) {
+      try {
+        const FighterImages = require('../models/FighterImages');
+        const fighterImages = await FighterImages.find();
+        const findImage = createFuzzyFinder(
+          fighterImages
+            .filter((img) => {
+              const imageUrl = img?.image_url || img?.image_path;
+              return img?.name && imageUrl && isValidImageUrl(imageUrl);
+            })
+            .map((img) => ({
+              name: img.name,
+              value: img.image_url || img.image_path,
+            })),
+          { threshold: 0.90 } // 90% similarity threshold for fuzzy matching (handles special characters)
+        );
+        
+        // Update images if missing
+        if (rookieFighter.registeredFight.selectedFighter?.name && 
+            !rookieFighter.registeredFight.selectedFighter.image_url) {
+          const imageUrl = findImage(rookieFighter.registeredFight.selectedFighter.name);
+          if (imageUrl) {
+            rookieFighter.registeredFight.selectedFighter.image_url = imageUrl;
+          }
+        }
+        
+        if (rookieFighter.registeredFight.opponentFighter?.name && 
+            !rookieFighter.registeredFight.opponentFighter.image_url) {
+          const imageUrl = findImage(rookieFighter.registeredFight.opponentFighter.name);
+          if (imageUrl) {
+            rookieFighter.registeredFight.opponentFighter.image_url = imageUrl;
+          }
+        }
+        
+        await rookieFighter.save();
+      } catch (imageError) {
+        console.error('Error updating fighter images:', imageError);
+        // Don't fail the request if image update fails
+      }
+    }
+
     res.json({
       initialized: true,
       gameProgress,
@@ -454,11 +498,15 @@ router.get('/upcoming-fights/:weightClass', async (req, res) => {
     const fighterImages = await FighterImages.find();
     const findImage = createFuzzyFinder(
       fighterImages
-        .filter((img) => img?.name && (img?.image_url || img?.image_path))
+        .filter((img) => {
+          const imageUrl = img?.image_url || img?.image_path;
+          return img?.name && imageUrl && isValidImageUrl(imageUrl);
+        })
         .map((img) => ({
           name: img.name,
           value: img.image_url || img.image_path,
-        }))
+        })),
+      { threshold: 0.95 } // 95% similarity threshold for fuzzy matching (handles special characters)
     );
     
     // Group fights by event and format
@@ -526,6 +574,8 @@ router.post('/register-fighter', requireAuth, async (req, res) => {
     console.log('🎯 Fighter registration request:', { firebaseUid, fightId, selectedFighterSide });
     
     const UpcomingEvent = require('../models/UpcomingEvent');
+    const FighterImages = require('../models/FighterImages');
+    const { createFuzzyFinder } = require('../utils/nameMatcher');
     
     // Get user's rookie fighter and game progress
     const rookieFighter = await RookieFighter.findOne({ firebaseUid });
@@ -566,16 +616,46 @@ router.post('/register-fighter', requireAuth, async (req, res) => {
     const selectedFighter = selectedFighterSide === 'red' ? fight.red_fighter : fight.blue_fighter;
     const opponentFighter = selectedFighterSide === 'red' ? fight.blue_fighter : fight.red_fighter;
     
-    // Update rookie fighter with registration
+    // Fetch fighter images and find matching images
+    const fighterImages = await FighterImages.find();
+    const findImage = createFuzzyFinder(
+      fighterImages
+        .filter((img) => img?.name && (img?.image_url || img?.image_path))
+        .map((img) => ({
+          name: img.name,
+          value: img.image_url || img.image_path,
+        })),
+      { threshold: 0.95 } // 95% similarity threshold for fuzzy matching (handles special characters)
+    );
+    
+    // Get fighter images
+    const selectedFighterImage = findImage(selectedFighter.name);
+    const opponentFighterImage = findImage(opponentFighter.name);
+    
+    console.log(`🖼️ Fighter images found:`, {
+      selected: selectedFighterImage ? '✅' : '❌',
+      opponent: opponentFighterImage ? '✅' : '❌'
+    });
+    
+    // Update rookie fighter with registration (including images)
     rookieFighter.registeredFight = {
       fightId: fight._id,
       eventTitle: fight.event_title,
       eventDate: fight.event_date,
       eventLocation: fight.event_location,
-      selectedFighter: selectedFighter,
-      opponentFighter: opponentFighter,
+      selectedFighter: {
+        name: selectedFighter.name,
+        profile_link: selectedFighter.profile_link,
+        image_url: selectedFighterImage || null
+      },
+      opponentFighter: {
+        name: opponentFighter.name,
+        profile_link: opponentFighter.profile_link,
+        image_url: opponentFighterImage || null
+      },
       selectedSide: selectedFighterSide,
-      registeredAt: new Date()
+      registeredAt: new Date(),
+      fightResult: 'pending'
     };
     
     await rookieFighter.save();
@@ -607,6 +687,165 @@ router.post('/register-fighter', requireAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error registering fighter:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update fight results from upcoming events
+// This endpoint can be called manually or scheduled to update fight results
+router.post('/update-fight-results', requireAuth, async (req, res) => {
+  try {
+    console.log('🔄 Updating fight results...');
+    
+    const UpcomingEvent = require('../models/UpcomingEvent');
+    
+    // Find all rookie fighters with pending registered fights
+    const pendingRegistrations = await RookieFighter.find({
+      'registeredFight.fightId': { $exists: true },
+      'registeredFight.fightResult': { $in: ['pending', null] }
+    });
+    
+    console.log(`📊 Found ${pendingRegistrations.length} pending fight registrations`);
+    
+    const updates = [];
+    
+    for (const registration of pendingRegistrations) {
+      try {
+        const fight = await UpcomingEvent.findById(registration.registeredFight.fightId);
+        
+        if (!fight) {
+          console.log(`⚠️ Fight ${registration.registeredFight.fightId} not found, skipping...`);
+          continue;
+        }
+        
+        // Skip if fight hasn't completed
+        if (!fight.status || fight.status !== 'completed') {
+          continue;
+        }
+        
+        const selectedFighterName = registration.registeredFight.selectedFighter?.name;
+        const opponentFighterName = registration.registeredFight.opponentFighter?.name;
+        
+        let fightResult = 'pending';
+        
+        // Determine result based on winner field
+        if (fight.winner) {
+          const winnerName = fight.winner.toLowerCase().trim();
+          const selectedName = selectedFighterName?.toLowerCase().trim();
+          
+          if (winnerName === selectedName) {
+            fightResult = 'win';
+          } else if (fight.blue_fighter?.name?.toLowerCase().trim() === winnerName ||
+                     fight.red_fighter?.name?.toLowerCase().trim() === winnerName) {
+            // Winner is the opponent
+            fightResult = 'loss';
+          }
+        } else if (fight.result) {
+          // Check result field directly
+          const resultLower = fight.result.toLowerCase();
+          if (resultLower === 'draw') {
+            fightResult = 'draw';
+          } else if (resultLower.includes('no contest') || resultLower.includes('nc')) {
+            fightResult = 'no_contest';
+          }
+        }
+        
+        // Update the registration if result changed
+        if (fightResult !== 'pending' && fightResult !== registration.registeredFight.fightResult) {
+          registration.registeredFight.fightResult = fightResult;
+          await registration.save();
+          
+          // Update game progress
+          const gameProgress = await GameProgress.findOne({ firebaseUid: registration.firebaseUid });
+          if (gameProgress) {
+            if (fightResult === 'win') {
+              gameProgress.totalWins = (gameProgress.totalWins || 0) + 1;
+              gameProgress.levelWins = (gameProgress.levelWins || 0) + 1;
+              
+              // Determine coin reward based on card position
+              // Default to Preliminary Card (1 coin), but you can enhance this
+              const coinReward = 1; // TODO: Determine based on card position from event data
+              gameProgress.fanCoin = (gameProgress.fanCoin || 0) + coinReward;
+              
+              // Use the addFightResult method for proper level progression
+              gameProgress.addFightResult({
+                eventName: registration.registeredFight.eventTitle,
+                fighterName: selectedFighterName,
+                opponent: opponentFighterName,
+                result: 'win',
+                method: fight.method || 'Unknown',
+                fanCoinGained: coinReward,
+                date: new Date()
+              });
+            } else if (fightResult === 'loss') {
+              gameProgress.totalLosses = (gameProgress.totalLosses || 0) + 1;
+              gameProgress.addFightResult({
+                eventName: registration.registeredFight.eventTitle,
+                fighterName: selectedFighterName,
+                opponent: opponentFighterName,
+                result: 'loss',
+                method: fight.method || 'Unknown',
+                fanCoinGained: 0,
+                date: new Date()
+              });
+            } else if (fightResult === 'draw') {
+              gameProgress.totalDraws = (gameProgress.totalDraws || 0) + 1;
+              gameProgress.addFightResult({
+                eventName: registration.registeredFight.eventTitle,
+                fighterName: selectedFighterName,
+                opponent: opponentFighterName,
+                result: 'draw',
+                method: fight.method || 'Unknown',
+                fanCoinGained: 0,
+                date: new Date()
+              });
+            }
+            
+            await gameProgress.save();
+            
+            updates.push({
+              firebaseUid: registration.firebaseUid,
+              fighter: selectedFighterName,
+              result: fightResult,
+              leveledUp: gameProgress.fighterLevel
+            });
+            
+            console.log(`✅ Updated result for ${selectedFighterName}: ${fightResult}`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error processing registration ${registration._id}:`, error);
+      }
+    }
+    
+    res.json({
+      message: `Processed ${pendingRegistrations.length} registrations`,
+      updates: updates.length,
+      details: updates
+    });
+  } catch (error) {
+    console.error('❌ Error updating fight results:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get fight results for a specific user
+router.get('/fight-results', requireAuth, async (req, res) => {
+  try {
+    const firebaseUid = req.user.uid;
+    
+    const rookieFighter = await RookieFighter.findOne({ firebaseUid });
+    
+    if (!rookieFighter || !rookieFighter.registeredFight?.fightId) {
+      return res.json({ hasRegisteredFight: false });
+    }
+    
+    res.json({
+      hasRegisteredFight: true,
+      registeredFight: rookieFighter.registeredFight
+    });
+  } catch (error) {
+    console.error('❌ Error fetching fight results:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

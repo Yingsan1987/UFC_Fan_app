@@ -727,10 +727,10 @@ export default function Prediction() {
         </div>
       )}
 
-      <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6">
-        <div className="mb-4 md:mb-6 lg:mb-8">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">Fight Predictions</h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-4 sm:mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">Fight Predictions</h1>
+          <p className="text-sm sm:text-base md:text-lg text-gray-600">
             Make your predictions for upcoming UFC fights
           </p>
         </div>
@@ -745,40 +745,40 @@ export default function Prediction() {
               <div key={eventIndex} className="bg-white rounded-lg shadow-lg border-2 border-gray-200 overflow-hidden">
                 <button
                   onClick={() => toggleEvent(eventIndex)}
-                  className="w-full p-3 sm:p-4 md:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors bg-gradient-to-r from-red-600 to-red-800 text-white hover:from-red-700 hover:to-red-900"
+                  className="w-full p-3 sm:p-4 md:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors bg-gradient-to-r from-red-600 to-red-800 text-white hover:from-red-700 hover:to-red-900 touch-manipulation"
                 >
-                  <div className="flex items-center gap-2 md:gap-4 text-left flex-1 min-w-0 overflow-hidden">
+                  <div className="flex items-center gap-2 sm:gap-3 md:gap-4 text-left flex-1 min-w-0 overflow-hidden">
                     <Trophy className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-yellow-400 flex-shrink-0" />
                     <div className="min-w-0 flex-1 overflow-hidden">
-                      <h2 className="text-sm sm:text-base md:text-2xl font-bold truncate">{event.eventName}</h2>
-                      <div className="flex flex-wrap items-center gap-2 md:gap-4 text-red-100 mt-1">
-                        <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
-                          <Calendar className="w-3 h-3 md:w-4 md:h-4" />
-                          <span>{event.eventDate || 'TBD'}</span>
+                      <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold break-words">{event.eventName}</h2>
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 text-red-100 mt-1">
+                        <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-xs sm:text-sm">
+                          <Calendar className="w-3 h-3 sm:w-4 sm:h-4 md:w-4 md:h-4 flex-shrink-0" />
+                          <span className="whitespace-nowrap">{event.eventDate || 'TBD'}</span>
                         </div>
                         {event.location && (
-                          <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
-                            <MapPin className="w-3 h-3 md:w-4 md:h-4" />
-                            <span className="truncate max-w-[120px] md:max-w-none">{event.location}</span>
+                          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-xs sm:text-sm">
+                            <MapPin className="w-3 h-3 sm:w-4 sm:h-4 md:w-4 md:h-4 flex-shrink-0" />
+                            <span className="truncate max-w-[100px] sm:max-w-[150px] md:max-w-none">{event.location}</span>
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
-                    <div className="text-right mr-2 md:mr-4">
-                      <div className="text-xs md:text-sm font-semibold text-yellow-300">
+                  <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-shrink-0 ml-2">
+                    <div className="text-right mr-1 sm:mr-2 md:mr-4">
+                      <div className="text-xs sm:text-sm md:text-base font-semibold text-yellow-300 whitespace-nowrap">
                         {totalPredictions}/{event.fights?.length || 0}
                       </div>
-                      <div className="text-xs text-red-100 hidden md:block">
+                      <div className="text-xs text-red-100 hidden sm:block whitespace-nowrap">
                         {event.fights?.length || 0} fights
                       </div>
                     </div>
                     {isExpanded ? (
-                      <ChevronUp className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                      <ChevronUp className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-white flex-shrink-0" />
                     ) : (
-                      <ChevronDown className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                      <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-white flex-shrink-0" />
                     )}
                   </div>
                 </button>
@@ -836,9 +836,9 @@ export default function Prediction() {
                       </div>
                     )}
 
-                    <div className="mt-6 pt-6 border-t-2 border-gray-300">
+                    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t-2 border-gray-300">
                       <button
-                        className="w-full bg-gradient-to-r from-red-600 to-red-800 text-white py-4 rounded-lg font-bold text-lg hover:from-red-700 hover:to-red-900 transition-all shadow-lg"
+                        className="w-full bg-gradient-to-r from-red-600 to-red-800 text-white py-3 sm:py-4 rounded-lg font-bold text-sm sm:text-base md:text-lg hover:from-red-700 hover:to-red-900 transition-all shadow-lg touch-manipulation min-h-[44px]"
                         onClick={() => handleSubmitPredictions(event, eventIndex)}
                       >
                         Submit Predictions for {event.eventName}
@@ -980,18 +980,18 @@ export default function Prediction() {
       </div>
 
       {isShareModalOpen && sharePayload && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 px-4 py-8 backdrop-blur-sm">
-          <div className="relative w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 px-2 sm:px-4 py-4 sm:py-8 backdrop-blur-sm overflow-y-auto">
+          <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl my-auto">
             <button
               type="button"
               onClick={handleCloseShareModal}
-              className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition hover:border-gray-300 hover:text-gray-900"
+              className="absolute right-2 top-2 sm:right-4 sm:top-4 inline-flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition hover:border-gray-300 hover:text-gray-900 touch-manipulation z-50"
               aria-label="Close share preview"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
 
-            <div className="grid gap-8 px-6 py-10 md:grid-cols-[1.2fr_1fr] md:px-10">
+            <div className="grid gap-4 sm:gap-6 md:gap-8 px-4 sm:px-6 py-6 sm:py-8 md:py-10 md:grid-cols-[1.2fr_1fr] md:px-10">
               <div className="flex flex-col gap-4">
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900">Share your predictions</h3>

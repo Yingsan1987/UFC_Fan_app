@@ -16,9 +16,13 @@ import LiveChat from './pages/LiveChat';
 import Ranking from './pages/Ranking';
 import Prediction from './pages/Prediction';
 import Game from './pages/Game';
+import GameSelection from './pages/GameSelection';
+import RoadToUFC from './pages/RoadToUFC';
+import TrainToUFC from './pages/TrainToUFC';
 import Profile from './pages/Profile';
 import AuthModal from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
+import { TrainGameProvider } from './store/trainGameStore';
 
 // Use localhost in development, production URL as fallback
 const API_URL = import.meta.env.VITE_API_URL || 
@@ -142,6 +146,7 @@ function App() {
   const menuItems = ["Home", "Fighters", "Techniques", "Events", "Forums", "Ranking", "Prediction", "Game", "News", "Live Chat", "Support"];
 
   return (
+    <TrainGameProvider>
     <div className="flex h-screen font-sans">
       {/* Sidebar */}
       <div
@@ -317,7 +322,9 @@ function App() {
             <Route path="/forums" element={<Forums />} />
             <Route path="/ranking" element={<Ranking />} />
             <Route path="/prediction" element={<Prediction />} />
-            <Route path="/game" element={<Game />} />
+            <Route path="/game" element={<GameSelection />} />
+            <Route path="/game/road-to-ufc" element={<RoadToUFC />} />
+            <Route path="/game/train-to-ufc" element={<TrainToUFC />} />
             <Route path="/news" element={<News />} />
             <Route path="/live-chat" element={
               <LiveChat 
@@ -351,6 +358,7 @@ function App() {
         onClose={() => setIsAuthModalOpen(false)} 
       />
     </div>
+    </TrainGameProvider>
   );
 }
 

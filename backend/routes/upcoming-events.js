@@ -16,14 +16,30 @@ router.get('/', async (req, res) => {
     // Fetch all fighter images
     const fighterImages = await FighterImages.find();
     console.log(`🖼️ Found ${fighterImages.length} fighter images`);
-
+    
+    // Count valid vs invalid images
+    const { isValidImageUrl, normalizeName } = require('../utils/nameMatcher');
+    const validImages = fighterImages.filter((img) => {
+      const imageUrl = img?.image_url || img?.image_path;
+      return img?.name && imageUrl && isValidImageUrl(imageUrl);
+    });
+    const invalidImages = fighterImages.filter((img) => {
+      const imageUrl = img?.image_url || img?.image_path;
+      return img?.name && imageUrl && !isValidImageUrl(imageUrl);
+    });
+    console.log(`✅ Valid images: ${validImages.length}, ❌ Invalid/placeholder images: ${invalidImages.length}`);
+    
+    // Show some example names from fighter images for debugging
+    if (validImages.length > 0) {
+      console.log(`📋 Sample fighter names in database: ${validImages.slice(0, 5).map(img => img.name).join(', ')}`);
+    }
+    
     const findImage = createFuzzyFinder(
-      fighterImages
-        .filter((img) => img?.name && (img?.image_url || img?.image_path))
-        .map((img) => ({
-          name: img.name,
-          value: img.image_url || img.image_path,
-        }))
+      validImages.map((img) => ({
+        name: img.name,
+        value: img.image_url || img.image_path,
+      })),
+      { threshold: 0.90 } // 90% similarity threshold for fuzzy matching (handles special characters)
     );
     
     // Group fights by event
@@ -45,11 +61,29 @@ router.get('/', async (req, res) => {
       const redFighterName = fight.red_fighter?.name || '';
       const blueFighterName = fight.blue_fighter?.name || '';
       
+      // Try to find images with logging for debugging
+      const fighter1Image = findImage(redFighterName);
+      const fighter2Image = findImage(blueFighterName);
+      
+      // Log when image not found for debugging
+      if (redFighterName && !fighter1Image) {
+        console.log(`⚠️ No image found for fighter: "${redFighterName}"`);
+      }
+      if (blueFighterName && !fighter2Image) {
+        console.log(`⚠️ No image found for fighter: "${blueFighterName}"`);
+      }
+      if (redFighterName && fighter1Image) {
+        console.log(`✅ Image found for "${redFighterName}": ${fighter1Image.substring(0, 50)}...`);
+      }
+      if (blueFighterName && fighter2Image) {
+        console.log(`✅ Image found for "${blueFighterName}": ${fighter2Image.substring(0, 50)}...`);
+      }
+      
       eventMap[eventKey].fights.push({
         fighter1: redFighterName,
         fighter2: blueFighterName,
-        fighter1Image: findImage(redFighterName),
-        fighter2Image: findImage(blueFighterName),
+        fighter1Image: fighter1Image,
+        fighter2Image: fighter2Image,
         redProfileLink: fight.red_fighter?.profile_link,
         blueProfileLink: fight.blue_fighter?.profile_link,
         weightClass: fight.weight_class || null

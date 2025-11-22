@@ -1,0 +1,178 @@
+/* Train to UFC Animations */
+
+/* Breathing animation for idle fighters */
+@keyframes breathing {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.02);
+  }
+}
+
+/* Pop animation on drag start */
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1.1);
+  }
+}
+
+/* Snap animation for slot drop */
+@keyframes snap {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Shake animation for rejected drops */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Snap back animation for returning to waiting zone */
+@keyframes snapBack {
+  0% {
+    transform: scale(1.2) rotate(-5deg);
+    opacity: 0.5;
+  }
+  60% {
+    transform: scale(0.95) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Pulse animation for empty slots on hover */
+@keyframes pulse-slot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+/* Glow effect for fighters on hover */
+@keyframes glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px rgba(255, 0, 0, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(255, 0, 0, 0.8));
+  }
+}
+
+/* Flip animation for waiting zone reordering */
+@keyframes flip {
+  0% {
+    transform: perspective(400px) rotateY(0);
+  }
+  40% {
+    transform: perspective(400px) rotateY(-90deg);
+  }
+  60% {
+    transform: perspective(400px) rotateY(-90deg);
+  }
+  100% {
+    transform: perspective(400px) rotateY(0);
+  }
+}
+
+/* Apply animations */
+.fighter-avatar-idle {
+  animation: breathing 3s ease-in-out infinite;
+}
+
+.fighter-avatar-drag-start {
+  animation: pop 0.15s ease;
+}
+
+.fighter-avatar-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.slot-snap {
+  animation: snap 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.slot-reject {
+  animation: shake 0.3s ease;
+}
+
+.fighter-snap-back {
+  animation: snapBack 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.slot-hover-pulse {
+  animation: pulse-slot 1s ease-in-out infinite;
+}
+
+.fighter-flip {
+  animation: flip 0.6s ease-in-out;
+}
+
+/* Smooth transitions */
+.smooth-transition {
+  transition: all 0.18s ease;
+}
+
+.smooth-transition-fast {
+  transition: all 0.1s ease;
+}
+
+.smooth-transition-slow {
+  transition: all 0.3s ease;
+}
+
+/* Drag cursor states */
+.cursor-grab {
+  cursor: grab;
+}
+
+.cursor-grab:active {
+  cursor: grabbing;
+}
+
+/* Hover effects */
+.hover-scale {
+  transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-glow {
+  transition: filter 0.2s ease;
+}
+
+.hover-glow:hover {
+  filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.6));
+}
+

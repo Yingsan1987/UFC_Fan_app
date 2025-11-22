@@ -166,22 +166,22 @@ const Events = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">UFC Events</h1>
-        <p className="text-gray-600 mb-6">Upcoming fights and latest UFC events</p>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">UFC Events</h1>
+        <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Upcoming fights and latest UFC events</p>
 
         {/* Search Bar */}
-        <div className="relative max-w-md">
+        <div className="relative max-w-md w-full">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+            <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
           </div>
           <input
             type="text"
             placeholder="Search events, locations, or dates..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-red-500 focus:border-red-500"
+            className="block w-full pl-9 sm:pl-10 pr-8 sm:pr-10 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-red-500 focus:border-red-500"
           />
           {searchTerm ? (
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -209,24 +209,24 @@ const Events = () => {
 
       {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
-        <div className="mb-16">
-          <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-t-2xl p-8 text-white shadow-2xl">
-            <div className="flex items-center justify-between">
+        <div className="mb-8 sm:mb-16">
+          <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 rounded-t-xl sm:rounded-t-2xl p-4 sm:p-6 md:p-8 text-white shadow-2xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <Trophy className="w-10 h-10 text-yellow-400" />
-                  <h2 className="text-4xl font-bold">UPCOMING FIGHTS</h2>
+                <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                  <Trophy className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-yellow-400 flex-shrink-0" />
+                  <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">UPCOMING FIGHTS</h2>
                 </div>
-                <p className="text-red-100 text-lg">Don't miss these exciting matchups!</p>
+                <p className="text-red-100 text-sm sm:text-base md:text-lg">Don't miss these exciting matchups!</p>
               </div>
-              <div className="bg-yellow-400 text-red-900 px-6 py-3 rounded-full font-bold text-2xl shadow-lg">
+              <div className="bg-yellow-400 text-red-900 px-4 py-2 sm:px-6 sm:py-3 rounded-full font-bold text-lg sm:text-xl md:text-2xl shadow-lg">
                 {upcomingEvents.length}
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-b-2xl p-8 shadow-2xl">
-            <div className="space-y-8">
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-b-xl sm:rounded-b-2xl p-4 sm:p-6 md:p-8 shadow-2xl">
+            <div className="space-y-4 sm:space-y-6 md:space-y-8">
               {upcomingEvents.map((event, eventIdx) => {
                 const fights = getAllFights(event);
                 const mainFight = fights[0];
@@ -241,49 +241,49 @@ const Events = () => {
                     <button
                       type="button"
                       onClick={() => toggleEvent(eventIdx)}
-                      className="w-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 p-4 md:p-8 text-black relative hover:from-yellow-500 hover:via-yellow-600 hover:to-orange-600 transition-all"
+                      className="w-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-500 p-3 sm:p-4 md:p-6 lg:p-8 text-black relative hover:from-yellow-500 hover:via-yellow-600 hover:to-orange-600 transition-all touch-manipulation"
                     >
-                      <div className="hidden md:block absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
-                      <div className="hidden md:block absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12" />
+                      <div className="hidden lg:block absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
+                      <div className="hidden lg:block absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12" />
 
                       <div className="relative flex items-center justify-between gap-2">
                         <div className="text-left flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <div className="bg-black text-white px-2 py-1 md:px-4 md:py-2 rounded-lg font-bold text-xs md:text-sm">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                            <div className="bg-black text-white px-2 py-0.5 sm:py-1 md:px-3 md:py-1.5 lg:px-4 lg:py-2 rounded text-xs sm:text-sm font-bold">
                               UFC
                             </div>
-                            <div className="bg-red-600 text-white px-2 py-1 md:px-4 md:py-2 rounded-lg font-bold text-xs md:text-sm">
+                            <div className="bg-red-600 text-white px-2 py-0.5 sm:py-1 md:px-3 md:py-1.5 lg:px-4 lg:py-2 rounded text-xs sm:text-sm font-bold">
                               FIGHT NIGHT
                             </div>
                           </div>
-                          <h3 className="text-lg md:text-3xl font-black mb-2 md:mb-3 text-gray-900 drop-shadow-lg truncate">
+                          <h3 className="text-base sm:text-lg md:text-2xl lg:text-3xl font-black mb-1.5 sm:mb-2 md:mb-3 text-gray-900 drop-shadow-lg break-words">
                             {event?.eventName ?? 'Untitled Event'}
                           </h3>
-                          <div className="flex flex-wrap items-center gap-2 md:gap-6 text-gray-900 font-semibold text-xs md:text-base">
-                            <div className="flex items-center gap-1 md:gap-2 bg-black/20 px-2 py-1 md:px-3 md:py-1 rounded-lg">
-                              <Calendar className="w-3 h-3 md:w-5 md:h-5" />
-                              <span className="text-xs md:text-lg">{event?.eventDate ?? 'TBD'}</span>
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-4 lg:gap-6 text-gray-900 font-semibold text-xs sm:text-sm md:text-base">
+                            <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 bg-black/20 px-2 py-1 rounded text-xs sm:text-sm">
+                              <Calendar className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
+                              <span className="whitespace-nowrap">{event?.eventDate ?? 'TBD'}</span>
                             </div>
                             {event?.location ? (
-                              <div className="flex items-center gap-1 md:gap-2 bg-black/20 px-2 py-1 md:px-3 md:py-1 rounded-lg">
-                                <MapPin className="w-3 h-3 md:w-5 md:h-5" />
-                                <span className="text-xs md:text-lg truncate max-w-[120px] md:max-w-none">
+                              <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 bg-black/20 px-2 py-1 rounded text-xs sm:text-sm">
+                                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
+                                <span className="truncate max-w-[100px] sm:max-w-[150px] md:max-w-none">
                                   {event.location}
                                 </span>
                               </div>
                             ) : null}
-                            <div className="flex items-center gap-1 md:gap-2 bg-black/20 px-2 py-1 md:px-3 md:py-1 rounded-lg">
-                              <Users className="w-3 h-3 md:w-5 md:h-5" />
-                              <span className="text-xs md:text-lg">{fights.length} Fights</span>
+                            <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 bg-black/20 px-2 py-1 rounded text-xs sm:text-sm">
+                              <Users className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
+                              <span className="whitespace-nowrap">{fights.length} Fights</span>
                             </div>
                           </div>
                         </div>
 
                         <div className="ml-2 flex-shrink-0">
                           {isExpanded ? (
-                            <ChevronUp className="w-6 h-6 md:w-12 md:h-12 text-gray-900" />
+                            <ChevronUp className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 lg:w-12 lg:h-12 text-gray-900" />
                           ) : (
-                            <ChevronDown className="w-6 h-6 md:w-12 md:h-12 text-gray-900" />
+                            <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 lg:w-12 lg:h-12 text-gray-900" />
                           )}
                         </div>
                       </div>

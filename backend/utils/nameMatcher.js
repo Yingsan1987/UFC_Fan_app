@@ -1,8 +1,33 @@
-const DEFAULT_THRESHOLD = 0.95;
+const DEFAULT_THRESHOLD = 0.90; // Lowered from 0.95 to 0.90 (90%) to catch more matches with special characters
 
 const toStringSafe = (value) => {
   if (value === null || value === undefined) return '';
   return String(value);
+};
+
+// Validate if an image URL is valid (not a placeholder)
+const isValidImageUrl = (url) => {
+  if (!url || typeof url !== 'string') return false;
+  
+  const urlLower = url.toLowerCase().trim();
+  
+  // Reject placeholder/relative paths
+  if (urlLower.includes('no-profile-image')) return false;
+  if (urlLower.includes('placeholder')) return false;
+  if (urlLower.includes('no-image')) return false;
+  if (urlLower.startsWith('/themes/')) return false;
+  if (urlLower.startsWith('/assets/')) return false;
+  if (urlLower.length < 10) return false; // Too short to be a valid URL
+  
+  // Must be a full URL (starts with http:// or https://) or at least contain a domain
+  if (urlLower.startsWith('http://') || urlLower.startsWith('https://')) {
+    // Additional check: make sure it's not a placeholder URL
+    if (urlLower.includes('.png') && urlLower.split('/').length < 4) return false;
+    return true;
+  }
+  
+  // If it's not a full URL, reject it (relative paths are not valid for img src)
+  return false;
 };
 
 const normalizeName = (value) => {
@@ -80,6 +105,9 @@ const createFuzzyFinder = (records, options = {}) => {
     const value = record?.value ?? record?.image_url ?? record?.url;
 
     if (!name || !value) return;
+    
+    // Validate image URL - skip if it's a placeholder or invalid
+    if (!isValidImageUrl(value)) return;
 
     const normalized = normalizeName(name);
     if (!normalized) return;
@@ -96,19 +124,28 @@ const createFuzzyFinder = (records, options = {}) => {
     const target = normalizeName(inputName);
     if (!target) return null;
 
+    // Try exact match first
     if (exactMap.has(target)) {
       return exactMap.get(target);
     }
 
+    // Try fuzzy match
     let bestValue = null;
     let bestScore = 0;
+    let bestMatch = null;
 
     for (const entry of entries) {
       const score = similarityScore(target, entry.normalized);
       if (score > bestScore) {
         bestScore = score;
         bestValue = entry.value;
+        bestMatch = entry.normalized;
       }
+    }
+
+    // Log if close match found but below threshold
+    if (bestScore > 0 && bestScore < threshold && bestScore >= threshold - 0.1) {
+      console.log(`⚠️ Close match for "${inputName}" (normalized: "${target}"): "${bestMatch}" (score: ${(bestScore * 100).toFixed(1)}%, threshold: ${(threshold * 100).toFixed(1)}%)`);
     }
 
     return bestScore >= threshold ? bestValue : null;
@@ -120,5 +157,6 @@ module.exports = {
   normalizeName,
   similarityScore,
   createFuzzyFinder,
+  isValidImageUrl,
 };
 

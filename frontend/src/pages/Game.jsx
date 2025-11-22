@@ -18,7 +18,8 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
-  Users
+  Users,
+  Check
 } from 'lucide-react';
 import StrikingGame from '../components/MiniGames/StrikingGame';
 import GrapplingGame from '../components/MiniGames/GrapplingGame';
@@ -1450,18 +1451,60 @@ function Game() {
                 </div>
               </div>
               
+              {/* Fighter Display with Images */}
+              <div className="mb-4">
+                <div className="text-center mb-3">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Your Fighter</h4>
+                  <div className="flex items-center justify-center gap-4">
+                    {/* Selected Fighter */}
+                    <div className="flex flex-col items-center">
+                      {rookieFighter.registeredFight.selectedFighter?.image_url ? (
+                        <img
+                          src={rookieFighter.registeredFight.selectedFighter.image_url}
+                          alt={rookieFighter.registeredFight.selectedFighter.name}
+                          className="w-20 h-20 rounded-full object-cover border-4 border-green-500 mb-2"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-20 h-20 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-2xl border-4 border-green-600 mb-2 ${rookieFighter.registeredFight.selectedFighter?.image_url ? 'hidden' : ''}`}>
+                        {(rookieFighter.registeredFight.selectedFighter?.name || 'F')[0].toUpperCase()}
+                      </div>
+                      <p className="text-sm font-bold text-green-700">{rookieFighter.registeredFight.selectedFighter?.name}</p>
+                      <p className="text-xs text-gray-600">You</p>
+                    </div>
+
+                    <div className="text-2xl font-bold text-gray-400">VS</div>
+
+                    {/* Opponent Fighter */}
+                    <div className="flex flex-col items-center">
+                      {rookieFighter.registeredFight.opponentFighter?.image_url ? (
+                        <img
+                          src={rookieFighter.registeredFight.opponentFighter.image_url}
+                          alt={rookieFighter.registeredFight.opponentFighter.name}
+                          className="w-20 h-20 rounded-full object-cover border-4 border-gray-400 mb-2"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-20 h-20 rounded-full bg-gray-400 flex items-center justify-center text-white font-bold text-2xl border-4 border-gray-500 mb-2 ${rookieFighter.registeredFight.opponentFighter?.image_url ? 'hidden' : ''}`}>
+                        {(rookieFighter.registeredFight.opponentFighter?.name || 'O')[0].toUpperCase()}
+                      </div>
+                      <p className="text-sm font-bold text-gray-700">{rookieFighter.registeredFight.opponentFighter?.name}</p>
+                      <p className="text-xs text-gray-600">Opponent</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               <div className="bg-white rounded-lg p-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Event:</span>
                   <span className="text-sm font-bold text-gray-900">{rookieFighter.registeredFight.eventTitle}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Fighter:</span>
-                  <span className="text-sm font-bold text-green-600">{rookieFighter.registeredFight.selectedFighter?.name}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Opponent:</span>
-                  <span className="text-sm font-bold text-gray-900">{rookieFighter.registeredFight.opponentFighter?.name}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Event Date:</span>
@@ -1473,9 +1516,25 @@ function Game() {
                     })}
                   </span>
                 </div>
+                {rookieFighter.registeredFight.eventLocation && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Location:</span>
+                    <span className="text-sm font-bold text-gray-900">{rookieFighter.registeredFight.eventLocation}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                   <span className="text-sm text-gray-600">Status:</span>
-                  <span className="text-sm font-bold text-orange-600">⏳ Waiting for Results</span>
+                  <span className={`text-sm font-bold ${
+                    rookieFighter.registeredFight.fightResult === 'win' ? 'text-green-600' :
+                    rookieFighter.registeredFight.fightResult === 'loss' ? 'text-red-600' :
+                    rookieFighter.registeredFight.fightResult === 'draw' ? 'text-yellow-600' :
+                    'text-orange-600'
+                  }`}>
+                    {rookieFighter.registeredFight.fightResult === 'win' ? '✅ Won' :
+                     rookieFighter.registeredFight.fightResult === 'loss' ? '❌ Lost' :
+                     rookieFighter.registeredFight.fightResult === 'draw' ? '🤝 Draw' :
+                     '⏳ Waiting for Results'}
+                  </span>
                 </div>
               </div>
 

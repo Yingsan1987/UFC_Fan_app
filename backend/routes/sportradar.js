@@ -1,4 +1,6 @@
 const express = require('express');
+const FighterImages = require('../models/FighterImages');
+const { createFuzzyFinder } = require('../utils/nameMatcher');
 const router = express.Router();
 
 // Sportradar MMA API - Dynamic import promise
@@ -82,8 +84,52 @@ router.get('/rankings', async (req, res) => {
         console.log('Response keys:', Object.keys(response || {}));
         console.log('Has data property?', !!response.data);
         
-        // Return the data - adjust based on response structure
-        return res.json(response.data || response);
+        // Fetch fighter images for fuzzy matching
+        const { isValidImageUrl } = require('../utils/nameMatcher');
+        const fighterImages = await FighterImages.find();
+        const findImage = createFuzzyFinder(
+          fighterImages
+            .filter((img) => {
+              const imageUrl = img?.image_url || img?.image_path;
+              return img?.name && imageUrl && isValidImageUrl(imageUrl);
+            })
+            .map((img) => ({
+              name: img.name,
+              value: img.image_url || img.image_path,
+            })),
+          { threshold: 0.90 } // 90% similarity threshold for fuzzy matching
+        );
+        
+        // Enhance rankings with fighter images from our database
+        const rankingsData = response.data || response;
+        if (rankingsData.rankings) {
+          rankingsData.rankings.forEach((ranking) => {
+            if (ranking.competitor_rankings) {
+              ranking.competitor_rankings.forEach((compRanking) => {
+                const competitor = compRanking.competitor;
+                if (competitor && competitor.name) {
+                  // Normalize name from "Last, First" format to "First Last"
+                  const nameParts = competitor.name.split(',').map(p => p.trim());
+                  const normalizedName = nameParts.length > 1 
+                    ? `${nameParts[1]} ${nameParts[0]}` 
+                    : competitor.name;
+                  
+                  // Try fuzzy match if image_url is missing or if we want to override
+                  if (!competitor.image_url || competitor.image_url.includes('placeholder')) {
+                    const matchedImage = findImage(normalizedName);
+                    if (matchedImage) {
+                      competitor.image_url = matchedImage;
+                      console.log(`✅ Matched image for ${competitor.name}: ${matchedImage}`);
+                    }
+                  }
+                }
+              });
+            }
+          });
+        }
+        
+        // Return the enhanced data
+        return res.json(rankingsData);
       } catch (apiError) {
         console.error('❌ Sportradar API error:', apiError.message);
         console.error('Error status:', apiError.response?.status);
@@ -97,6 +143,53 @@ router.get('/rankings', async (req, res) => {
     // Fallback to mock data if API fails or package not installed
     console.log('⚠️ Using mock rankings data');
     
+    // Fetch fighter images for fuzzy matching
+    let findImage = null;
+    try {
+      const { isValidImageUrl } = require('../utils/nameMatcher');
+      const fighterImages = await FighterImages.find();
+      findImage = createFuzzyFinder(
+        fighterImages
+          .filter((img) => {
+            const imageUrl = img?.image_url || img?.image_path;
+            return img?.name && imageUrl && isValidImageUrl(imageUrl);
+          })
+          .map((img) => ({
+            name: img.name,
+            value: img.image_url || img.image_path,
+          })),
+        { threshold: 0.90 } // 90% similarity threshold for fuzzy matching
+      );
+      console.log(`🖼️ Loaded ${fighterImages.length} fighter images for rankings`);
+    } catch (imageError) {
+      console.warn('⚠️ Could not load fighter images for rankings:', imageError.message);
+    }
+    
+    // Enhance mock data with fuzzy-matched images
+    const enhanceCompetitorImages = (competitors) => {
+      if (!findImage) return competitors;
+      
+      return competitors.map(comp => {
+        if (comp.competitor && comp.competitor.name) {
+          // Normalize name from "Last, First" format to "First Last"
+          const nameParts = comp.competitor.name.split(',').map(p => p.trim());
+          const normalizedName = nameParts.length > 1 
+            ? `${nameParts[1]} ${nameParts[0]}` 
+            : comp.competitor.name;
+          
+          // Try fuzzy match if image_url is missing
+          if (!comp.competitor.image_url) {
+            const matchedImage = findImage(normalizedName);
+            if (matchedImage) {
+              comp.competitor.image_url = matchedImage;
+              console.log(`✅ Matched image for ${comp.competitor.name}: ${matchedImage}`);
+            }
+          }
+        }
+        return comp;
+      });
+    };
+    
     const mockRankings = {
       rankings: [
         {
@@ -104,7 +197,7 @@ router.get('/rankings', async (req, res) => {
           type_id: 1,
           week: 45,
           year: 2024,
-          competitor_rankings: [
+          competitor_rankings: enhanceCompetitorImages([
             {
               rank: 1,
               movement: 0,
@@ -144,7 +237,7 @@ router.get('/rankings', async (req, res) => {
                 image_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/athlete_bio_full_body/s3/2023-09/GANE_CIRYL_L_09-02.png'
               }
             }
-          ]
+          ])
         },
         {
           name: 'light_heavyweight',
@@ -240,10 +333,14 @@ router.get('/rankings', async (req, res) => {
               }
             ]
           }
-        ],
+        ].map(ranking => ({
+          ...ranking,
+          competitor_rankings: enhanceCompetitorImages(ranking.competitor_rankings || [])
+        })),
         generated_at: new Date().toISOString()
       };
       
+      console.log('✅ Returning enhanced mock rankings with fuzzy-matched images');
       return res.json(mockRankings);
   } catch (error) {
     console.error('❌ Error fetching rankings:', error.message);

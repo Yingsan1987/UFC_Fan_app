@@ -3,7 +3,8 @@ import ReactDOM from "react-dom/client";
 import App from "./App"; 
 import { BrowserRouter } from "react-router-dom"; 
 import { AuthProvider } from "./context/AuthContext";
-import "./index.css"; 
+import "./index.css";
+import "./styles/trainAnimations.css"; 
 
 // Log to console to verify main.jsx is loading
 console.log('🚀 main.jsx is loading...');
