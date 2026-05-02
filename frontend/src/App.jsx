@@ -19,6 +19,7 @@ import Game from './pages/Game';
 import GameSelection from './pages/GameSelection';
 import RoadToUFC from './pages/RoadToUFC';
 import TrainToUFC from './pages/TrainToUFC';
+import PokerGame from './pages/PokerGame';
 import Profile from './pages/Profile';
 import AuthModal from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
@@ -325,6 +326,7 @@ function App() {
             <Route path="/game" element={<GameSelection />} />
             <Route path="/game/road-to-ufc" element={<RoadToUFC />} />
             <Route path="/game/train-to-ufc" element={<TrainToUFC />} />
+            <Route path="/game/poker" element={<PokerGame />} />
             <Route path="/news" element={<News />} />
             <Route path="/live-chat" element={
               <LiveChat 

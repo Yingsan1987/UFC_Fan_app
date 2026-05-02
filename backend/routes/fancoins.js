@@ -263,6 +263,43 @@ router.get('/leaderboard/my-rank', requireAuth, async (req, res) => {
   }
 });
 
+// Update fan coins after a poker session
+router.post('/poker-result', requireAuth, async (req, res) => {
+  try {
+    const firebaseUid = req.user.uid;
+    const { coinDelta } = req.body;
+
+    if (typeof coinDelta !== 'number' || isNaN(coinDelta)) {
+      return res.status(400).json({ message: 'Invalid coinDelta' });
+    }
+
+    const gameProgress = await GameProgress.findOne({ firebaseUid });
+    if (!gameProgress) {
+      return res.status(404).json({ message: 'Game progress not found' });
+    }
+
+    const oldBalance = gameProgress.fanCoin;
+    gameProgress.fanCoin = Math.max(0, oldBalance + coinDelta);
+    await gameProgress.save();
+
+    const transaction = new FanCoinTransaction({
+      userId: gameProgress.userId,
+      firebaseUid,
+      amount: Math.abs(coinDelta),
+      type: coinDelta >= 0 ? 'earned' : 'spent',
+      source: 'other',
+      balanceAfter: gameProgress.fanCoin,
+      description: `Poker session: ${coinDelta >= 0 ? '+' : ''}${coinDelta} Fan Coins`,
+    });
+    await transaction.save();
+
+    res.json({ message: 'Balance updated', fanCoin: gameProgress.fanCoin });
+  } catch (error) {
+    console.error('Error updating poker result:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Create new UFC event (Admin only - simplified for now)
 router.post('/events/create', requireAuth, async (req, res) => {
   try {

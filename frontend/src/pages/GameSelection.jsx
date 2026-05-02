@@ -36,6 +36,21 @@ const GameSelection = () => {
         'Last fighter standing wins'
       ],
       route: '/game/train-to-ufc'
+    },
+    {
+      id: 'poker',
+      name: 'UFC Poker',
+      description: 'Play Texas Hold\'em with your Fan Coins against 3 AI fighters — Conor McFighter, Khabib Nurmabot, and Jon Jonesy. Win big or go broke. Your coin balance updates when you cash out!',
+      icon: <span className="text-6xl">🃏</span>,
+      color: 'from-green-700 to-green-900',
+      features: [
+        'Full Texas Hold\'em rules',
+        'Bet with UFC Fan Coins',
+        'vs 3 AI opponents',
+        'Raise, call, fold, all-in',
+        'Balance syncs to your account'
+      ],
+      route: '/game/poker'
     }
   ];
 
@@ -50,7 +65,7 @@ const GameSelection = () => {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8 mb-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
         {games.map((game) => (
           <div
             key={game.id}
