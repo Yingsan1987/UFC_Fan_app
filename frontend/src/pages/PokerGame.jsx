@@ -143,13 +143,15 @@ function aiDecide(player, { currentBet, pot, communityCards, bigBlind }) {
 const SMALL_BLIND = 10;
 const BIG_BLIND = 20;
 const NUM_PLAYERS = 4;
+const STARTING_CHIPS = 1000;
+const REBUY_OPTIONS = [200, 500, 1000];
 
-function makePlayers(humanChips) {
+function makePlayers() {
   return [
-    { id: 0, name: 'You',         chips: humanChips, holeCards: [], bet: 0, folded: false, allIn: false, isAI: false },
-    { id: 1, name: AI_NAMES[0],   chips: 1000,       holeCards: [], bet: 0, folded: false, allIn: false, isAI: true  },
-    { id: 2, name: AI_NAMES[1],   chips: 1000,       holeCards: [], bet: 0, folded: false, allIn: false, isAI: true  },
-    { id: 3, name: AI_NAMES[2],   chips: 1000,       holeCards: [], bet: 0, folded: false, allIn: false, isAI: true  },
+    { id: 0, name: 'You',         chips: STARTING_CHIPS, holeCards: [], bet: 0, folded: false, allIn: false, isAI: false },
+    { id: 1, name: AI_NAMES[0],   chips: STARTING_CHIPS, holeCards: [], bet: 0, folded: false, allIn: false, isAI: true  },
+    { id: 2, name: AI_NAMES[1],   chips: STARTING_CHIPS, holeCards: [], bet: 0, folded: false, allIn: false, isAI: true  },
+    { id: 3, name: AI_NAMES[2],   chips: STARTING_CHIPS, holeCards: [], bet: 0, folded: false, allIn: false, isAI: true  },
   ];
 }
 
@@ -370,6 +372,13 @@ function reducer(state, action) {
       };
     }
 
+    case 'REBUY': {
+      const players = state.players.map(p =>
+        p.id === 0 ? { ...p, chips: p.chips + action.amount, folded: false, allIn: false } : p
+      );
+      return { ...state, players };
+    }
+
     default:
       return state;
   }
@@ -447,8 +456,9 @@ export default function PokerGame() {
   const navigate = useNavigate();
   const [fanCoins, setFanCoins] = useState(0);
   const [loadingCoins, setLoadingCoins] = useState(true);
-  const [buyIn, setBuyIn] = useState(200);
-  const [sessionStart, setSessionStart] = useState(0);
+  const [fanCoinsSpent, setFanCoinsSpent] = useState(0); // fan coins used for rebuys
+  const [showRebuy, setShowRebuy] = useState(false);
+  const [rebuyInput, setRebuyInput] = useState(500);
   const [syncing, setSyncing] = useState(false);
 
   const [game, dispatch] = useReducer(reducer, INIT);
@@ -471,6 +481,27 @@ export default function PokerGame() {
     );
   }, [currentUser]);
 
+  // ── Helper: kick off next hand ──
+  const startNextHand = useCallback((currentPlayers, currentDealerIdx, currentHandNumber) => {
+    const deck = newShuffledDeck();
+    let di = 0;
+    const nextDealer = (currentDealerIdx + 1) % NUM_PLAYERS;
+    const players = currentPlayers.map(p => ({
+      ...p,
+      holeCards: [deck[di++], deck[di++]],
+      bet: 0,
+      folded: p.chips <= 0,
+      allIn: false,
+    }));
+    dispatch({
+      type: 'START_HAND',
+      players,
+      deck: deck.slice(di),
+      dealerIdx: nextDealer,
+      handNumber: currentHandNumber + 1,
+    });
+  }, []);
+
   // ── Phase advancement after betting round ends ──
   useEffect(() => {
     if (!game._roundDone) return;
@@ -487,7 +518,6 @@ export default function PokerGame() {
       else if (game.phase === 'flop')   dispatch({ type: 'DEAL_TURN' });
       else if (game.phase === 'turn')   dispatch({ type: 'DEAL_RIVER' });
       else if (game.phase === 'river') {
-        // Showdown
         const alive = game.players.filter(p => !p.folded);
         let best = null;
         let winners = [];
@@ -509,29 +539,20 @@ export default function PokerGame() {
   // ── Auto-start next hand after showdown ──
   useEffect(() => {
     if (game.phase !== 'showdown') return;
+    clearTimeout(phaseTimer.current);
     phaseTimer.current = setTimeout(() => {
-      const alive = game.players.filter(p => p.chips > 0);
-      if (alive.length < 2) return; // game over
-      const nextDealer = (game.dealerIdx + 1) % NUM_PLAYERS;
-      const deck = newShuffledDeck();
-      let di = 0;
-      const players = game.players.map(p => ({
-        ...p,
-        holeCards: [deck[di++], deck[di++]],
-        bet: 0,
-        folded: p.chips <= 0,
-        allIn: false,
-      }));
-      dispatch({
-        type: 'START_HAND',
-        players,
-        deck: deck.slice(di),
-        dealerIdx: nextDealer,
-        handNumber: game.handNumber + 1,
-      });
-    }, 3500);
+      const humanChips = game.players[0]?.chips ?? 0;
+      // Human busted — pause for rebuy
+      if (humanChips === 0) {
+        setShowRebuy(true);
+        return;
+      }
+      const aiAlive = game.players.slice(1).filter(p => p.chips > 0);
+      if (aiAlive.length === 0) return; // all AI busted, session over
+      startNextHand(game.players, game.dealerIdx, game.handNumber);
+    }, 3000);
     return () => clearTimeout(phaseTimer.current);
-  }, [game.phase]);
+  }, [game.phase, game.players, game.dealerIdx, game.handNumber, startNextHand]);
 
   // ── AI turns ──
   useEffect(() => {
@@ -555,15 +576,12 @@ export default function PokerGame() {
 
   // ── Start game from lobby ──
   function startGame() {
-    const chips = Math.min(buyIn, fanCoins);
-    if (chips < BIG_BLIND * 2) return;
     const deck = newShuffledDeck();
     let di = 0;
-    const players = makePlayers(chips).map(p => ({
+    const players = makePlayers().map(p => ({
       ...p,
       holeCards: [deck[di++], deck[di++]],
     }));
-    setSessionStart(chips);
     dispatch({
       type: 'START_HAND',
       players,
@@ -573,11 +591,31 @@ export default function PokerGame() {
     });
   }
 
+  // ── Rebuy with fan coins ──
+  function handleRebuy(amount) {
+    if (amount <= 0 || amount > fanCoins) return;
+    dispatch({ type: 'REBUY', amount });
+    setFanCoins(prev => prev - amount);
+    setFanCoinsSpent(prev => prev + amount);
+    setShowRebuy(false);
+    // Delay before dealing — give UI time to update
+    setTimeout(() => {
+      setShowRebuy(false); // ensure closed
+      startNextHand(
+        game.players.map(p => p.id === 0 ? { ...p, chips: p.chips + amount } : p),
+        game.dealerIdx,
+        game.handNumber
+      );
+    }, 300);
+  }
+
   // ── Sync coins on exit ──
   async function cashOut() {
     if (!currentUser) { navigate('/game'); return; }
-    const humanChips = game.players[0]?.chips ?? sessionStart;
-    const delta = humanChips - sessionStart;
+    // delta = chips gained from AI - fan coins spent on rebuys
+    // initial 1000 free chips are excluded from delta
+    const humanChips = game.players[0]?.chips ?? 0;
+    const delta = (humanChips - STARTING_CHIPS) - fanCoinsSpent;
     if (delta !== 0) {
       setSyncing(true);
       try {
@@ -600,12 +638,14 @@ export default function PokerGame() {
     dispatch({ type: 'PLAYER_ACTION', action: act, amount });
   }
 
-  // ── Derived state for controls ──
+  // ── Derived state ──
   const human = game.players[0];
   const isMyTurn = game.activeIdx === 0 && ['preflop','flop','turn','river'].includes(game.phase);
   const toCall = human ? Math.max(0, game.currentBet - (human.bet || 0)) : 0;
   const canCheck = toCall === 0;
   const minRaiseTotal = game.currentBet + game.minRaise;
+  // Net fan coin change this session (does not count initial free 1000)
+  const sessionNet = human ? (human.chips - STARTING_CHIPS) - fanCoinsSpent : -fanCoinsSpent;
 
   // ── Lobby ──
   if (game.phase === 'lobby') {
@@ -621,10 +661,7 @@ export default function PokerGame() {
           {!currentUser ? (
             <div className="text-center">
               <p className="text-yellow-400 mb-4">Sign in to play with your Fan Coins</p>
-              <button
-                onClick={() => navigate('/')}
-                className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700"
-              >
+              <button onClick={() => navigate('/')} className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
                 Go Sign In
               </button>
             </div>
@@ -632,47 +669,31 @@ export default function PokerGame() {
             <p className="text-gray-400 text-center">Loading your balance…</p>
           ) : (
             <>
-              <div className="bg-gray-700 rounded-xl p-4 mb-6 text-center">
-                <p className="text-gray-400 text-sm mb-1">Your Fan Coin Balance</p>
-                <p className="text-3xl font-bold text-yellow-400">🥊 {fanCoins}</p>
+              {/* Free chip banner */}
+              <div className="bg-gradient-to-r from-green-800 to-green-700 rounded-xl p-4 mb-4 text-center border border-green-500">
+                <p className="text-green-200 text-sm font-semibold mb-1">Every player starts with</p>
+                <p className="text-4xl font-bold text-white">1,000 FREE chips</p>
+                <p className="text-green-300 text-xs mt-1">No Fan Coins required to start</p>
               </div>
 
-              <div className="mb-6">
-                <label className="text-gray-300 text-sm block mb-2">Buy-in amount</label>
-                <div className="flex gap-2 mb-3">
-                  {[100, 200, 500].map(v => (
-                    <button
-                      key={v}
-                      onClick={() => setBuyIn(Math.min(v, fanCoins))}
-                      className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${buyIn === Math.min(v, fanCoins) ? 'bg-red-600 text-white' : 'bg-gray-600 text-gray-200 hover:bg-gray-500'}`}
-                    >
-                      {v}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="range"
-                  min={BIG_BLIND * 2}
-                  max={Math.max(BIG_BLIND * 2, fanCoins)}
-                  value={buyIn}
-                  onChange={e => setBuyIn(+e.target.value)}
-                  className="w-full accent-red-600"
-                />
-                <p className="text-yellow-400 text-center font-bold mt-1">🥊 {buyIn} coins</p>
+              {/* Fan coin balance */}
+              <div className="bg-gray-700 rounded-xl p-3 mb-6 text-center">
+                <p className="text-gray-400 text-xs mb-1">Your Fan Coin Balance (for rebuys)</p>
+                <p className="text-2xl font-bold text-yellow-400">🥊 {fanCoins}</p>
               </div>
 
               <div className="bg-gray-700 rounded-xl p-3 mb-6 text-xs text-gray-400 space-y-1">
                 <p>• 4 players: You vs 3 AI fighters</p>
-                <p>• Blinds: {SMALL_BLIND}/{BIG_BLIND} Fan Coins</p>
-                <p>• Wins and losses update your balance</p>
+                <p>• Blinds: {SMALL_BLIND}/{BIG_BLIND} chips</p>
+                <p>• Run out? Rebuy using your Fan Coins</p>
+                <p>• Win chips from AI → earn Fan Coins</p>
               </div>
 
               <button
                 onClick={startGame}
-                disabled={fanCoins < BIG_BLIND * 2}
-                className="w-full py-3 bg-gradient-to-r from-red-600 to-red-800 text-white font-bold rounded-xl text-lg hover:from-red-700 hover:to-red-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                className="w-full py-3 bg-gradient-to-r from-red-600 to-red-800 text-white font-bold rounded-xl text-lg hover:from-red-700 hover:to-red-900 transition-all shadow-lg"
               >
-                {fanCoins < BIG_BLIND * 2 ? `Need ${BIG_BLIND * 2}+ coins to play` : 'Deal Cards'}
+                Deal Cards — Free to Play!
               </button>
             </>
           )}
@@ -683,10 +704,70 @@ export default function PokerGame() {
 
   // ── Game Table ──
   const showdownPhase = game.phase === 'showdown';
-  const humanNet = (human?.chips ?? 0) - sessionStart;
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col" style={{ fontFamily: 'sans-serif' }}>
+      {/* Rebuy Modal */}
+      {showRebuy && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-red-700">
+            <div className="text-center mb-4">
+              <div className="text-5xl mb-2">💀</div>
+              <h2 className="text-xl font-bold text-white">You're out of chips!</h2>
+              <p className="text-gray-400 text-sm mt-1">Use your Fan Coins to buy back in</p>
+            </div>
+
+            <div className="bg-gray-700 rounded-xl p-3 mb-4 text-center">
+              <p className="text-gray-400 text-xs mb-1">Fan Coin Balance</p>
+              <p className="text-2xl font-bold text-yellow-400">🥊 {fanCoins}</p>
+            </div>
+
+            {fanCoins > 0 ? (
+              <>
+                <p className="text-gray-300 text-sm mb-2 text-center">Select rebuy amount (1 coin = 1 chip)</p>
+                <div className="flex gap-2 mb-3">
+                  {REBUY_OPTIONS.filter(v => v <= fanCoins).map(v => (
+                    <button
+                      key={v}
+                      onClick={() => setRebuyInput(v)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${rebuyInput === v ? 'bg-red-600 text-white' : 'bg-gray-600 text-gray-200 hover:bg-gray-500'}`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="range"
+                  min={BIG_BLIND * 2}
+                  max={fanCoins}
+                  value={Math.min(rebuyInput, fanCoins)}
+                  onChange={e => setRebuyInput(+e.target.value)}
+                  className="w-full accent-red-500 mb-2"
+                />
+                <p className="text-yellow-400 text-center font-bold mb-4">
+                  🥊 {Math.min(rebuyInput, fanCoins)} Fan Coins → {Math.min(rebuyInput, fanCoins)} chips
+                </p>
+                <button
+                  onClick={() => handleRebuy(Math.min(rebuyInput, fanCoins))}
+                  className="w-full py-3 bg-gradient-to-r from-red-600 to-red-800 text-white font-bold rounded-xl hover:from-red-700 hover:to-red-900 transition-all mb-2"
+                >
+                  Rebuy {Math.min(rebuyInput, fanCoins)} chips
+                </button>
+              </>
+            ) : (
+              <p className="text-red-400 text-center font-semibold mb-4">No Fan Coins available for rebuy</p>
+            )}
+
+            <button
+              onClick={cashOut}
+              className="w-full py-2 bg-gray-700 text-gray-300 font-semibold rounded-xl hover:bg-gray-600 transition-colors text-sm"
+            >
+              Leave Table
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
         <button
@@ -700,10 +781,13 @@ export default function PokerGame() {
           <span className="text-white font-bold">UFC Poker</span>
           <span className="text-gray-400 text-xs ml-2">Hand #{game.handNumber}</span>
         </div>
-        <div className="text-right">
-          <span className={`text-sm font-bold ${humanNet >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {humanNet >= 0 ? '+' : ''}{humanNet} 🥊
+        <div className="text-right flex flex-col items-end">
+          <span className={`text-sm font-bold ${sessionNet >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {sessionNet >= 0 ? '+' : ''}{sessionNet} 🥊
           </span>
+          {fanCoinsSpent > 0 && (
+            <span className="text-xs text-gray-500">Spent: {fanCoinsSpent}</span>
+          )}
         </div>
       </div>
 
