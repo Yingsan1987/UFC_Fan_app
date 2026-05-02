@@ -158,7 +158,7 @@ function makePlayers() {
 
 // ─── Reducer ──────────────────────────────────────────────────
 const INIT = {
-  phase: 'lobby',          // lobby | preflop | flop | turn | river | showdown
+  phase: 'lobby',
   players: [],
   deck: [],
   communityCards: [],
@@ -167,7 +167,7 @@ const INIT = {
   minRaise: BIG_BLIND,
   activeIdx: 0,
   dealerIdx: 0,
-  toAct: [],               // queue of player indices still to act this round
+  toAct: [],
   message: '',
   handResult: null,
   handNumber: 0,
@@ -208,8 +208,6 @@ function reducer(state, action) {
       let p = postBlind(players, sbIdx, SMALL_BLIND);
       p = postBlind(p, bbIdx, BIG_BLIND);
       const pot = p[sbIdx].bet + p[bbIdx].bet;
-
-      // UTG acts first; BB gets option last (included in toAct)
       const toAct = buildToAct(p, utgIdx - 1, NUM_PLAYERS);
 
       return {
@@ -251,7 +249,6 @@ function reducer(state, action) {
         pot += toCall;
         if (player.chips === 0) player.allIn = true;
       } else if (act === 'raise') {
-        // amount = total bet target (includes what player already bet)
         const newBet = Math.min(amount, player.chips + player.bet);
         const added = newBet - player.bet;
         player.chips -= added;
@@ -261,10 +258,7 @@ function reducer(state, action) {
         const raisedBy = newBet - currentBet;
         minRaise = Math.max(BIG_BLIND, raisedBy);
         currentBet = newBet;
-        // everyone else needs to act again
-        toAct = players
-          .filter(p => p.id !== idx && !p.folded && !p.allIn)
-          .map(p => p.id);
+        toAct = players.filter(p => p.id !== idx && !p.folded && !p.allIn).map(p => p.id);
       }
 
       const nextToAct = toAct.filter(i => i !== idx);
@@ -276,7 +270,6 @@ function reducer(state, action) {
         currentBet,
         minRaise,
         toAct: nextToAct,
-        // Signal round complete if queue empty
         _roundDone: nextToAct.length === 0,
         _nextActIdx: nextToAct[0] ?? -1,
         activeIdx: nextToAct.length > 0 ? nextToAct[0] : state.activeIdx,
@@ -288,18 +281,10 @@ function reducer(state, action) {
       const players = state.players.map(p => ({ ...p, bet: 0 }));
       const firstAct = nextActive(players, state.dealerIdx);
       return {
-        ...state,
-        phase: 'flop',
-        communityCards: [c1, c2, c3],
-        deck: rest,
-        players,
-        pot: state.pot,
-        currentBet: 0,
-        minRaise: BIG_BLIND,
-        activeIdx: firstAct,
+        ...state, phase: 'flop', communityCards: [c1, c2, c3], deck: rest, players,
+        currentBet: 0, minRaise: BIG_BLIND, activeIdx: firstAct,
         toAct: buildToAct(players, state.dealerIdx, NUM_PLAYERS).filter(i => i !== firstAct),
-        message: 'Flop',
-        _roundDone: false,
+        message: 'Flop', _roundDone: false,
       };
     }
 
@@ -308,17 +293,10 @@ function reducer(state, action) {
       const players = state.players.map(p => ({ ...p, bet: 0 }));
       const firstAct = nextActive(players, state.dealerIdx);
       return {
-        ...state,
-        phase: 'turn',
-        communityCards: [...state.communityCards, card],
-        deck: rest,
-        players,
-        currentBet: 0,
-        minRaise: BIG_BLIND,
-        activeIdx: firstAct,
+        ...state, phase: 'turn', communityCards: [...state.communityCards, card], deck: rest, players,
+        currentBet: 0, minRaise: BIG_BLIND, activeIdx: firstAct,
         toAct: buildToAct(players, state.dealerIdx, NUM_PLAYERS).filter(i => i !== firstAct),
-        message: 'Turn',
-        _roundDone: false,
+        message: 'Turn', _roundDone: false,
       };
     }
 
@@ -327,55 +305,40 @@ function reducer(state, action) {
       const players = state.players.map(p => ({ ...p, bet: 0 }));
       const firstAct = nextActive(players, state.dealerIdx);
       return {
-        ...state,
-        phase: 'river',
-        communityCards: [...state.communityCards, card],
-        deck: rest,
-        players,
-        currentBet: 0,
-        minRaise: BIG_BLIND,
-        activeIdx: firstAct,
+        ...state, phase: 'river', communityCards: [...state.communityCards, card], deck: rest, players,
+        currentBet: 0, minRaise: BIG_BLIND, activeIdx: firstAct,
         toAct: buildToAct(players, state.dealerIdx, NUM_PLAYERS).filter(i => i !== firstAct),
-        message: 'River',
-        _roundDone: false,
+        message: 'River', _roundDone: false,
       };
     }
 
     case 'SHOWDOWN': {
       const { winners, handName } = action;
       const share = Math.floor(state.pot / winners.length);
-      const players = state.players.map(p =>
-        winners.includes(p.id) ? { ...p, chips: p.chips + share } : p
-      );
+      const players = state.players.map(p => winners.includes(p.id) ? { ...p, chips: p.chips + share } : p);
       const names = winners.map(id => state.players[id].name).join(' & ');
       return {
-        ...state,
-        phase: 'showdown',
-        players,
+        ...state, phase: 'showdown', players,
         handResult: { winners, handName, pot: state.pot },
-        message: `${names} wins ${state.pot} coins with ${handName}!`,
+        message: `${names} wins ${state.pot} with ${handName}!`,
         _roundDone: false,
       };
     }
 
     case 'EARLY_WIN': {
       const { winnerId } = action;
-      const players = state.players.map(p =>
-        p.id === winnerId ? { ...p, chips: p.chips + state.pot } : p
-      );
+      const players = state.players.map(p => p.id === winnerId ? { ...p, chips: p.chips + state.pot } : p);
       return {
-        ...state,
-        phase: 'showdown',
-        players,
+        ...state, phase: 'showdown', players,
         handResult: { winners: [winnerId], handName: 'Everyone else folded', pot: state.pot },
-        message: `${state.players[winnerId].name} wins ${state.pot} coins!`,
+        message: `${state.players[winnerId].name} wins ${state.pot}!`,
         _roundDone: false,
       };
     }
 
     case 'REBUY': {
       const players = state.players.map(p =>
-        p.id === 0 ? { ...p, chips: p.chips + action.amount, folded: false, allIn: false } : p
+        p.id === 0 ? { ...p, chips: action.amount, folded: false, allIn: false } : p
       );
       return { ...state, players };
     }
@@ -387,74 +350,23 @@ function reducer(state, action) {
 
 // ─── UFC Hand Effects ────────────────────────────────────────
 const HAND_EFFECTS = {
-  'Three of a Kind': {
-    title: 'TRIPLE THREAT!',
-    sub: 'Three of a Kind',
-    emoji: '🥊',
-    particles: ['🥊','🥊','🥊','💥','🥊'],
-    bg: 'from-orange-600 via-red-700 to-red-900',
-    glow: '#ff4500',
-  },
-  'Straight': {
-    title: 'LIGHTNING COMBO!',
-    sub: 'Straight',
-    emoji: '⚡',
-    particles: ['⚡','⚡','⚡','🔥','⚡'],
-    bg: 'from-yellow-400 via-yellow-600 to-orange-700',
-    glow: '#ffd700',
-  },
-  'Flush': {
-    title: 'OCTAGON FLUSH!',
-    sub: 'Flush',
-    emoji: '🏟️',
-    particles: ['🏟️','⚡','🥊','⚡','🏟️'],
-    bg: 'from-blue-500 via-cyan-600 to-blue-900',
-    glow: '#00bfff',
-  },
-  'Full House': {
-    title: 'FULL HOUSE KO!',
-    sub: 'Full House',
-    emoji: '🔥',
-    particles: ['🔥','🔥','💥','🔥','💥'],
-    bg: 'from-red-500 via-orange-500 to-yellow-600',
-    glow: '#ff6600',
-  },
-  'Four of a Kind': {
-    title: 'QUAD KNOCKOUT!',
-    sub: 'Four of a Kind',
-    emoji: '💥',
-    particles: ['💥','⭐','💥','⭐','💥'],
-    bg: 'from-purple-600 via-pink-600 to-red-700',
-    glow: '#9900ff',
-  },
-  'Straight Flush': {
-    title: 'SUBMISSION!',
-    sub: 'Straight Flush',
-    emoji: '🦅',
-    particles: ['🦅','💎','⚡','💎','🦅'],
-    bg: 'from-green-500 via-teal-600 to-emerald-900',
-    glow: '#00ff88',
-  },
-  'Royal Flush': {
-    title: 'UFC CHAMPION!',
-    sub: 'Royal Flush',
-    emoji: '👑',
-    particles: ['👑','🏆','⭐','🏆','👑'],
-    bg: 'from-yellow-400 via-amber-500 to-red-700',
-    glow: '#ffd700',
-  },
+  'Three of a Kind': { title: 'TRIPLE THREAT!',    emoji: '🥊', particles: ['🥊','🥊','🥊','💥','🥊'], bg: 'from-orange-600 via-red-700 to-red-900',         glow: '#ff4500' },
+  'Straight':        { title: 'LIGHTNING COMBO!',  emoji: '⚡', particles: ['⚡','⚡','⚡','🔥','⚡'], bg: 'from-yellow-400 via-yellow-600 to-orange-700',    glow: '#ffd700' },
+  'Flush':           { title: 'OCTAGON FLUSH!',    emoji: '🏟️', particles: ['🏟️','⚡','🥊','⚡','🏟️'], bg: 'from-blue-500 via-cyan-600 to-blue-900',         glow: '#00bfff' },
+  'Full House':      { title: 'FULL HOUSE KO!',    emoji: '🔥', particles: ['🔥','🔥','💥','🔥','💥'], bg: 'from-red-500 via-orange-500 to-yellow-600',      glow: '#ff6600' },
+  'Four of a Kind':  { title: 'QUAD KNOCKOUT!',    emoji: '💥', particles: ['💥','⭐','💥','⭐','💥'], bg: 'from-purple-600 via-pink-600 to-red-700',        glow: '#9900ff' },
+  'Straight Flush':  { title: 'SUBMISSION!',       emoji: '🦅', particles: ['🦅','💎','⚡','💎','🦅'], bg: 'from-green-500 via-teal-600 to-emerald-900',     glow: '#00ff88' },
+  'Royal Flush':     { title: 'UFC CHAMPION!',     emoji: '👑', particles: ['👑','🏆','⭐','🏆','👑'], bg: 'from-yellow-400 via-amber-500 to-red-700',       glow: '#ffd700' },
 };
 
 function Particle({ emoji, delay }) {
   const startX = Math.random() * 100;
   return (
-    <motion.div
-      className="absolute text-2xl pointer-events-none select-none"
+    <motion.div className="absolute text-2xl pointer-events-none select-none"
       style={{ left: `${startX}%`, bottom: '10%' }}
       initial={{ y: 0, opacity: 1, scale: 0.5 }}
-      animate={{ y: -300, opacity: 0, scale: 1.5, x: (Math.random() - 0.5) * 200 }}
-      transition={{ duration: 1.8, delay, ease: 'easeOut' }}
-    >
+      animate={{ y: -280, opacity: 0, scale: 1.4, x: (Math.random() - 0.5) * 180 }}
+      transition={{ duration: 1.6, delay, ease: 'easeOut' }}>
       {emoji}
     </motion.div>
   );
@@ -462,63 +374,27 @@ function Particle({ emoji, delay }) {
 
 function HandCelebration({ handName, humanWon, onDone }) {
   const effect = HAND_EFFECTS[handName];
-  useEffect(() => {
-    const t = setTimeout(onDone, 3200);
-    return () => clearTimeout(t);
-  }, [onDone]);
+  useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, [onDone]);
   if (!effect) return null;
-
   return (
-    <motion.div
-      className="fixed inset-0 z-40 flex flex-col items-center justify-center overflow-hidden pointer-events-none"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      {/* Background flash */}
-      <motion.div
-        className={`absolute inset-0 bg-gradient-to-b ${effect.bg} opacity-80`}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.85, 0.6] }}
-        transition={{ duration: 0.5 }}
-      />
-
-      {/* Particles */}
-      {effect.particles.map((p, i) => (
-        <Particle key={i} emoji={p} delay={i * 0.12} />
-      ))}
-
-      {/* Main callout */}
-      <motion.div
-        className="relative text-center px-6"
-        initial={{ scale: 0, rotate: -10 }}
-        animate={{ scale: [0, 1.3, 1], rotate: [-10, 5, 0] }}
-        transition={{ duration: 0.6, type: 'spring', stiffness: 300 }}
-      >
-        <div className="text-7xl mb-3 drop-shadow-lg">{effect.emoji}</div>
-        <div
-          className="text-4xl sm:text-5xl font-black text-white tracking-wider drop-shadow-2xl uppercase"
-          style={{ textShadow: `0 0 30px ${effect.glow}, 0 0 60px ${effect.glow}` }}
-        >
+    <motion.div className="fixed inset-0 z-40 flex flex-col items-center justify-center overflow-hidden pointer-events-none"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
+      <motion.div className={`absolute inset-0 bg-gradient-to-b ${effect.bg}`}
+        initial={{ opacity: 0 }} animate={{ opacity: [0, 0.82, 0.55] }} transition={{ duration: 0.4 }} />
+      {effect.particles.map((p, i) => <Particle key={i} emoji={p} delay={i * 0.1} />)}
+      <motion.div className="relative text-center px-6"
+        initial={{ scale: 0, rotate: -10 }} animate={{ scale: [0, 1.25, 1], rotate: [-10, 4, 0] }}
+        transition={{ duration: 0.55, type: 'spring', stiffness: 280 }}>
+        <div className="text-6xl mb-2">{effect.emoji}</div>
+        <div className="text-3xl sm:text-4xl font-black text-white tracking-wider uppercase"
+          style={{ textShadow: `0 0 25px ${effect.glow}, 0 0 50px ${effect.glow}` }}>
           {effect.title}
         </div>
-        <motion.div
-          className="text-xl sm:text-2xl font-bold text-white/90 mt-2"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          {effect.sub}
-        </motion.div>
+        <div className="text-lg font-bold text-white/80 mt-1">{handName}</div>
         {humanWon && (
-          <motion.div
-            className="mt-4 text-2xl font-black text-yellow-300"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            style={{ textShadow: '0 0 20px #ffd700' }}
-          >
+          <motion.div className="mt-3 text-2xl font-black text-yellow-300"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+            style={{ textShadow: '0 0 18px #ffd700' }}>
             🏆 YOU WIN!
           </motion.div>
         )}
@@ -528,146 +404,159 @@ function HandCelebration({ handName, humanWon, onDone }) {
 }
 
 // ─── Card Component ────────────────────────────────────────────
-function Card({ card, hidden = false, size = 'md' }) {
-  const sizes = {
-    sm:  { w: 40,  h: 56,  rankSize: 13, suitSize: 15 },
-    md:  { w: 56,  h: 80,  rankSize: 17, suitSize: 20 },
-    lg:  { w: 72,  h: 100, rankSize: 22, suitSize: 26 },
-    xl:  { w: 88,  h: 124, rankSize: 28, suitSize: 34 },
-  };
-  const s = sizes[size] || sizes.md;
+const CARD_SIZES = {
+  ai:        { w: 34,  h: 48,  rankSize: 11, suitSize: 13 },
+  community: { w: 50,  h: 72,  rankSize: 15, suitSize: 19 },
+  human:     { w: 62,  h: 88,  rankSize: 19, suitSize: 25 },
+};
 
+function Card({ card, hidden = false, size = 'community' }) {
+  const s = CARD_SIZES[size] || CARD_SIZES.community;
   if (hidden) return (
-    <motion.div
-      className="rounded-xl border-2 border-red-600 flex items-center justify-center shadow-lg bg-gradient-to-br from-red-900 to-red-800 select-none flex-shrink-0"
+    <motion.div className="rounded-lg border-2 border-red-600 flex items-center justify-center shadow-md bg-gradient-to-br from-red-900 to-red-800 select-none flex-shrink-0"
       style={{ width: s.w, height: s.h }}
-      initial={{ rotateY: 90, opacity: 0 }}
-      animate={{ rotateY: 0, opacity: 1 }}
-      transition={{ duration: 0.35 }}
-    >
-      <span style={{ fontSize: s.suitSize }}>🥊</span>
+      initial={{ rotateY: 90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} transition={{ duration: 0.28 }}>
+      <span style={{ fontSize: s.suitSize - 2 }}>🥊</span>
     </motion.div>
   );
-
   const red = isRed(card.suit);
   return (
-    <motion.div
-      className="rounded-xl border-2 border-gray-300 bg-white shadow-lg flex flex-col items-center justify-center select-none flex-shrink-0"
+    <motion.div className="rounded-lg border-2 border-gray-300 bg-white shadow-md flex flex-col items-center justify-center select-none flex-shrink-0"
       style={{ width: s.w, height: s.h }}
-      initial={{ rotateY: 90, opacity: 0 }}
-      animate={{ rotateY: 0, opacity: 1 }}
-      transition={{ duration: 0.35 }}
-    >
-      <span className={`font-black leading-none ${red ? 'text-red-600' : 'text-gray-900'}`} style={{ fontSize: s.rankSize }}>
-        {rankLabel(card.rank)}
-      </span>
-      <span className={`leading-none ${red ? 'text-red-600' : 'text-gray-900'}`} style={{ fontSize: s.suitSize }}>
-        {SUIT_SYM[card.suit]}
-      </span>
+      initial={{ rotateY: 90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} transition={{ duration: 0.28 }}>
+      <span className={`font-black leading-none ${red ? 'text-red-600' : 'text-gray-900'}`} style={{ fontSize: s.rankSize }}>{rankLabel(card.rank)}</span>
+      <span className={`leading-none ${red ? 'text-red-600' : 'text-gray-900'}`} style={{ fontSize: s.suitSize }}>{SUIT_SYM[card.suit]}</span>
     </motion.div>
   );
 }
 
-// ─── Position Badge ────────────────────────────────────────────
-function PosBadge({ label, color }) {
-  return (
-    <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-black leading-none ${color}`}>
-      {label}
-    </span>
-  );
-}
-
-// ─── Chip Stack Visual ─────────────────────────────────────────
-function BetChips({ amount }) {
-  if (!amount) return null;
-  return (
-    <div className="flex items-center gap-1 bg-black/60 rounded-full px-2 py-0.5">
-      <div className="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-600 shadow" />
-      <span className="text-yellow-300 text-xs font-bold">{amount}</span>
-    </div>
-  );
-}
-
-// ─── Player Seat ───────────────────────────────────────────────
-function PlayerSeat({ player, isActive, isDealer, isSB, isBB, showCards, communityCards, isHuman }) {
+// ─── Compact AI Seat ───────────────────────────────────────────
+function AISeat({ player, isActive, isDealer, isSB, isBB, showCards, communityCards }) {
   const hand = showCards && player.holeCards.length === 2 && communityCards?.length >= 3
-    ? bestHand(player.holeCards, communityCards)
-    : null;
-
-  const cardSize = isHuman ? 'xl' : 'sm';
+    ? bestHand(player.holeCards, communityCards) : null;
 
   return (
-    <div className={`flex flex-col items-center gap-1 transition-all duration-300 rounded-2xl p-2
-      ${isActive && !player.folded && !player.allIn ? 'ring-4 ring-yellow-400 bg-yellow-400/10 shadow-lg shadow-yellow-400/30' : ''}
-      ${player.folded ? 'opacity-50' : ''}
-    `}>
-      {/* Position badges row */}
-      <div className="flex items-center gap-1 flex-wrap justify-center">
-        {isDealer && <PosBadge label="D" color="bg-white text-gray-900" />}
-        {isSB && <PosBadge label="SB" color="bg-blue-600 text-white" />}
-        {isBB && <PosBadge label="BB" color="bg-red-600 text-white" />}
-        {player.allIn && <PosBadge label="ALL IN" color="bg-yellow-500 text-gray-900" />}
+    <div className={`flex flex-col items-center gap-0.5 px-1 py-1 rounded-xl flex-1 min-w-0 transition-all
+      ${isActive && !player.folded && !player.allIn ? 'ring-2 ring-yellow-400 bg-yellow-400/10' : ''}
+      ${player.folded ? 'opacity-40' : ''}`}>
+      <div className="flex gap-0.5 flex-wrap justify-center min-h-[16px]">
+        {isDealer && <span className="bg-white text-gray-900 font-black px-1 rounded leading-tight" style={{fontSize:9}}>D</span>}
+        {isSB && <span className="bg-blue-600 text-white font-black px-1 rounded leading-tight" style={{fontSize:9}}>SB</span>}
+        {isBB && <span className="bg-red-600 text-white font-black px-1 rounded leading-tight" style={{fontSize:9}}>BB</span>}
+        {player.allIn && <span className="bg-yellow-500 text-gray-900 font-black px-1 rounded leading-tight" style={{fontSize:9}}>AI</span>}
       </div>
-
-      {/* Name */}
-      <div className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap max-w-[120px] truncate
-        ${isHuman ? 'bg-yellow-500 text-gray-900 text-sm' : player.folded ? 'bg-gray-600 text-gray-400' : 'bg-red-900 text-white border border-red-700'}
-      `}>
-        {player.name}
-      </div>
-
-      {/* Chips */}
-      <div className="flex items-center gap-1">
-        <div className="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-600" />
-        <span className={`font-bold ${isHuman ? 'text-sm text-yellow-300' : 'text-xs text-yellow-400'}`}>
-          {player.chips.toLocaleString()}
-        </span>
-      </div>
-
-      {/* Hole cards */}
-      <div className="flex gap-1 justify-center">
+      <div className="flex gap-0.5">
         {player.holeCards.length === 2 ? (
-          player.folded ? (
-            <span className="text-gray-500 text-xs italic">Folded</span>
-          ) : showCards ? (
-            <>
-              <Card card={player.holeCards[0]} size={cardSize} />
-              <Card card={player.holeCards[1]} size={cardSize} />
-            </>
-          ) : (
-            <>
-              <Card hidden size={cardSize} />
-              <Card hidden size={cardSize} />
-            </>
-          )
-        ) : null}
+          player.folded ? <span className="text-gray-600" style={{fontSize:10}}>—</span> :
+          showCards ? <><Card card={player.holeCards[0]} size="ai"/><Card card={player.holeCards[1]} size="ai"/></> :
+          <><Card hidden size="ai"/><Card hidden size="ai"/></>
+        ) : <div style={{ width: 72, height: 48 }} />}
       </div>
-
-      {/* Current bet chips */}
-      <BetChips amount={player.bet > 0 && !player.folded ? player.bet : 0} />
-
-      {/* Hand name at showdown */}
-      {hand && hand.rank >= 0 && (
-        <motion.div
-          className="text-xs font-bold text-green-300 bg-green-900/60 rounded px-2 py-0.5"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
-          {hand.name}
-        </motion.div>
+      <div className={`font-bold truncate ${player.folded ? 'text-gray-500' : 'text-white'}`}
+        style={{ fontSize: 9, maxWidth: 88 }}>{player.name}</div>
+      <div className="text-yellow-400 font-semibold" style={{fontSize:9}}>🥊{player.chips}</div>
+      {player.bet > 0 && !player.folded && (
+        <div className="bg-black/60 rounded-full px-1.5 flex items-center gap-0.5" style={{fontSize:8}}>
+          <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+          <span className="text-yellow-300 font-bold">{player.bet}</span>
+        </div>
       )}
-
-      {/* Active indicator */}
+      {hand && hand.rank >= 0 && <div className="text-green-300 font-semibold text-center" style={{fontSize:8}}>{hand.name}</div>}
       {isActive && !player.folded && !player.allIn && (
-        <motion.div
-          className="text-xs text-yellow-400 font-semibold"
-          animate={{ opacity: [1, 0.3, 1] }}
-          transition={{ repeat: Infinity, duration: 1 }}
-        >
-          {isHuman ? '▶ YOUR TURN' : 'thinking…'}
-        </motion.div>
+        <motion.div style={{fontSize:8}} className="text-yellow-400 font-bold"
+          animate={{ opacity: [1,0.3,1] }} transition={{ repeat: Infinity, duration: 0.8 }}>●●●</motion.div>
       )}
     </div>
+  );
+}
+
+// ─── Human Seat ────────────────────────────────────────────────
+function HumanSeat({ player, isDealer, isSB, isBB, communityCards }) {
+  const hand = player.holeCards.length === 2 && communityCards?.length >= 3
+    ? bestHand(player.holeCards, communityCards) : null;
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap justify-center">
+        {isDealer && <span className="bg-white text-gray-900 text-xs font-black px-1.5 py-0.5 rounded">D</span>}
+        {isSB && <span className="bg-blue-600 text-white text-xs font-black px-1.5 py-0.5 rounded">SB</span>}
+        {isBB && <span className="bg-red-600 text-white text-xs font-black px-1.5 py-0.5 rounded">BB</span>}
+        <span className="bg-yellow-500 text-gray-900 text-sm font-black px-2 py-0.5 rounded-full">You</span>
+        {player.allIn && <span className="bg-orange-500 text-white text-xs font-black px-1.5 py-0.5 rounded animate-pulse">ALL-IN</span>}
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-600" />
+          <span className="text-yellow-300 font-bold text-sm">{player.chips.toLocaleString()}</span>
+        </div>
+        {player.bet > 0 && !player.folded && (
+          <div className="bg-black/60 rounded-full px-2 py-0.5 flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-yellow-400" />
+            <span className="text-yellow-300 text-xs font-bold">Bet:{player.bet}</span>
+          </div>
+        )}
+      </div>
+      <div className="flex gap-2 justify-center">
+        {player.holeCards.length === 2 && (player.folded
+          ? <span className="text-gray-500 text-sm italic">Folded</span>
+          : <><Card card={player.holeCards[0]} size="human"/><Card card={player.holeCards[1]} size="human"/></>
+        )}
+      </div>
+      {hand && hand.rank >= 0 && (
+        <motion.div className="bg-green-900/70 text-green-300 text-xs font-bold px-2 py-0.5 rounded"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{hand.name}</motion.div>
+      )}
+    </div>
+  );
+}
+
+// ─── Rebuy Modal ───────────────────────────────────────────────
+function RebuyModal({ fanCoins, rebuyInput, setRebuyInput, onRebuy, onLeave, loading }) {
+  return (
+    <motion.div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <motion.div className="bg-gray-800 rounded-2xl shadow-2xl p-5 w-full max-w-sm border border-red-700"
+        initial={{ scale: 0.85, y: 30 }} animate={{ scale: 1, y: 0 }}>
+        <div className="text-center mb-3">
+          <div className="text-5xl mb-1">💀</div>
+          <h2 className="text-lg font-black text-white">OUT OF CHIPS!</h2>
+          <p className="text-gray-400 text-xs mt-0.5">Use Fan Coins to buy back in</p>
+        </div>
+        <div className="bg-gray-700 rounded-xl p-2.5 mb-3 flex items-center justify-between">
+          <span className="text-gray-400 text-xs">Fan Coin Balance</span>
+          <span className="text-yellow-400 font-bold text-lg">🥊{fanCoins.toLocaleString()}</span>
+        </div>
+        {fanCoins >= BIG_BLIND * 2 ? (
+          <>
+            <p className="text-gray-300 text-xs mb-2 text-center">1 Fan Coin = 1 chip</p>
+            <div className="flex gap-1.5 mb-2">
+              {REBUY_OPTIONS.filter(v => v <= fanCoins).map(v => (
+                <button key={v} onClick={() => setRebuyInput(v)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${rebuyInput === v ? 'bg-red-600 text-white' : 'bg-gray-600 text-gray-200 hover:bg-gray-500'}`}>
+                  {v}
+                </button>
+              ))}
+            </div>
+            <input type="range" min={BIG_BLIND * 2} max={fanCoins}
+              value={Math.min(rebuyInput, fanCoins)}
+              onChange={e => setRebuyInput(+e.target.value)}
+              className="w-full accent-red-500 mb-1.5" />
+            <p className="text-yellow-400 text-center font-bold text-sm mb-3">
+              🥊{Math.min(rebuyInput, fanCoins)} coins → {Math.min(rebuyInput, fanCoins)} chips
+            </p>
+            <button onClick={() => onRebuy(Math.min(rebuyInput, fanCoins))} disabled={loading}
+              className="w-full py-2.5 bg-gradient-to-r from-red-600 to-red-800 text-white font-bold rounded-xl hover:from-red-700 hover:to-red-900 transition-all mb-2 text-sm disabled:opacity-50">
+              {loading ? 'Processing…' : `Rebuy ${Math.min(rebuyInput, fanCoins)} chips`}
+            </button>
+          </>
+        ) : (
+          <p className="text-red-400 text-center text-sm font-semibold mb-3">Not enough Fan Coins to rebuy</p>
+        )}
+        <button onClick={onLeave}
+          className="w-full py-2 bg-gray-700 text-gray-300 font-semibold rounded-xl hover:bg-gray-600 transition-colors text-xs">
+          Leave Table
+        </button>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -675,548 +564,384 @@ function PlayerSeat({ player, isActive, isDealer, isSB, isBB, showCards, communi
 export default function PokerGame() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [fanCoins, setFanCoins] = useState(0);
+  const [fanCoins, setFanCoins]         = useState(0);
   const [loadingCoins, setLoadingCoins] = useState(true);
-  const [fanCoinsSpent, setFanCoinsSpent] = useState(0); // fan coins used for rebuys
-  const [showRebuy, setShowRebuy] = useState(false);
-  const [rebuyInput, setRebuyInput] = useState(500);
-  const [syncing, setSyncing] = useState(false);
+  const [isBusted, setIsBusted]         = useState(false);
+  const [fanCoinsSpent, setFanCoinsSpent] = useState(0);
+  const [showRebuy, setShowRebuy]       = useState(false);
+  const [rebuyInput, setRebuyInput]     = useState(500);
+  const [syncing, setSyncing]           = useState(false);
+  const [rebuyLoading, setRebuyLoading] = useState(false);
+  const [celebration, setCelebration]   = useState(null);
 
   const [game, dispatch] = useReducer(reducer, INIT);
-  const [raiseAmt, setRaiseAmt] = useState(0);
+  const [raiseAmt, setRaiseAmt]   = useState(0);
   const [showRaise, setShowRaise] = useState(false);
 
-  const aiTimer = useRef(null);
+  const aiTimer    = useRef(null);
   const phaseTimer = useRef(null);
 
-  // Load fan coins
+  // ── Load poker status (balance + server-persisted bust flag) ──
   useEffect(() => {
     if (!currentUser) { setLoadingCoins(false); return; }
     currentUser.getIdToken().then(token =>
-      axios.get(`${API_URL}/fancoins/leaderboard/my-rank`, {
-        headers: { Authorization: `Bearer ${token}` }
-      }).then(res => {
-        setFanCoins(res.data.fanCoin ?? 0);
-        setLoadingCoins(false);
-      }).catch(() => setLoadingCoins(false))
+      axios.get(`${API_URL}/fancoins/poker-status`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => {
+          setFanCoins(res.data.fanCoin ?? 0);
+          setIsBusted(!!res.data.busted);
+          if (res.data.busted) setShowRebuy(true);
+          setLoadingCoins(false);
+        }).catch(() => setLoadingCoins(false))
     );
   }, [currentUser]);
 
-  // ── Helper: kick off next hand ──
-  const startNextHand = useCallback((currentPlayers, currentDealerIdx, currentHandNumber) => {
+  // ── Next-hand helper ──
+  const startNextHand = useCallback((currentPlayers, dealerIdx, handNumber) => {
     const deck = newShuffledDeck();
     let di = 0;
-    const nextDealer = (currentDealerIdx + 1) % NUM_PLAYERS;
+    const nextDealer = (dealerIdx + 1) % NUM_PLAYERS;
     const players = currentPlayers.map(p => ({
-      ...p,
-      holeCards: [deck[di++], deck[di++]],
-      bet: 0,
-      folded: p.chips <= 0,
-      allIn: false,
+      ...p, holeCards: [deck[di++], deck[di++]], bet: 0, folded: p.chips <= 0, allIn: false,
     }));
-    dispatch({
-      type: 'START_HAND',
-      players,
-      deck: deck.slice(di),
-      dealerIdx: nextDealer,
-      handNumber: currentHandNumber + 1,
-    });
+    dispatch({ type: 'START_HAND', players, deck: deck.slice(di), dealerIdx: nextDealer, handNumber: handNumber + 1 });
   }, []);
 
-  // ── Phase advancement after betting round ends ──
+  // ── Betting-round end → advance phase ──
   useEffect(() => {
     if (!game._roundDone) return;
     clearTimeout(phaseTimer.current);
-
     const active = game.players.filter(p => !p.folded);
     if (active.length === 1) {
       phaseTimer.current = setTimeout(() => dispatch({ type: 'EARLY_WIN', winnerId: active[0].id }), 200);
       return;
     }
-
     phaseTimer.current = setTimeout(() => {
       if (game.phase === 'preflop') dispatch({ type: 'DEAL_FLOP' });
-      else if (game.phase === 'flop')   dispatch({ type: 'DEAL_TURN' });
-      else if (game.phase === 'turn')   dispatch({ type: 'DEAL_RIVER' });
+      else if (game.phase === 'flop') dispatch({ type: 'DEAL_TURN' });
+      else if (game.phase === 'turn') dispatch({ type: 'DEAL_RIVER' });
       else if (game.phase === 'river') {
         const alive = game.players.filter(p => !p.folded);
-        let best = null;
-        let winners = [];
+        let best = null; let winners = [];
         for (const p of alive) {
           const h = bestHand(p.holeCards, game.communityCards);
-          if (!best || h.rank > best.rank || (h.rank === best.rank && cmpTie(h.tie, best.tie) > 0)) {
-            best = h; winners = [p.id];
-          } else if (h.rank === best.rank && cmpTie(h.tie, best.tie) === 0) {
-            winners.push(p.id);
-          }
+          if (!best || h.rank > best.rank || (h.rank === best.rank && cmpTie(h.tie, best.tie) > 0)) { best = h; winners = [p.id]; }
+          else if (h.rank === best.rank && cmpTie(h.tie, best.tie) === 0) winners.push(p.id);
         }
         dispatch({ type: 'SHOWDOWN', winners, handName: best?.name ?? '' });
       }
-    }, 400);
-
+    }, 350);
     return () => clearTimeout(phaseTimer.current);
   }, [game._roundDone, game.phase]);
 
-  // ── Auto-start next hand after showdown ──
+  // ── Showdown → persist bust / auto-next hand ──
   useEffect(() => {
     if (game.phase !== 'showdown') return;
     clearTimeout(phaseTimer.current);
-    phaseTimer.current = setTimeout(() => {
+    phaseTimer.current = setTimeout(async () => {
       const humanChips = game.players[0]?.chips ?? 0;
-      // Human busted — pause for rebuy
       if (humanChips === 0) {
+        if (currentUser) {
+          try {
+            const token = await currentUser.getIdToken();
+            await axios.post(`${API_URL}/fancoins/poker-bust`, {}, { headers: { Authorization: `Bearer ${token}` } });
+          } catch (e) { /* non-critical */ }
+        }
+        setIsBusted(true);
         setShowRebuy(true);
         return;
       }
-      const aiAlive = game.players.slice(1).filter(p => p.chips > 0);
-      if (aiAlive.length === 0) return; // all AI busted, session over
+      if (game.players.slice(1).every(p => p.chips <= 0)) return; // all AI busted
       startNextHand(game.players, game.dealerIdx, game.handNumber);
-    }, 3000);
+    }, 2600);
     return () => clearTimeout(phaseTimer.current);
-  }, [game.phase, game.players, game.dealerIdx, game.handNumber, startNextHand]);
+  }, [game.phase, game.players, game.dealerIdx, game.handNumber, startNextHand, currentUser]);
 
   // ── AI turns ──
   useEffect(() => {
     if (!['preflop','flop','turn','river'].includes(game.phase)) return;
     const player = game.players[game.activeIdx];
     if (!player || !player.isAI || player.folded || player.allIn) return;
-
     clearTimeout(aiTimer.current);
     aiTimer.current = setTimeout(() => {
-      const decision = aiDecide(player, {
-        currentBet: game.currentBet,
-        pot: game.pot,
-        communityCards: game.communityCards,
-        bigBlind: BIG_BLIND,
-      });
-      dispatch({ type: 'PLAYER_ACTION', action: decision.action, amount: decision.amount });
-    }, 700 + Math.random() * 800);
-
+      const d = aiDecide(player, { currentBet: game.currentBet, pot: game.pot, communityCards: game.communityCards, bigBlind: BIG_BLIND });
+      dispatch({ type: 'PLAYER_ACTION', action: d.action, amount: d.amount });
+    }, 550 + Math.random() * 650);
     return () => clearTimeout(aiTimer.current);
   }, [game.activeIdx, game.phase]);
 
-  // ── Start game from lobby ──
+  // ── Celebration trigger ──
+  useEffect(() => {
+    if (game.phase !== 'showdown' || !game.handResult) return;
+    const { winners, handName } = game.handResult;
+    if (HAND_EFFECTS[handName]) setCelebration({ handName, humanWon: winners.includes(0) });
+  }, [game.phase, game.handResult]);
+
+  // ── Start game ──
   function startGame() {
     const deck = newShuffledDeck();
     let di = 0;
-    const players = makePlayers().map(p => ({
-      ...p,
-      holeCards: [deck[di++], deck[di++]],
-    }));
-    dispatch({
-      type: 'START_HAND',
-      players,
-      deck: deck.slice(di),
-      dealerIdx: 0,
-      handNumber: 1,
-    });
+    const players = makePlayers().map(p => ({ ...p, holeCards: [deck[di++], deck[di++]] }));
+    dispatch({ type: 'START_HAND', players, deck: deck.slice(di), dealerIdx: 0, handNumber: 1 });
   }
 
-  // ── Rebuy with fan coins ──
-  function handleRebuy(amount) {
-    if (amount <= 0 || amount > fanCoins) return;
-    dispatch({ type: 'REBUY', amount });
-    setFanCoins(prev => prev - amount);
-    setFanCoinsSpent(prev => prev + amount);
-    setShowRebuy(false);
-    // Delay before dealing — give UI time to update
-    setTimeout(() => {
-      setShowRebuy(false); // ensure closed
-      startNextHand(
-        game.players.map(p => p.id === 0 ? { ...p, chips: p.chips + amount } : p),
-        game.dealerIdx,
-        game.handNumber
-      );
-    }, 300);
+  // ── Rebuy (server deducts coins + clears bust) ──
+  async function handleRebuy(amount) {
+    if (!currentUser || amount <= 0 || amount > fanCoins) return;
+    setRebuyLoading(true);
+    try {
+      const token = await currentUser.getIdToken();
+      const res = await axios.post(`${API_URL}/fancoins/poker-rebuy`, { amount }, { headers: { Authorization: `Bearer ${token}` } });
+      setFanCoins(res.data.fanCoin);
+      setFanCoinsSpent(prev => prev + amount);
+      setIsBusted(false);
+      setShowRebuy(false);
+      dispatch({ type: 'REBUY', amount });
+      const updatedPlayers = game.players.map(p => p.id === 0 ? { ...p, chips: amount, folded: false, allIn: false } : p);
+      setTimeout(() => startNextHand(updatedPlayers, game.dealerIdx, game.handNumber), 300);
+    } catch (e) {
+      alert(e.response?.data?.message || 'Rebuy failed — please try again.');
+    }
+    setRebuyLoading(false);
   }
 
-  // ── Sync coins on exit ──
+  // ── Cash out ──
   async function cashOut() {
     if (!currentUser) { navigate('/game'); return; }
-    // delta = chips gained from AI - fan coins spent on rebuys
-    // initial 1000 free chips are excluded from delta
     const humanChips = game.players[0]?.chips ?? 0;
-    const delta = (humanChips - STARTING_CHIPS) - fanCoinsSpent;
-    if (delta !== 0) {
+    // Positive winnings above starting stack (rebuys already deducted server-side)
+    const delta = Math.max(0, humanChips - STARTING_CHIPS);
+    if (delta > 0) {
       setSyncing(true);
       try {
         const token = await currentUser.getIdToken();
-        await axios.post(`${API_URL}/fancoins/poker-result`,
-          { coinDelta: delta },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } catch (e) {
-        console.error('Coin sync error', e);
-      }
+        await axios.post(`${API_URL}/fancoins/poker-result`, { coinDelta: delta }, { headers: { Authorization: `Bearer ${token}` } });
+      } catch (e) { /* non-critical */ }
       setSyncing(false);
     }
     navigate('/game');
   }
 
-  // ── Player actions ──
   function doAction(act, amount) {
     setShowRaise(false);
     dispatch({ type: 'PLAYER_ACTION', action: act, amount });
   }
 
-  // ── Celebration state ──
-  const [celebration, setCelebration] = useState(null); // { handName, humanWon }
-
-  // Trigger celebration on big hands at showdown
-  useEffect(() => {
-    if (game.phase !== 'showdown' || !game.handResult) return;
-    const { winners, handName } = game.handResult;
-    if (!handName || !HAND_EFFECTS[handName]) return;
-    setCelebration({ handName, humanWon: winners.includes(0) });
-  }, [game.phase, game.handResult]);
-
-  // ── Derived state ──
-  const human = game.players[0];
-  const isMyTurn = game.activeIdx === 0 && ['preflop','flop','turn','river'].includes(game.phase);
-  const toCall = human ? Math.max(0, game.currentBet - (human.bet || 0)) : 0;
-  const canCheck = toCall === 0;
-  const minRaiseTotal = game.currentBet + game.minRaise;
-  const sessionNet = human ? (human.chips - STARTING_CHIPS) - fanCoinsSpent : -fanCoinsSpent;
-
-  // Blind positions derived from dealer
-  const sbIdx = game.players.length ? (game.dealerIdx + 1) % NUM_PLAYERS : -1;
-  const bbIdx = game.players.length ? (game.dealerIdx + 2) % NUM_PLAYERS : -1;
-
-  const PHASE_LABELS = {
-    preflop: 'PRE-FLOP',
-    flop: 'FLOP',
-    turn: 'TURN',
-    river: 'RIVER',
-    showdown: 'SHOWDOWN',
-  };
+  // ── Derived ──
+  const human          = game.players[0];
+  const isMyTurn       = game.activeIdx === 0 && ['preflop','flop','turn','river'].includes(game.phase);
+  const toCall         = human ? Math.max(0, game.currentBet - (human.bet || 0)) : 0;
+  const canCheck       = toCall === 0;
+  const minRaiseTotal  = game.currentBet + game.minRaise;
+  const sessionNet     = human ? Math.max(0, human.chips - STARTING_CHIPS) - fanCoinsSpent : -fanCoinsSpent;
+  const sbIdx          = game.players.length ? (game.dealerIdx + 1) % NUM_PLAYERS : -1;
+  const bbIdx          = game.players.length ? (game.dealerIdx + 2) % NUM_PLAYERS : -1;
+  const inBettingPhase = ['preflop','flop','turn','river'].includes(game.phase);
+  const showdownPhase  = game.phase === 'showdown';
+  const PHASE_LABELS   = { preflop: 'PRE-FLOP', flop: 'FLOP', turn: 'TURN', river: 'RIVER', showdown: 'SHOWDOWN' };
 
   // ── Lobby ──
   if (game.phase === 'lobby') {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full border border-gray-700">
-          <div className="text-center mb-6">
-            <div className="text-7xl mb-3">🃏</div>
-            <h1 className="text-3xl sm:text-4xl font-black text-white mb-1 tracking-wide">UFC POKER</h1>
-            <p className="text-gray-400 text-sm">Texas Hold'em · Fan Coins</p>
+      <div className="fixed inset-0 z-50 bg-gray-950 flex items-center justify-center p-4">
+        <div className="bg-gray-800 rounded-2xl shadow-2xl p-5 max-w-sm w-full border border-gray-700">
+          <div className="text-center mb-4">
+            <div className="text-5xl mb-1">🃏</div>
+            <h1 className="text-2xl font-black text-white tracking-widest">UFC POKER</h1>
+            <p className="text-gray-400 text-xs mt-0.5">Texas Hold'em · Fan Coins</p>
           </div>
-
           {!currentUser ? (
             <div className="text-center">
-              <p className="text-yellow-400 mb-4">Sign in to play with your Fan Coins</p>
-              <button onClick={() => navigate('/')} className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
-                Go Sign In
-              </button>
+              <p className="text-yellow-400 mb-3 text-sm">Sign in to play</p>
+              <button onClick={() => navigate('/')} className="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 text-sm">Sign In</button>
             </div>
           ) : loadingCoins ? (
-            <p className="text-gray-400 text-center">Loading your balance…</p>
+            <p className="text-gray-400 text-center text-sm animate-pulse">Loading…</p>
           ) : (
             <>
-              <div className="bg-gradient-to-r from-green-800 to-green-700 rounded-xl p-4 mb-4 text-center border border-green-500">
-                <p className="text-green-200 text-sm font-semibold mb-1">Every player starts with</p>
-                <p className="text-4xl font-black text-white">1,000 FREE chips</p>
-                <p className="text-green-300 text-xs mt-1">No Fan Coins required to start</p>
+              <div className="bg-gradient-to-r from-green-800 to-green-700 rounded-xl p-3 mb-3 text-center border border-green-600">
+                <p className="text-green-200 text-xs font-semibold">Every player starts with</p>
+                <p className="text-3xl font-black text-white">1,000 FREE chips</p>
+                <p className="text-green-300 text-xs">No Fan Coins needed to start</p>
               </div>
-              <div className="bg-gray-700 rounded-xl p-3 mb-4 text-center">
-                <p className="text-gray-400 text-xs mb-1">Your Fan Coin Balance (for rebuys)</p>
-                <p className="text-2xl font-bold text-yellow-400">🥊 {fanCoins.toLocaleString()}</p>
+              <div className="bg-gray-700 rounded-xl p-2.5 mb-3 flex items-center justify-between">
+                <span className="text-gray-400 text-xs">Fan Coins (rebuys)</span>
+                <span className="text-yellow-400 font-bold">🥊 {fanCoins.toLocaleString()}</span>
               </div>
-              <div className="bg-gray-700/60 rounded-xl p-3 mb-5 text-xs text-gray-400 grid grid-cols-2 gap-1">
-                <p>🎮 4 players: You vs 3 AI</p>
-                <p>🃏 Texas Hold'em rules</p>
-                <p>🪙 Blinds: {SMALL_BLIND}/{BIG_BLIND} chips</p>
-                <p>💸 Rebuy with Fan Coins</p>
-                <p>🏆 Win chips = earn coins</p>
-                <p>👑 Special hand animations</p>
+              <div className="grid grid-cols-2 gap-1 mb-4 text-xs text-gray-400 bg-gray-700/40 rounded-xl p-2">
+                <span>🃏 4 players</span><span>⚡ Texas Hold'em</span>
+                <span>🪙 SB{SMALL_BLIND}/BB{BIG_BLIND}</span><span>💸 Rebuy=Fan Coins</span>
               </div>
-              <motion.button
-                onClick={startGame}
-                whileTap={{ scale: 0.97 }}
-                className="w-full py-4 bg-gradient-to-r from-red-600 to-red-800 text-white font-black rounded-xl text-xl hover:from-red-700 hover:to-red-900 transition-all shadow-lg shadow-red-900/50 tracking-wide"
-              >
-                DEAL CARDS — FREE TO PLAY!
-              </motion.button>
+              {isBusted ? (
+                <div className="text-center">
+                  <p className="text-red-400 text-sm font-semibold mb-2">You ran out of chips.<br/>Rebuy to continue.</p>
+                  <button onClick={() => setShowRebuy(true)}
+                    className="w-full py-2.5 bg-gradient-to-r from-red-600 to-red-800 text-white font-black rounded-xl text-base hover:from-red-700 hover:to-red-900">
+                    REBUY WITH FAN COINS
+                  </button>
+                </div>
+              ) : (
+                <motion.button onClick={startGame} whileTap={{ scale: 0.97 }}
+                  className="w-full py-3 bg-gradient-to-r from-red-600 to-red-800 text-white font-black rounded-xl text-lg hover:from-red-700 hover:to-red-900 shadow-lg">
+                  DEAL CARDS — FREE!
+                </motion.button>
+              )}
             </>
           )}
         </div>
+        <AnimatePresence>
+          {showRebuy && (
+            <RebuyModal fanCoins={fanCoins} rebuyInput={rebuyInput} setRebuyInput={setRebuyInput}
+              onRebuy={handleRebuy} onLeave={() => { setShowRebuy(false); navigate('/game'); }} loading={rebuyLoading} />
+          )}
+        </AnimatePresence>
       </div>
     );
   }
 
-  // ── Game Table ──
-  const showdownPhase = game.phase === 'showdown';
-  const inBettingPhase = ['preflop','flop','turn','river'].includes(game.phase);
-
+  // ── Game Table — fixed inset-0 so it fills the full viewport regardless of app padding ──
   return (
-    <div className="h-screen flex flex-col bg-gray-950 overflow-hidden select-none" style={{ fontFamily: 'sans-serif' }}>
+    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden"
+      style={{ background: 'radial-gradient(ellipse at 50% 40%, #1a5c2a 0%, #0c3016 55%, #06180a 100%)' }}>
 
-      {/* ── Celebration Overlay ── */}
       <AnimatePresence>
-        {celebration && (
-          <HandCelebration
-            handName={celebration.handName}
-            humanWon={celebration.humanWon}
-            onDone={() => setCelebration(null)}
-          />
-        )}
+        {celebration && <HandCelebration handName={celebration.handName} humanWon={celebration.humanWon} onDone={() => setCelebration(null)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showRebuy && <RebuyModal fanCoins={fanCoins} rebuyInput={rebuyInput} setRebuyInput={setRebuyInput}
+          onRebuy={handleRebuy} onLeave={cashOut} loading={rebuyLoading} />}
       </AnimatePresence>
 
-      {/* ── Rebuy Modal ── */}
-      <AnimatePresence>
-        {showRebuy && (
-          <motion.div
-            className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-red-700"
-              initial={{ scale: 0.8, y: 40 }} animate={{ scale: 1, y: 0 }}
-            >
-              <div className="text-center mb-4">
-                <div className="text-5xl mb-2">💀</div>
-                <h2 className="text-xl font-black text-white">YOU'RE OUT OF CHIPS!</h2>
-                <p className="text-gray-400 text-sm mt-1">Use your Fan Coins to buy back in</p>
-              </div>
-              <div className="bg-gray-700 rounded-xl p-3 mb-4 text-center">
-                <p className="text-gray-400 text-xs mb-1">Fan Coin Balance</p>
-                <p className="text-2xl font-bold text-yellow-400">🥊 {fanCoins.toLocaleString()}</p>
-              </div>
-              {fanCoins > 0 ? (
-                <>
-                  <p className="text-gray-300 text-sm mb-2 text-center">Select rebuy (1 coin = 1 chip)</p>
-                  <div className="flex gap-2 mb-3">
-                    {REBUY_OPTIONS.filter(v => v <= fanCoins).map(v => (
-                      <button key={v} onClick={() => setRebuyInput(v)}
-                        className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${rebuyInput === v ? 'bg-red-600 text-white' : 'bg-gray-600 text-gray-200 hover:bg-gray-500'}`}>
-                        {v}
-                      </button>
-                    ))}
-                  </div>
-                  <input type="range" min={BIG_BLIND * 2} max={fanCoins}
-                    value={Math.min(rebuyInput, fanCoins)}
-                    onChange={e => setRebuyInput(+e.target.value)}
-                    className="w-full accent-red-500 mb-2" />
-                  <p className="text-yellow-400 text-center font-bold mb-4">
-                    🥊 {Math.min(rebuyInput, fanCoins)} coins → {Math.min(rebuyInput, fanCoins)} chips
-                  </p>
-                  <button onClick={() => handleRebuy(Math.min(rebuyInput, fanCoins))}
-                    className="w-full py-3 bg-gradient-to-r from-red-600 to-red-800 text-white font-bold rounded-xl hover:from-red-700 hover:to-red-900 transition-all mb-2">
-                    Rebuy {Math.min(rebuyInput, fanCoins)} chips
-                  </button>
-                </>
-              ) : (
-                <p className="text-red-400 text-center font-semibold mb-4">No Fan Coins available for rebuy</p>
-              )}
-              <button onClick={cashOut}
-                className="w-full py-2 bg-gray-700 text-gray-300 font-semibold rounded-xl hover:bg-gray-600 transition-colors text-sm">
-                Leave Table
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Header bar ── */}
-      <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-800 z-10 flex-shrink-0">
+      {/* ── Header (compact) ── */}
+      <div className="flex items-center justify-between px-3 py-1 bg-black/60 border-b border-white/10 flex-shrink-0">
         <button onClick={cashOut} disabled={syncing}
-          className="text-gray-400 hover:text-white text-xs sm:text-sm px-2 sm:px-3 py-1 rounded border border-gray-700 hover:border-gray-500 transition-colors whitespace-nowrap">
-          {syncing ? 'Saving…' : '← Exit'}
+          className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded border border-gray-700 hover:border-gray-500 transition-colors">
+          {syncing ? '…' : '← Exit'}
         </button>
-        <div className="text-center">
-          <div className="text-white font-black text-sm sm:text-base tracking-widest">🥊 UFC POKER</div>
-          <div className="text-gray-500 text-xs">Hand #{game.handNumber} · {PHASE_LABELS[game.phase] ?? game.phase.toUpperCase()}</div>
-        </div>
-        <div className="text-right">
-          <div className={`text-sm font-bold ${sessionNet >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {sessionNet >= 0 ? '+' : ''}{sessionNet} 🥊
+        <div className="text-center leading-none">
+          <div className="text-white font-black text-xs tracking-widest">🥊 UFC POKER</div>
+          <div className="text-gray-400" style={{fontSize:9}}>
+            Hand #{game.handNumber} · <span className="text-green-300 font-bold">{PHASE_LABELS[game.phase] ?? game.phase.toUpperCase()}</span>
+            {' '}· SB{SMALL_BLIND}/BB{BIG_BLIND}
           </div>
-          {fanCoinsSpent > 0 && <div className="text-xs text-gray-600">spent: {fanCoinsSpent}</div>}
+        </div>
+        <div className="text-right leading-none">
+          <div className={`text-xs font-bold ${sessionNet >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {sessionNet >= 0 ? '+' : ''}{sessionNet}🥊
+          </div>
+          <div className="text-gray-500" style={{fontSize:9}}>bal:{fanCoins}</div>
         </div>
       </div>
 
-      {/* ── Poker Table ── */}
-      <div className="flex-1 flex flex-col min-h-0"
-        style={{ background: 'radial-gradient(ellipse at center, #1a5c2a 0%, #0c3016 55%, #06180a 100%)' }}>
+      {/* ── AI Row (compact, fixed height) ── */}
+      <div className="flex justify-around items-stretch px-1 pt-1 pb-0.5 flex-shrink-0 bg-black/30">
+        {[1,2,3].map(idx => (
+          <AISeat key={idx} player={game.players[idx]}
+            isActive={game.activeIdx === idx} isDealer={game.dealerIdx === idx}
+            isSB={sbIdx === idx} isBB={bbIdx === idx}
+            showCards={showdownPhase} communityCards={game.communityCards} />
+        ))}
+      </div>
 
-        {/* AI players row */}
-        <div className="flex justify-around items-start pt-2 px-2 flex-shrink-0">
-          {[1, 2, 3].map(idx => (
-            <PlayerSeat
-              key={idx}
-              player={game.players[idx]}
-              isActive={game.activeIdx === idx}
-              isDealer={game.dealerIdx === idx}
-              isSB={sbIdx === idx}
-              isBB={bbIdx === idx}
-              showCards={showdownPhase}
-              communityCards={game.communityCards}
-              isHuman={false}
-            />
-          ))}
+      {/* ── Center: community cards + pot (flex-1, fills remaining space) ── */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-1.5 px-2 min-h-0">
+        <motion.div key={game.pot} className="bg-black/60 rounded-full px-3 py-1 border border-yellow-700/40"
+          initial={{ scale: 1.12 }} animate={{ scale: 1 }} transition={{ duration: 0.18 }}>
+          <span className="text-yellow-300 font-black text-sm">POT 🥊{game.pot.toLocaleString()}</span>
+        </motion.div>
+
+        <div className="flex gap-1 sm:gap-1.5 justify-center flex-wrap">
+          <AnimatePresence>
+            {[0,1,2,3,4].map(i => (
+              game.communityCards[i] ? (
+                <motion.div key={`cc-${i}-${game.handNumber}`}
+                  initial={{ rotateY: 90, opacity: 0, y: -8 }}
+                  animate={{ rotateY: 0, opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06, duration: 0.25 }}>
+                  <Card card={game.communityCards[i]} size="community" />
+                </motion.div>
+              ) : (
+                <div key={`empty-${i}`}
+                  className="rounded-lg border-2 border-dashed border-green-800/40 opacity-25 flex-shrink-0"
+                  style={{ width: CARD_SIZES.community.w, height: CARD_SIZES.community.h }} />
+              )
+            ))}
+          </AnimatePresence>
         </div>
 
-        {/* Community cards + info center */}
-        <div className="flex flex-col items-center justify-center flex-1 gap-2 px-2">
-          {/* Phase + blinds info strip */}
-          <div className="flex items-center gap-2 flex-wrap justify-center">
-            <span className="bg-black/60 text-green-300 text-xs font-black px-3 py-1 rounded-full tracking-widest uppercase">
-              {PHASE_LABELS[game.phase] ?? game.phase}
-            </span>
-            <span className="bg-black/60 text-blue-300 text-xs font-semibold px-2 py-1 rounded-full">
-              SB {SMALL_BLIND} / BB {BIG_BLIND}
-            </span>
-            {game.pot > 0 && (
-              <motion.span
-                key={game.pot}
-                className="bg-yellow-900/80 text-yellow-300 text-xs font-black px-3 py-1 rounded-full border border-yellow-700"
-                initial={{ scale: 1.2 }} animate={{ scale: 1 }}
-              >
-                POT: {game.pot.toLocaleString()}
-              </motion.span>
-            )}
-          </div>
-
-          {/* Community cards */}
-          <div className="flex gap-1 sm:gap-2 justify-center flex-wrap">
-            <AnimatePresence>
-              {[0,1,2,3,4].map(i => (
-                game.communityCards[i] ? (
-                  <motion.div key={`cc-${i}-${game.handNumber}`}
-                    initial={{ rotateY: 90, opacity: 0, y: -20 }}
-                    animate={{ rotateY: 0, opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.08, duration: 0.3 }}>
-                    <Card card={game.communityCards[i]} size="lg" />
-                  </motion.div>
-                ) : (
-                  <div key={`empty-${i}`}
-                    className="rounded-xl border-2 border-dashed border-green-800/50 opacity-30 flex-shrink-0"
-                    style={{ width: 72, height: 100 }} />
-                )
-              ))}
-            </AnimatePresence>
-          </div>
-
-          {/* Action log / message */}
+        <AnimatePresence mode="wait">
           {game.message && (
-            <motion.div
-              key={game.message}
-              className="bg-black/70 text-yellow-200 text-xs sm:text-sm font-semibold px-4 py-1.5 rounded-full text-center max-w-xs"
-              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-            >
+            <motion.div key={game.message}
+              className="bg-black/70 text-yellow-200 font-semibold px-3 py-1 rounded-full text-center max-w-xs"
+              style={{fontSize:11}}
+              initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               {game.message}
             </motion.div>
           )}
-        </div>
+        </AnimatePresence>
+      </div>
 
-        {/* Human player area */}
-        <div className="flex-shrink-0 pb-2 px-2">
-          <div className="flex flex-col items-center gap-2">
-            <PlayerSeat
-              player={game.players[0]}
-              isActive={game.activeIdx === 0}
-              isDealer={game.dealerIdx === 0}
-              isSB={sbIdx === 0}
-              isBB={bbIdx === 0}
-              showCards={true}
-              communityCards={game.communityCards}
-              isHuman={true}
-            />
+      {/* ── Human zone (fixed at bottom) ── */}
+      <div className="flex-shrink-0 pb-1.5 pt-1 px-2 bg-black/30 border-t border-white/10">
+        <div className="flex flex-col items-center gap-1">
+          <HumanSeat player={game.players[0]} isDealer={game.dealerIdx === 0}
+            isSB={sbIdx === 0} isBB={bbIdx === 0} communityCards={game.communityCards} />
 
-            {/* ── Action Buttons ── */}
-            {isMyTurn && !human?.folded && !human?.allIn && (
-              <motion.div
-                className="flex flex-col items-center gap-2 w-full max-w-sm"
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              >
-                <div className="flex gap-2 w-full">
-                  <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('fold')}
-                    className="flex-1 py-3 bg-gray-800 text-red-400 font-black rounded-xl border border-red-800 hover:bg-red-950 transition-colors text-sm">
-                    FOLD
-                  </motion.button>
-
-                  {canCheck ? (
-                    <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('check')}
-                      className="flex-1 py-3 bg-green-800 text-white font-black rounded-xl hover:bg-green-700 transition-colors text-sm">
-                      CHECK
+          {/* Action buttons */}
+          {isMyTurn && !human?.folded && !human?.allIn && (
+            <motion.div className="flex flex-col items-center gap-1 w-full max-w-sm"
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="flex gap-1.5 w-full">
+                <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('fold')}
+                  className="flex-1 py-2 bg-gray-800 text-red-400 font-black rounded-xl border border-red-900 hover:bg-red-950 text-xs transition-colors">FOLD</motion.button>
+                {canCheck
+                  ? <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('check')}
+                      className="flex-1 py-2 bg-green-800 text-white font-black rounded-xl hover:bg-green-700 text-xs transition-colors">CHECK</motion.button>
+                  : <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('call')}
+                      className="flex-1 py-2 bg-blue-700 text-white font-black rounded-xl hover:bg-blue-600 text-xs transition-colors">CALL {toCall}</motion.button>
+                }
+                {human.chips > toCall && (
+                  <motion.button whileTap={{ scale: 0.93 }}
+                    onClick={() => { setRaiseAmt(Math.min(minRaiseTotal, human.chips + human.bet)); setShowRaise(r => !r); }}
+                    className="flex-1 py-2 bg-yellow-600 text-white font-black rounded-xl hover:bg-yellow-500 text-xs transition-colors">RAISE</motion.button>
+                )}
+                <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('raise', human.chips + human.bet)}
+                  className="flex-1 py-2 bg-red-700 text-white font-black rounded-xl hover:bg-red-600 transition-colors leading-tight"
+                  style={{fontSize:10}}>ALL-IN<br/>{human.chips}</motion.button>
+              </div>
+              <AnimatePresence>
+                {showRaise && (
+                  <motion.div className="bg-gray-900 rounded-xl p-2 w-full border border-yellow-600"
+                    initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                    <p className="text-yellow-300 text-xs font-bold text-center mb-1">Raise to: 🥊{raiseAmt}</p>
+                    <input type="range" min={minRaiseTotal} max={human.chips + human.bet} value={raiseAmt}
+                      onChange={e => setRaiseAmt(+e.target.value)} className="w-full accent-yellow-500 mb-1" />
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => doAction('raise', raiseAmt)}
+                      className="w-full py-1.5 bg-yellow-600 text-white font-black rounded-lg hover:bg-yellow-500 text-xs">
+                      CONFIRM RAISE TO {raiseAmt}
                     </motion.button>
-                  ) : (
-                    <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('call')}
-                      className="flex-1 py-3 bg-blue-700 text-white font-black rounded-xl hover:bg-blue-600 transition-colors text-sm">
-                      CALL {toCall}
-                    </motion.button>
-                  )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
 
-                  {human.chips > toCall && (
-                    <motion.button whileTap={{ scale: 0.93 }}
-                      onClick={() => { setRaiseAmt(Math.min(minRaiseTotal, human.chips + human.bet)); setShowRaise(r => !r); }}
-                      className="flex-1 py-3 bg-yellow-600 text-white font-black rounded-xl hover:bg-yellow-500 transition-colors text-sm">
-                      RAISE
-                    </motion.button>
-                  )}
-
-                  <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('raise', human.chips + human.bet)}
-                    className="flex-1 py-3 bg-red-700 text-white font-black rounded-xl hover:bg-red-600 transition-colors text-xs">
-                    ALL-IN<br/>{human.chips}
-                  </motion.button>
-                </div>
-
-                <AnimatePresence>
-                  {showRaise && (
-                    <motion.div
-                      className="bg-gray-900 rounded-xl p-3 flex flex-col items-center gap-2 border border-yellow-600 w-full"
-                      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                    >
-                      <p className="text-yellow-300 text-sm font-bold">Raise to: 🥊 {raiseAmt.toLocaleString()}</p>
-                      <input type="range"
-                        min={minRaiseTotal} max={human.chips + human.bet} value={raiseAmt}
-                        onChange={e => setRaiseAmt(+e.target.value)}
-                        className="w-full accent-yellow-500" />
-                      <motion.button whileTap={{ scale: 0.95 }} onClick={() => doAction('raise', raiseAmt)}
-                        className="px-8 py-2 bg-yellow-600 text-white font-black rounded-lg hover:bg-yellow-500 text-sm w-full">
-                        CONFIRM RAISE TO {raiseAmt}
-                      </motion.button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            )}
-
-            {isMyTurn && human?.allIn && (
-              <p className="text-yellow-400 text-sm font-black tracking-widest animate-pulse">★ ALL-IN ★</p>
-            )}
-
-            {!isMyTurn && inBettingPhase && !human?.folded && (
-              <p className="text-gray-500 text-xs">
-                Waiting for {game.players[game.activeIdx]?.name ?? ''}…
-              </p>
-            )}
-
-            {human?.folded && inBettingPhase && (
-              <p className="text-gray-600 text-xs italic">You folded this hand</p>
-            )}
-          </div>
+          {isMyTurn && human?.allIn && <p className="text-yellow-400 font-black tracking-widest animate-pulse" style={{fontSize:11}}>★ ALL-IN ★</p>}
+          {!isMyTurn && inBettingPhase && !human?.folded && <p className="text-gray-500" style={{fontSize:10}}>Waiting for {game.players[game.activeIdx]?.name}…</p>}
+          {human?.folded && inBettingPhase && <p className="text-gray-600 italic" style={{fontSize:10}}>You folded this hand</p>}
         </div>
       </div>
 
       {/* ── Hand result toast ── */}
       <AnimatePresence>
         {game.handResult && !celebration && (
-          <motion.div
-            className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/90 border-2 border-yellow-500 rounded-2xl px-6 py-3 text-center shadow-2xl z-20 pointer-events-none"
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <div className="text-2xl mb-1">{game.handResult.winners.includes(0) ? '🏆' : '💀'}</div>
-            <p className="text-yellow-300 font-black text-base">
-              {game.handResult.winners.includes(0)
-                ? 'YOU WIN!'
-                : `${game.players[game.handResult.winners[0]]?.name ?? ''} wins!`}
+          <motion.div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-black/90 border-2 border-yellow-500 rounded-xl px-4 py-2 text-center shadow-2xl z-20 pointer-events-none"
+            initial={{ opacity: 0, y: 8, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }}>
+            <div className="text-xl">{game.handResult.winners.includes(0) ? '🏆' : '💀'}</div>
+            <p className="text-yellow-300 font-black text-sm">
+              {game.handResult.winners.includes(0) ? 'YOU WIN!' : `${game.players[game.handResult.winners[0]]?.name} wins!`}
             </p>
-            {game.handResult.handName && (
-              <p className="text-gray-300 text-xs mt-0.5">{game.handResult.handName}</p>
-            )}
-            <p className="text-yellow-400 font-bold text-sm">🥊 {game.handResult.pot.toLocaleString()}</p>
+            {game.handResult.handName && <p className="text-gray-400" style={{fontSize:10}}>{game.handResult.handName}</p>}
+            <p className="text-yellow-400 font-bold text-sm">🥊{game.handResult.pot.toLocaleString()}</p>
           </motion.div>
         )}
       </AnimatePresence>

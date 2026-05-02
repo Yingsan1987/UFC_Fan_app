@@ -96,6 +96,12 @@ const gameProgressSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+
+  // Poker session state (prevents refresh-exploit for free chips)
+  pokerBusted: {
+    type: Boolean,
+    default: false
+  },
   
   // Timestamps
   createdAt: {

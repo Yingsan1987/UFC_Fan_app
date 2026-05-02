@@ -263,6 +263,62 @@ router.get('/leaderboard/my-rank', requireAuth, async (req, res) => {
   }
 });
 
+// Get poker session status — checked on page load to detect busted state
+router.get('/poker-status', requireAuth, async (req, res) => {
+  try {
+    const gp = await GameProgress.findOne({ firebaseUid: req.user.uid });
+    if (!gp) return res.json({ busted: false, fanCoin: 0 });
+    res.json({ busted: !!gp.pokerBusted, fanCoin: gp.fanCoin });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Mark player as busted (chips = 0) — called immediately when chips hit 0
+router.post('/poker-bust', requireAuth, async (req, res) => {
+  try {
+    await GameProgress.findOneAndUpdate(
+      { firebaseUid: req.user.uid },
+      { pokerBusted: true }
+    );
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Rebuy: deduct fan coins and clear busted flag
+router.post('/poker-rebuy', requireAuth, async (req, res) => {
+  try {
+    const { amount } = req.body;
+    if (typeof amount !== 'number' || amount <= 0) {
+      return res.status(400).json({ message: 'Invalid amount' });
+    }
+    const gp = await GameProgress.findOne({ firebaseUid: req.user.uid });
+    if (!gp) return res.status(404).json({ message: 'Game progress not found' });
+    if (gp.fanCoin < amount) {
+      return res.status(400).json({ message: 'Insufficient Fan Coins' });
+    }
+    gp.fanCoin -= amount;
+    gp.pokerBusted = false;
+    await gp.save();
+
+    await new FanCoinTransaction({
+      userId: gp.userId,
+      firebaseUid: req.user.uid,
+      amount,
+      type: 'spent',
+      source: 'other',
+      balanceAfter: gp.fanCoin,
+      description: `Poker rebuy: -${amount} Fan Coins`,
+    }).save();
+
+    res.json({ ok: true, fanCoin: gp.fanCoin });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Update fan coins after a poker session
 router.post('/poker-result', requireAuth, async (req, res) => {
   try {
