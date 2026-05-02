@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node server.js",
     "seed": "node seed.js",
-    "update-news": "node scripts/news-updater.js"
+    "update-news": "node scripts/news-updater.js",
+    "sync-news": "node scripts/syncNews.js"
   },
   "dependencies": {
     "@api/sportradar-mma": "file:.api/apis/sportradar-mma",

@@ -1,0 +1,5 @@
+# Python dependencies for syncNews.py
+# Install with: pip3 install -r requirements.txt
+# Or in PythonAnywhere: pip3.10 install --user -r requirements.txt
+
+requests>=2.25.0
