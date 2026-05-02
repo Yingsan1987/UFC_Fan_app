@@ -1,4 +1,5 @@
 import { useState, useEffect, useReducer, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
@@ -384,67 +385,287 @@ function reducer(state, action) {
   }
 }
 
-// ─── Card Component ────────────────────────────────────────────
-function Card({ card, hidden = false, small = false }) {
-  const base = `${small ? 'w-8 h-12 text-xs' : 'w-12 h-18 text-sm'} rounded border-2 flex flex-col items-center justify-center font-bold select-none`;
-  if (hidden) return (
-    <div className={`${base} bg-red-800 border-red-600`} style={{ height: small ? 48 : 72 }}>
-      <span className="text-red-400 text-lg">🥊</span>
-    </div>
+// ─── UFC Hand Effects ────────────────────────────────────────
+const HAND_EFFECTS = {
+  'Three of a Kind': {
+    title: 'TRIPLE THREAT!',
+    sub: 'Three of a Kind',
+    emoji: '🥊',
+    particles: ['🥊','🥊','🥊','💥','🥊'],
+    bg: 'from-orange-600 via-red-700 to-red-900',
+    glow: '#ff4500',
+  },
+  'Straight': {
+    title: 'LIGHTNING COMBO!',
+    sub: 'Straight',
+    emoji: '⚡',
+    particles: ['⚡','⚡','⚡','🔥','⚡'],
+    bg: 'from-yellow-400 via-yellow-600 to-orange-700',
+    glow: '#ffd700',
+  },
+  'Flush': {
+    title: 'OCTAGON FLUSH!',
+    sub: 'Flush',
+    emoji: '🏟️',
+    particles: ['🏟️','⚡','🥊','⚡','🏟️'],
+    bg: 'from-blue-500 via-cyan-600 to-blue-900',
+    glow: '#00bfff',
+  },
+  'Full House': {
+    title: 'FULL HOUSE KO!',
+    sub: 'Full House',
+    emoji: '🔥',
+    particles: ['🔥','🔥','💥','🔥','💥'],
+    bg: 'from-red-500 via-orange-500 to-yellow-600',
+    glow: '#ff6600',
+  },
+  'Four of a Kind': {
+    title: 'QUAD KNOCKOUT!',
+    sub: 'Four of a Kind',
+    emoji: '💥',
+    particles: ['💥','⭐','💥','⭐','💥'],
+    bg: 'from-purple-600 via-pink-600 to-red-700',
+    glow: '#9900ff',
+  },
+  'Straight Flush': {
+    title: 'SUBMISSION!',
+    sub: 'Straight Flush',
+    emoji: '🦅',
+    particles: ['🦅','💎','⚡','💎','🦅'],
+    bg: 'from-green-500 via-teal-600 to-emerald-900',
+    glow: '#00ff88',
+  },
+  'Royal Flush': {
+    title: 'UFC CHAMPION!',
+    sub: 'Royal Flush',
+    emoji: '👑',
+    particles: ['👑','🏆','⭐','🏆','👑'],
+    bg: 'from-yellow-400 via-amber-500 to-red-700',
+    glow: '#ffd700',
+  },
+};
+
+function Particle({ emoji, delay }) {
+  const startX = Math.random() * 100;
+  return (
+    <motion.div
+      className="absolute text-2xl pointer-events-none select-none"
+      style={{ left: `${startX}%`, bottom: '10%' }}
+      initial={{ y: 0, opacity: 1, scale: 0.5 }}
+      animate={{ y: -300, opacity: 0, scale: 1.5, x: (Math.random() - 0.5) * 200 }}
+      transition={{ duration: 1.8, delay, ease: 'easeOut' }}
+    >
+      {emoji}
+    </motion.div>
   );
+}
+
+function HandCelebration({ handName, humanWon, onDone }) {
+  const effect = HAND_EFFECTS[handName];
+  useEffect(() => {
+    const t = setTimeout(onDone, 3200);
+    return () => clearTimeout(t);
+  }, [onDone]);
+  if (!effect) return null;
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-40 flex flex-col items-center justify-center overflow-hidden pointer-events-none"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      {/* Background flash */}
+      <motion.div
+        className={`absolute inset-0 bg-gradient-to-b ${effect.bg} opacity-80`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.85, 0.6] }}
+        transition={{ duration: 0.5 }}
+      />
+
+      {/* Particles */}
+      {effect.particles.map((p, i) => (
+        <Particle key={i} emoji={p} delay={i * 0.12} />
+      ))}
+
+      {/* Main callout */}
+      <motion.div
+        className="relative text-center px-6"
+        initial={{ scale: 0, rotate: -10 }}
+        animate={{ scale: [0, 1.3, 1], rotate: [-10, 5, 0] }}
+        transition={{ duration: 0.6, type: 'spring', stiffness: 300 }}
+      >
+        <div className="text-7xl mb-3 drop-shadow-lg">{effect.emoji}</div>
+        <div
+          className="text-4xl sm:text-5xl font-black text-white tracking-wider drop-shadow-2xl uppercase"
+          style={{ textShadow: `0 0 30px ${effect.glow}, 0 0 60px ${effect.glow}` }}
+        >
+          {effect.title}
+        </div>
+        <motion.div
+          className="text-xl sm:text-2xl font-bold text-white/90 mt-2"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          {effect.sub}
+        </motion.div>
+        {humanWon && (
+          <motion.div
+            className="mt-4 text-2xl font-black text-yellow-300"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            style={{ textShadow: '0 0 20px #ffd700' }}
+          >
+            🏆 YOU WIN!
+          </motion.div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Card Component ────────────────────────────────────────────
+function Card({ card, hidden = false, size = 'md' }) {
+  const sizes = {
+    sm:  { w: 40,  h: 56,  rankSize: 13, suitSize: 15 },
+    md:  { w: 56,  h: 80,  rankSize: 17, suitSize: 20 },
+    lg:  { w: 72,  h: 100, rankSize: 22, suitSize: 26 },
+    xl:  { w: 88,  h: 124, rankSize: 28, suitSize: 34 },
+  };
+  const s = sizes[size] || sizes.md;
+
+  if (hidden) return (
+    <motion.div
+      className="rounded-xl border-2 border-red-600 flex items-center justify-center shadow-lg bg-gradient-to-br from-red-900 to-red-800 select-none flex-shrink-0"
+      style={{ width: s.w, height: s.h }}
+      initial={{ rotateY: 90, opacity: 0 }}
+      animate={{ rotateY: 0, opacity: 1 }}
+      transition={{ duration: 0.35 }}
+    >
+      <span style={{ fontSize: s.suitSize }}>🥊</span>
+    </motion.div>
+  );
+
   const red = isRed(card.suit);
   return (
-    <div className={`${base} bg-white border-gray-300 shadow`} style={{ height: small ? 48 : 72, minWidth: small ? 32 : 48 }}>
-      <span className={red ? 'text-red-600' : 'text-gray-900'} style={{ fontSize: small ? 11 : 14 }}>
+    <motion.div
+      className="rounded-xl border-2 border-gray-300 bg-white shadow-lg flex flex-col items-center justify-center select-none flex-shrink-0"
+      style={{ width: s.w, height: s.h }}
+      initial={{ rotateY: 90, opacity: 0 }}
+      animate={{ rotateY: 0, opacity: 1 }}
+      transition={{ duration: 0.35 }}
+    >
+      <span className={`font-black leading-none ${red ? 'text-red-600' : 'text-gray-900'}`} style={{ fontSize: s.rankSize }}>
         {rankLabel(card.rank)}
       </span>
-      <span className={red ? 'text-red-600' : 'text-gray-900'} style={{ fontSize: small ? 11 : 16 }}>
+      <span className={`leading-none ${red ? 'text-red-600' : 'text-gray-900'}`} style={{ fontSize: s.suitSize }}>
         {SUIT_SYM[card.suit]}
       </span>
+    </motion.div>
+  );
+}
+
+// ─── Position Badge ────────────────────────────────────────────
+function PosBadge({ label, color }) {
+  return (
+    <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-black leading-none ${color}`}>
+      {label}
+    </span>
+  );
+}
+
+// ─── Chip Stack Visual ─────────────────────────────────────────
+function BetChips({ amount }) {
+  if (!amount) return null;
+  return (
+    <div className="flex items-center gap-1 bg-black/60 rounded-full px-2 py-0.5">
+      <div className="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-600 shadow" />
+      <span className="text-yellow-300 text-xs font-bold">{amount}</span>
     </div>
   );
 }
 
 // ─── Player Seat ───────────────────────────────────────────────
-function PlayerSeat({ player, isActive, isDealer, showCards, communityCards, pot }) {
-  const hand = showCards && player.holeCards.length === 2 && communityCards
+function PlayerSeat({ player, isActive, isDealer, isSB, isBB, showCards, communityCards, isHuman }) {
+  const hand = showCards && player.holeCards.length === 2 && communityCards?.length >= 3
     ? bestHand(player.holeCards, communityCards)
     : null;
 
+  const cardSize = isHuman ? 'xl' : 'sm';
+
   return (
-    <div className={`flex flex-col items-center gap-1 transition-all duration-300 ${isActive && !player.folded ? 'ring-4 ring-yellow-400 rounded-xl p-1' : 'p-1'}`}>
-      {/* Name + chips */}
-      <div className={`px-3 py-1 rounded-full text-xs font-bold ${player.folded ? 'bg-gray-500 text-gray-300' : player.isAI ? 'bg-red-800 text-white' : 'bg-yellow-500 text-gray-900'}`}>
-        {isDealer && <span className="mr-1">D</span>}
-        {player.name}
-        {player.allIn && <span className="ml-1 text-yellow-300">ALL-IN</span>}
+    <div className={`flex flex-col items-center gap-1 transition-all duration-300 rounded-2xl p-2
+      ${isActive && !player.folded && !player.allIn ? 'ring-4 ring-yellow-400 bg-yellow-400/10 shadow-lg shadow-yellow-400/30' : ''}
+      ${player.folded ? 'opacity-50' : ''}
+    `}>
+      {/* Position badges row */}
+      <div className="flex items-center gap-1 flex-wrap justify-center">
+        {isDealer && <PosBadge label="D" color="bg-white text-gray-900" />}
+        {isSB && <PosBadge label="SB" color="bg-blue-600 text-white" />}
+        {isBB && <PosBadge label="BB" color="bg-red-600 text-white" />}
+        {player.allIn && <PosBadge label="ALL IN" color="bg-yellow-500 text-gray-900" />}
       </div>
-      <div className="text-yellow-400 text-xs font-semibold">🥊 {player.chips}</div>
-      {/* Cards */}
-      <div className="flex gap-1">
+
+      {/* Name */}
+      <div className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap max-w-[120px] truncate
+        ${isHuman ? 'bg-yellow-500 text-gray-900 text-sm' : player.folded ? 'bg-gray-600 text-gray-400' : 'bg-red-900 text-white border border-red-700'}
+      `}>
+        {player.name}
+      </div>
+
+      {/* Chips */}
+      <div className="flex items-center gap-1">
+        <div className="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-600" />
+        <span className={`font-bold ${isHuman ? 'text-sm text-yellow-300' : 'text-xs text-yellow-400'}`}>
+          {player.chips.toLocaleString()}
+        </span>
+      </div>
+
+      {/* Hole cards */}
+      <div className="flex gap-1 justify-center">
         {player.holeCards.length === 2 ? (
           player.folded ? (
-            <span className="text-gray-500 text-xs">Folded</span>
+            <span className="text-gray-500 text-xs italic">Folded</span>
           ) : showCards ? (
             <>
-              <Card card={player.holeCards[0]} small />
-              <Card card={player.holeCards[1]} small />
+              <Card card={player.holeCards[0]} size={cardSize} />
+              <Card card={player.holeCards[1]} size={cardSize} />
             </>
           ) : (
             <>
-              <Card hidden small />
-              <Card hidden small />
+              <Card hidden size={cardSize} />
+              <Card hidden size={cardSize} />
             </>
           )
         ) : null}
       </div>
-      {/* Current bet */}
-      {player.bet > 0 && !player.folded && (
-        <div className="text-xs text-yellow-300 font-bold">Bet: {player.bet}</div>
-      )}
+
+      {/* Current bet chips */}
+      <BetChips amount={player.bet > 0 && !player.folded ? player.bet : 0} />
+
       {/* Hand name at showdown */}
       {hand && hand.rank >= 0 && (
-        <div className="text-xs text-green-300 font-semibold">{hand.name}</div>
+        <motion.div
+          className="text-xs font-bold text-green-300 bg-green-900/60 rounded px-2 py-0.5"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+        >
+          {hand.name}
+        </motion.div>
+      )}
+
+      {/* Active indicator */}
+      {isActive && !player.folded && !player.allIn && (
+        <motion.div
+          className="text-xs text-yellow-400 font-semibold"
+          animate={{ opacity: [1, 0.3, 1] }}
+          transition={{ repeat: Infinity, duration: 1 }}
+        >
+          {isHuman ? '▶ YOUR TURN' : 'thinking…'}
+        </motion.div>
       )}
     </div>
   );
@@ -638,24 +859,46 @@ export default function PokerGame() {
     dispatch({ type: 'PLAYER_ACTION', action: act, amount });
   }
 
+  // ── Celebration state ──
+  const [celebration, setCelebration] = useState(null); // { handName, humanWon }
+
+  // Trigger celebration on big hands at showdown
+  useEffect(() => {
+    if (game.phase !== 'showdown' || !game.handResult) return;
+    const { winners, handName } = game.handResult;
+    if (!handName || !HAND_EFFECTS[handName]) return;
+    setCelebration({ handName, humanWon: winners.includes(0) });
+  }, [game.phase, game.handResult]);
+
   // ── Derived state ──
   const human = game.players[0];
   const isMyTurn = game.activeIdx === 0 && ['preflop','flop','turn','river'].includes(game.phase);
   const toCall = human ? Math.max(0, game.currentBet - (human.bet || 0)) : 0;
   const canCheck = toCall === 0;
   const minRaiseTotal = game.currentBet + game.minRaise;
-  // Net fan coin change this session (does not count initial free 1000)
   const sessionNet = human ? (human.chips - STARTING_CHIPS) - fanCoinsSpent : -fanCoinsSpent;
+
+  // Blind positions derived from dealer
+  const sbIdx = game.players.length ? (game.dealerIdx + 1) % NUM_PLAYERS : -1;
+  const bbIdx = game.players.length ? (game.dealerIdx + 2) % NUM_PLAYERS : -1;
+
+  const PHASE_LABELS = {
+    preflop: 'PRE-FLOP',
+    flop: 'FLOP',
+    turn: 'TURN',
+    river: 'RIVER',
+    showdown: 'SHOWDOWN',
+  };
 
   // ── Lobby ──
   if (game.phase === 'lobby') {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full border border-gray-700">
-          <div className="text-center mb-8">
-            <div className="text-6xl mb-3">🃏</div>
-            <h1 className="text-3xl font-bold text-white mb-1">UFC Poker</h1>
-            <p className="text-gray-400">Texas Hold'em · Fan Coins</p>
+        <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full border border-gray-700">
+          <div className="text-center mb-6">
+            <div className="text-7xl mb-3">🃏</div>
+            <h1 className="text-3xl sm:text-4xl font-black text-white mb-1 tracking-wide">UFC POKER</h1>
+            <p className="text-gray-400 text-sm">Texas Hold'em · Fan Coins</p>
           </div>
 
           {!currentUser ? (
@@ -669,32 +912,30 @@ export default function PokerGame() {
             <p className="text-gray-400 text-center">Loading your balance…</p>
           ) : (
             <>
-              {/* Free chip banner */}
               <div className="bg-gradient-to-r from-green-800 to-green-700 rounded-xl p-4 mb-4 text-center border border-green-500">
                 <p className="text-green-200 text-sm font-semibold mb-1">Every player starts with</p>
-                <p className="text-4xl font-bold text-white">1,000 FREE chips</p>
+                <p className="text-4xl font-black text-white">1,000 FREE chips</p>
                 <p className="text-green-300 text-xs mt-1">No Fan Coins required to start</p>
               </div>
-
-              {/* Fan coin balance */}
-              <div className="bg-gray-700 rounded-xl p-3 mb-6 text-center">
+              <div className="bg-gray-700 rounded-xl p-3 mb-4 text-center">
                 <p className="text-gray-400 text-xs mb-1">Your Fan Coin Balance (for rebuys)</p>
-                <p className="text-2xl font-bold text-yellow-400">🥊 {fanCoins}</p>
+                <p className="text-2xl font-bold text-yellow-400">🥊 {fanCoins.toLocaleString()}</p>
               </div>
-
-              <div className="bg-gray-700 rounded-xl p-3 mb-6 text-xs text-gray-400 space-y-1">
-                <p>• 4 players: You vs 3 AI fighters</p>
-                <p>• Blinds: {SMALL_BLIND}/{BIG_BLIND} chips</p>
-                <p>• Run out? Rebuy using your Fan Coins</p>
-                <p>• Win chips from AI → earn Fan Coins</p>
+              <div className="bg-gray-700/60 rounded-xl p-3 mb-5 text-xs text-gray-400 grid grid-cols-2 gap-1">
+                <p>🎮 4 players: You vs 3 AI</p>
+                <p>🃏 Texas Hold'em rules</p>
+                <p>🪙 Blinds: {SMALL_BLIND}/{BIG_BLIND} chips</p>
+                <p>💸 Rebuy with Fan Coins</p>
+                <p>🏆 Win chips = earn coins</p>
+                <p>👑 Special hand animations</p>
               </div>
-
-              <button
+              <motion.button
                 onClick={startGame}
-                className="w-full py-3 bg-gradient-to-r from-red-600 to-red-800 text-white font-bold rounded-xl text-lg hover:from-red-700 hover:to-red-900 transition-all shadow-lg"
+                whileTap={{ scale: 0.97 }}
+                className="w-full py-4 bg-gradient-to-r from-red-600 to-red-800 text-white font-black rounded-xl text-xl hover:from-red-700 hover:to-red-900 transition-all shadow-lg shadow-red-900/50 tracking-wide"
               >
-                Deal Cards — Free to Play!
-              </button>
+                DEAL CARDS — FREE TO PLAY!
+              </motion.button>
             </>
           )}
         </div>
@@ -704,262 +945,281 @@ export default function PokerGame() {
 
   // ── Game Table ──
   const showdownPhase = game.phase === 'showdown';
+  const inBettingPhase = ['preflop','flop','turn','river'].includes(game.phase);
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col" style={{ fontFamily: 'sans-serif' }}>
-      {/* Rebuy Modal */}
-      {showRebuy && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-red-700">
-            <div className="text-center mb-4">
-              <div className="text-5xl mb-2">💀</div>
-              <h2 className="text-xl font-bold text-white">You're out of chips!</h2>
-              <p className="text-gray-400 text-sm mt-1">Use your Fan Coins to buy back in</p>
-            </div>
+    <div className="h-screen flex flex-col bg-gray-950 overflow-hidden select-none" style={{ fontFamily: 'sans-serif' }}>
 
-            <div className="bg-gray-700 rounded-xl p-3 mb-4 text-center">
-              <p className="text-gray-400 text-xs mb-1">Fan Coin Balance</p>
-              <p className="text-2xl font-bold text-yellow-400">🥊 {fanCoins}</p>
-            </div>
+      {/* ── Celebration Overlay ── */}
+      <AnimatePresence>
+        {celebration && (
+          <HandCelebration
+            handName={celebration.handName}
+            humanWon={celebration.humanWon}
+            onDone={() => setCelebration(null)}
+          />
+        )}
+      </AnimatePresence>
 
-            {fanCoins > 0 ? (
-              <>
-                <p className="text-gray-300 text-sm mb-2 text-center">Select rebuy amount (1 coin = 1 chip)</p>
-                <div className="flex gap-2 mb-3">
-                  {REBUY_OPTIONS.filter(v => v <= fanCoins).map(v => (
-                    <button
-                      key={v}
-                      onClick={() => setRebuyInput(v)}
-                      className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${rebuyInput === v ? 'bg-red-600 text-white' : 'bg-gray-600 text-gray-200 hover:bg-gray-500'}`}
-                    >
-                      {v}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="range"
-                  min={BIG_BLIND * 2}
-                  max={fanCoins}
-                  value={Math.min(rebuyInput, fanCoins)}
-                  onChange={e => setRebuyInput(+e.target.value)}
-                  className="w-full accent-red-500 mb-2"
-                />
-                <p className="text-yellow-400 text-center font-bold mb-4">
-                  🥊 {Math.min(rebuyInput, fanCoins)} Fan Coins → {Math.min(rebuyInput, fanCoins)} chips
-                </p>
-                <button
-                  onClick={() => handleRebuy(Math.min(rebuyInput, fanCoins))}
-                  className="w-full py-3 bg-gradient-to-r from-red-600 to-red-800 text-white font-bold rounded-xl hover:from-red-700 hover:to-red-900 transition-all mb-2"
-                >
-                  Rebuy {Math.min(rebuyInput, fanCoins)} chips
-                </button>
-              </>
-            ) : (
-              <p className="text-red-400 text-center font-semibold mb-4">No Fan Coins available for rebuy</p>
-            )}
-
-            <button
-              onClick={cashOut}
-              className="w-full py-2 bg-gray-700 text-gray-300 font-semibold rounded-xl hover:bg-gray-600 transition-colors text-sm"
+      {/* ── Rebuy Modal ── */}
+      <AnimatePresence>
+        {showRebuy && (
+          <motion.div
+            className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-red-700"
+              initial={{ scale: 0.8, y: 40 }} animate={{ scale: 1, y: 0 }}
             >
-              Leave Table
-            </button>
-          </div>
-        </div>
-      )}
+              <div className="text-center mb-4">
+                <div className="text-5xl mb-2">💀</div>
+                <h2 className="text-xl font-black text-white">YOU'RE OUT OF CHIPS!</h2>
+                <p className="text-gray-400 text-sm mt-1">Use your Fan Coins to buy back in</p>
+              </div>
+              <div className="bg-gray-700 rounded-xl p-3 mb-4 text-center">
+                <p className="text-gray-400 text-xs mb-1">Fan Coin Balance</p>
+                <p className="text-2xl font-bold text-yellow-400">🥊 {fanCoins.toLocaleString()}</p>
+              </div>
+              {fanCoins > 0 ? (
+                <>
+                  <p className="text-gray-300 text-sm mb-2 text-center">Select rebuy (1 coin = 1 chip)</p>
+                  <div className="flex gap-2 mb-3">
+                    {REBUY_OPTIONS.filter(v => v <= fanCoins).map(v => (
+                      <button key={v} onClick={() => setRebuyInput(v)}
+                        className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${rebuyInput === v ? 'bg-red-600 text-white' : 'bg-gray-600 text-gray-200 hover:bg-gray-500'}`}>
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="range" min={BIG_BLIND * 2} max={fanCoins}
+                    value={Math.min(rebuyInput, fanCoins)}
+                    onChange={e => setRebuyInput(+e.target.value)}
+                    className="w-full accent-red-500 mb-2" />
+                  <p className="text-yellow-400 text-center font-bold mb-4">
+                    🥊 {Math.min(rebuyInput, fanCoins)} coins → {Math.min(rebuyInput, fanCoins)} chips
+                  </p>
+                  <button onClick={() => handleRebuy(Math.min(rebuyInput, fanCoins))}
+                    className="w-full py-3 bg-gradient-to-r from-red-600 to-red-800 text-white font-bold rounded-xl hover:from-red-700 hover:to-red-900 transition-all mb-2">
+                    Rebuy {Math.min(rebuyInput, fanCoins)} chips
+                  </button>
+                </>
+              ) : (
+                <p className="text-red-400 text-center font-semibold mb-4">No Fan Coins available for rebuy</p>
+              )}
+              <button onClick={cashOut}
+                className="w-full py-2 bg-gray-700 text-gray-300 font-semibold rounded-xl hover:bg-gray-600 transition-colors text-sm">
+                Leave Table
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
-        <button
-          onClick={cashOut}
-          disabled={syncing}
-          className="text-gray-400 hover:text-white text-sm px-3 py-1 rounded border border-gray-600 hover:border-gray-400 transition-colors"
-        >
-          {syncing ? 'Saving…' : '← Cash Out'}
+      {/* ── Header bar ── */}
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-800 z-10 flex-shrink-0">
+        <button onClick={cashOut} disabled={syncing}
+          className="text-gray-400 hover:text-white text-xs sm:text-sm px-2 sm:px-3 py-1 rounded border border-gray-700 hover:border-gray-500 transition-colors whitespace-nowrap">
+          {syncing ? 'Saving…' : '← Exit'}
         </button>
         <div className="text-center">
-          <span className="text-white font-bold">UFC Poker</span>
-          <span className="text-gray-400 text-xs ml-2">Hand #{game.handNumber}</span>
+          <div className="text-white font-black text-sm sm:text-base tracking-widest">🥊 UFC POKER</div>
+          <div className="text-gray-500 text-xs">Hand #{game.handNumber} · {PHASE_LABELS[game.phase] ?? game.phase.toUpperCase()}</div>
         </div>
-        <div className="text-right flex flex-col items-end">
-          <span className={`text-sm font-bold ${sessionNet >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+        <div className="text-right">
+          <div className={`text-sm font-bold ${sessionNet >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {sessionNet >= 0 ? '+' : ''}{sessionNet} 🥊
-          </span>
-          {fanCoinsSpent > 0 && (
-            <span className="text-xs text-gray-500">Spent: {fanCoinsSpent}</span>
-          )}
+          </div>
+          {fanCoinsSpent > 0 && <div className="text-xs text-gray-600">spent: {fanCoinsSpent}</div>}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 flex flex-col items-center justify-between p-4"
-        style={{ background: 'radial-gradient(ellipse at center, #1a5c2a 0%, #0d3318 60%, #081c0e 100%)' }}>
+      {/* ── Poker Table ── */}
+      <div className="flex-1 flex flex-col min-h-0"
+        style={{ background: 'radial-gradient(ellipse at center, #1a5c2a 0%, #0c3016 55%, #06180a 100%)' }}>
 
-        {/* Top: AI 1 */}
-        <div className="flex justify-center mt-2">
-          <PlayerSeat
-            player={game.players[1]}
-            isActive={game.activeIdx === 1}
-            isDealer={game.dealerIdx === 1}
-            showCards={showdownPhase}
-            communityCards={game.communityCards}
-          />
+        {/* AI players row */}
+        <div className="flex justify-around items-start pt-2 px-2 flex-shrink-0">
+          {[1, 2, 3].map(idx => (
+            <PlayerSeat
+              key={idx}
+              player={game.players[idx]}
+              isActive={game.activeIdx === idx}
+              isDealer={game.dealerIdx === idx}
+              isSB={sbIdx === idx}
+              isBB={bbIdx === idx}
+              showCards={showdownPhase}
+              communityCards={game.communityCards}
+              isHuman={false}
+            />
+          ))}
         </div>
 
-        {/* Middle row: AI 2, Table center, AI 3 */}
-        <div className="flex items-center justify-between w-full max-w-2xl my-2">
-          {/* AI 2 - left */}
-          <PlayerSeat
-            player={game.players[2]}
-            isActive={game.activeIdx === 2}
-            isDealer={game.dealerIdx === 2}
-            showCards={showdownPhase}
-            communityCards={game.communityCards}
-          />
-
-          {/* Center: community cards + pot */}
-          <div className="flex flex-col items-center gap-2">
-            {/* Message */}
-            {game.message && (
-              <div className="bg-black bg-opacity-50 text-yellow-300 text-xs font-bold px-3 py-1 rounded-full text-center max-w-xs">
-                {game.message}
-              </div>
+        {/* Community cards + info center */}
+        <div className="flex flex-col items-center justify-center flex-1 gap-2 px-2">
+          {/* Phase + blinds info strip */}
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            <span className="bg-black/60 text-green-300 text-xs font-black px-3 py-1 rounded-full tracking-widest uppercase">
+              {PHASE_LABELS[game.phase] ?? game.phase}
+            </span>
+            <span className="bg-black/60 text-blue-300 text-xs font-semibold px-2 py-1 rounded-full">
+              SB {SMALL_BLIND} / BB {BIG_BLIND}
+            </span>
+            {game.pot > 0 && (
+              <motion.span
+                key={game.pot}
+                className="bg-yellow-900/80 text-yellow-300 text-xs font-black px-3 py-1 rounded-full border border-yellow-700"
+                initial={{ scale: 1.2 }} animate={{ scale: 1 }}
+              >
+                POT: {game.pot.toLocaleString()}
+              </motion.span>
             )}
-            {/* Community cards */}
-            <div className="flex gap-1">
-              {[0,1,2,3,4].map(i => (
-                game.communityCards[i]
-                  ? <Card key={i} card={game.communityCards[i]} />
-                  : <div key={i} className="w-12 rounded border-2 border-dashed border-green-800 opacity-40" style={{ height: 72 }} />
-              ))}
-            </div>
-            {/* Pot */}
-            <div className="bg-black bg-opacity-50 rounded-full px-4 py-1">
-              <span className="text-yellow-400 font-bold text-sm">Pot: 🥊 {game.pot}</span>
-            </div>
-            {/* Phase badge */}
-            <div className="text-green-300 text-xs uppercase tracking-widest font-semibold">{game.phase}</div>
           </div>
 
-          {/* AI 3 - right */}
-          <PlayerSeat
-            player={game.players[3]}
-            isActive={game.activeIdx === 3}
-            isDealer={game.dealerIdx === 3}
-            showCards={showdownPhase}
-            communityCards={game.communityCards}
-          />
+          {/* Community cards */}
+          <div className="flex gap-1 sm:gap-2 justify-center flex-wrap">
+            <AnimatePresence>
+              {[0,1,2,3,4].map(i => (
+                game.communityCards[i] ? (
+                  <motion.div key={`cc-${i}-${game.handNumber}`}
+                    initial={{ rotateY: 90, opacity: 0, y: -20 }}
+                    animate={{ rotateY: 0, opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.08, duration: 0.3 }}>
+                    <Card card={game.communityCards[i]} size="lg" />
+                  </motion.div>
+                ) : (
+                  <div key={`empty-${i}`}
+                    className="rounded-xl border-2 border-dashed border-green-800/50 opacity-30 flex-shrink-0"
+                    style={{ width: 72, height: 100 }} />
+                )
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {/* Action log / message */}
+          {game.message && (
+            <motion.div
+              key={game.message}
+              className="bg-black/70 text-yellow-200 text-xs sm:text-sm font-semibold px-4 py-1.5 rounded-full text-center max-w-xs"
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+            >
+              {game.message}
+            </motion.div>
+          )}
         </div>
 
-        {/* Bottom: Human player */}
-        <div className="flex flex-col items-center gap-3 mb-2">
-          <PlayerSeat
-            player={game.players[0]}
-            isActive={game.activeIdx === 0}
-            isDealer={game.dealerIdx === 0}
-            showCards={true}
-            communityCards={game.communityCards}
-          />
+        {/* Human player area */}
+        <div className="flex-shrink-0 pb-2 px-2">
+          <div className="flex flex-col items-center gap-2">
+            <PlayerSeat
+              player={game.players[0]}
+              isActive={game.activeIdx === 0}
+              isDealer={game.dealerIdx === 0}
+              isSB={sbIdx === 0}
+              isBB={bbIdx === 0}
+              showCards={true}
+              communityCards={game.communityCards}
+              isHuman={true}
+            />
 
-          {/* Action buttons */}
-          {isMyTurn && !human?.folded && !human?.allIn && (
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex gap-2">
-                {/* Fold */}
-                <button
-                  onClick={() => doAction('fold')}
-                  className="px-5 py-2 bg-gray-700 text-red-400 font-bold rounded-xl border border-red-700 hover:bg-red-900 transition-colors"
-                >
-                  Fold
-                </button>
+            {/* ── Action Buttons ── */}
+            {isMyTurn && !human?.folded && !human?.allIn && (
+              <motion.div
+                className="flex flex-col items-center gap-2 w-full max-w-sm"
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              >
+                <div className="flex gap-2 w-full">
+                  <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('fold')}
+                    className="flex-1 py-3 bg-gray-800 text-red-400 font-black rounded-xl border border-red-800 hover:bg-red-950 transition-colors text-sm">
+                    FOLD
+                  </motion.button>
 
-                {/* Check or Call */}
-                {canCheck ? (
-                  <button
-                    onClick={() => doAction('check')}
-                    className="px-5 py-2 bg-gray-700 text-green-400 font-bold rounded-xl border border-green-700 hover:bg-green-900 transition-colors"
-                  >
-                    Check
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => doAction('call')}
-                    className="px-5 py-2 bg-blue-700 text-white font-bold rounded-xl hover:bg-blue-800 transition-colors"
-                  >
-                    Call {toCall}
-                  </button>
-                )}
+                  {canCheck ? (
+                    <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('check')}
+                      className="flex-1 py-3 bg-green-800 text-white font-black rounded-xl hover:bg-green-700 transition-colors text-sm">
+                      CHECK
+                    </motion.button>
+                  ) : (
+                    <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('call')}
+                      className="flex-1 py-3 bg-blue-700 text-white font-black rounded-xl hover:bg-blue-600 transition-colors text-sm">
+                      CALL {toCall}
+                    </motion.button>
+                  )}
 
-                {/* Raise */}
-                {human.chips > toCall && (
-                  <button
-                    onClick={() => {
-                      setRaiseAmt(Math.min(minRaiseTotal, human.chips + human.bet));
-                      setShowRaise(r => !r);
-                    }}
-                    className="px-5 py-2 bg-yellow-600 text-white font-bold rounded-xl hover:bg-yellow-700 transition-colors"
-                  >
-                    Raise
-                  </button>
-                )}
+                  {human.chips > toCall && (
+                    <motion.button whileTap={{ scale: 0.93 }}
+                      onClick={() => { setRaiseAmt(Math.min(minRaiseTotal, human.chips + human.bet)); setShowRaise(r => !r); }}
+                      className="flex-1 py-3 bg-yellow-600 text-white font-black rounded-xl hover:bg-yellow-500 transition-colors text-sm">
+                      RAISE
+                    </motion.button>
+                  )}
 
-                {/* All-in */}
-                <button
-                  onClick={() => doAction('raise', human.chips + human.bet)}
-                  className="px-4 py-2 bg-red-700 text-white font-bold rounded-xl hover:bg-red-800 transition-colors text-sm"
-                >
-                  All-in
-                </button>
-              </div>
-
-              {/* Raise slider */}
-              {showRaise && (
-                <div className="bg-gray-800 rounded-xl p-3 flex flex-col items-center gap-2 border border-yellow-600">
-                  <p className="text-yellow-300 text-xs font-bold">Raise to: 🥊 {raiseAmt}</p>
-                  <input
-                    type="range"
-                    min={minRaiseTotal}
-                    max={human.chips + human.bet}
-                    value={raiseAmt}
-                    onChange={e => setRaiseAmt(+e.target.value)}
-                    className="w-48 accent-yellow-500"
-                  />
-                  <button
-                    onClick={() => doAction('raise', raiseAmt)}
-                    className="px-6 py-1 bg-yellow-600 text-white font-bold rounded-lg hover:bg-yellow-700 text-sm"
-                  >
-                    Confirm Raise
-                  </button>
+                  <motion.button whileTap={{ scale: 0.93 }} onClick={() => doAction('raise', human.chips + human.bet)}
+                    className="flex-1 py-3 bg-red-700 text-white font-black rounded-xl hover:bg-red-600 transition-colors text-xs">
+                    ALL-IN<br/>{human.chips}
+                  </motion.button>
                 </div>
-              )}
-            </div>
-          )}
 
-          {isMyTurn && human?.allIn && (
-            <p className="text-yellow-400 text-sm font-bold animate-pulse">You're All-In</p>
-          )}
+                <AnimatePresence>
+                  {showRaise && (
+                    <motion.div
+                      className="bg-gray-900 rounded-xl p-3 flex flex-col items-center gap-2 border border-yellow-600 w-full"
+                      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                    >
+                      <p className="text-yellow-300 text-sm font-bold">Raise to: 🥊 {raiseAmt.toLocaleString()}</p>
+                      <input type="range"
+                        min={minRaiseTotal} max={human.chips + human.bet} value={raiseAmt}
+                        onChange={e => setRaiseAmt(+e.target.value)}
+                        className="w-full accent-yellow-500" />
+                      <motion.button whileTap={{ scale: 0.95 }} onClick={() => doAction('raise', raiseAmt)}
+                        className="px-8 py-2 bg-yellow-600 text-white font-black rounded-lg hover:bg-yellow-500 text-sm w-full">
+                        CONFIRM RAISE TO {raiseAmt}
+                      </motion.button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
 
-          {!isMyTurn && !showdownPhase && ['preflop','flop','turn','river'].includes(game.phase) && (
-            <p className="text-gray-400 text-xs">
-              Waiting for {game.players[game.activeIdx]?.name ?? ''}…
-            </p>
-          )}
+            {isMyTurn && human?.allIn && (
+              <p className="text-yellow-400 text-sm font-black tracking-widest animate-pulse">★ ALL-IN ★</p>
+            )}
+
+            {!isMyTurn && inBettingPhase && !human?.folded && (
+              <p className="text-gray-500 text-xs">
+                Waiting for {game.players[game.activeIdx]?.name ?? ''}…
+              </p>
+            )}
+
+            {human?.folded && inBettingPhase && (
+              <p className="text-gray-600 text-xs italic">You folded this hand</p>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Hand result overlay */}
-      {game.handResult && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="bg-black bg-opacity-75 text-white text-center p-6 rounded-2xl border-2 border-yellow-400 shadow-2xl">
-            <div className="text-4xl mb-2">{game.handResult.winners.includes(0) ? '🏆' : '💀'}</div>
-            <p className="text-xl font-bold text-yellow-400">
-              {game.handResult.winners.includes(0) ? 'You win!' : `${game.players[game.handResult.winners[0]]?.name} wins!`}
+      {/* ── Hand result toast ── */}
+      <AnimatePresence>
+        {game.handResult && !celebration && (
+          <motion.div
+            className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/90 border-2 border-yellow-500 rounded-2xl px-6 py-3 text-center shadow-2xl z-20 pointer-events-none"
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <div className="text-2xl mb-1">{game.handResult.winners.includes(0) ? '🏆' : '💀'}</div>
+            <p className="text-yellow-300 font-black text-base">
+              {game.handResult.winners.includes(0)
+                ? 'YOU WIN!'
+                : `${game.players[game.handResult.winners[0]]?.name ?? ''} wins!`}
             </p>
-            <p className="text-gray-300 text-sm mt-1">{game.handResult.handName}</p>
-            <p className="text-yellow-300 font-bold">🥊 {game.handResult.pot} coins</p>
-          </div>
-        </div>
-      )}
+            {game.handResult.handName && (
+              <p className="text-gray-300 text-xs mt-0.5">{game.handResult.handName}</p>
+            )}
+            <p className="text-yellow-400 font-bold text-sm">🥊 {game.handResult.pot.toLocaleString()}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
