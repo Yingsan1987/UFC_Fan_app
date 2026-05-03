@@ -210,6 +210,12 @@ function reducer(state, action) {
       const pot = p[sbIdx].bet + p[bbIdx].bet;
       const toAct = buildToAct(p, utgIdx - 1, NUM_PLAYERS);
 
+      // FIX: UTG slot may be an eliminated (folded) player — use the first
+      // actually-active seat instead so activeIdx never points at a dead player.
+      const firstToAct = (!p[utgIdx].folded && !p[utgIdx].allIn)
+        ? utgIdx
+        : (toAct[0] ?? -1);
+
       return {
         ...state,
         phase: 'preflop',
@@ -219,9 +225,10 @@ function reducer(state, action) {
         pot,
         currentBet: BIG_BLIND,
         minRaise: BIG_BLIND,
-        activeIdx: utgIdx,
+        activeIdx: firstToAct >= 0 ? firstToAct : utgIdx,
         dealerIdx,
-        toAct: toAct.filter(i => i !== utgIdx),
+        toAct: toAct.filter(i => i !== firstToAct),
+        _roundDone: false,
         message: `Hand #${handNumber} — Blinds ${SMALL_BLIND}/${BIG_BLIND}`,
         handResult: null,
         handNumber,
@@ -280,11 +287,13 @@ function reducer(state, action) {
       const [c1, c2, c3, ...rest] = state.deck;
       const players = state.players.map(p => ({ ...p, bet: 0 }));
       const firstAct = nextActive(players, state.dealerIdx);
+      // If no one can act (all allIn / only 1 left), mark round done immediately
       return {
         ...state, phase: 'flop', communityCards: [c1, c2, c3], deck: rest, players,
-        currentBet: 0, minRaise: BIG_BLIND, activeIdx: firstAct,
+        currentBet: 0, minRaise: BIG_BLIND,
+        activeIdx: firstAct >= 0 ? firstAct : state.activeIdx,
         toAct: buildToAct(players, state.dealerIdx, NUM_PLAYERS).filter(i => i !== firstAct),
-        message: 'Flop', _roundDone: false,
+        message: 'Flop', _roundDone: firstAct < 0,
       };
     }
 
@@ -294,9 +303,10 @@ function reducer(state, action) {
       const firstAct = nextActive(players, state.dealerIdx);
       return {
         ...state, phase: 'turn', communityCards: [...state.communityCards, card], deck: rest, players,
-        currentBet: 0, minRaise: BIG_BLIND, activeIdx: firstAct,
+        currentBet: 0, minRaise: BIG_BLIND,
+        activeIdx: firstAct >= 0 ? firstAct : state.activeIdx,
         toAct: buildToAct(players, state.dealerIdx, NUM_PLAYERS).filter(i => i !== firstAct),
-        message: 'Turn', _roundDone: false,
+        message: 'Turn', _roundDone: firstAct < 0,
       };
     }
 
@@ -306,9 +316,10 @@ function reducer(state, action) {
       const firstAct = nextActive(players, state.dealerIdx);
       return {
         ...state, phase: 'river', communityCards: [...state.communityCards, card], deck: rest, players,
-        currentBet: 0, minRaise: BIG_BLIND, activeIdx: firstAct,
+        currentBet: 0, minRaise: BIG_BLIND,
+        activeIdx: firstAct >= 0 ? firstAct : state.activeIdx,
         toAct: buildToAct(players, state.dealerIdx, NUM_PLAYERS).filter(i => i !== firstAct),
-        message: 'River', _roundDone: false,
+        message: 'River', _roundDone: firstAct < 0,
       };
     }
 
@@ -660,7 +671,19 @@ export default function PokerGame() {
   useEffect(() => {
     if (!['preflop','flop','turn','river'].includes(game.phase)) return;
     const player = game.players[game.activeIdx];
-    if (!player || !player.isAI || player.folded || player.allIn) return;
+
+    // Safety net: if the active seat is a dead player (folded / eliminated / allIn)
+    // dispatch a fold so PLAYER_ACTION advances activeIdx to toAct[0].
+    // This self-heals any edge case where activeIdx ends up pointing at a dead seat.
+    if (!player || player.folded || player.allIn) {
+      clearTimeout(aiTimer.current);
+      aiTimer.current = setTimeout(() => {
+        dispatch({ type: 'PLAYER_ACTION', action: 'fold' });
+      }, 50);
+      return () => clearTimeout(aiTimer.current);
+    }
+
+    if (!player.isAI) return;
     clearTimeout(aiTimer.current);
     aiTimer.current = setTimeout(() => {
       const d = aiDecide(player, { currentBet: game.currentBet, pot: game.pot, communityCards: game.communityCards, bigBlind: BIG_BLIND });
