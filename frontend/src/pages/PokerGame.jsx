@@ -385,7 +385,7 @@ function Particle({ emoji, delay }) {
 
 function HandCelebration({ handName, humanWon, onDone }) {
   const effect = HAND_EFFECTS[handName];
-  useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, [onDone]);
+  useEffect(() => { const t = setTimeout(onDone, 2500); return () => clearTimeout(t); }, [onDone]);
   if (!effect) return null;
   return (
     <motion.div className="fixed inset-0 z-40 flex flex-col items-center justify-center overflow-hidden pointer-events-none"
@@ -571,6 +571,58 @@ function RebuyModal({ fanCoins, rebuyInput, setRebuyInput, onRebuy, onLeave, loa
   );
 }
 
+// ─── Game Over Screen ──────────────────────────────────────────
+function GameOverScreen({ finalChips, earnings, fanCoins, onNewGame, onGameSelection }) {
+  return (
+    <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden"
+      style={{ background: 'radial-gradient(ellipse at 50% 30%, #1a0800 0%, #080300 100%)' }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+      {['🏆','👑','💰','🥊','⭐','🏆','💎'].map((e, i) => <Particle key={i} emoji={e} delay={i * 0.15} />)}
+      <motion.div className="bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-yellow-500 relative"
+        initial={{ scale: 0.75, y: 50, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
+        transition={{ delay: 0.15, type: 'spring', stiffness: 220, damping: 18 }}>
+        <div className="text-center mb-5">
+          <motion.div className="text-7xl mb-2"
+            initial={{ scale: 0, rotate: -20 }} animate={{ scale: [0, 1.35, 1], rotate: [-20, 5, 0] }}
+            transition={{ delay: 0.3, duration: 0.6, type: 'spring', stiffness: 260 }}>🏆</motion.div>
+          <h2 className="text-3xl font-black text-yellow-400 tracking-widest uppercase"
+            style={{ textShadow: '0 0 24px #ffd700, 0 0 48px #ffd700' }}>CHAMPION!</h2>
+          <p className="text-gray-300 text-sm mt-1 font-semibold">You knocked out all opponents!</p>
+        </div>
+
+        <div className="bg-gray-800/80 rounded-xl p-3 mb-4 space-y-2 border border-gray-700">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">Final chips</span>
+            <span className="text-white font-bold">🥊{finalChips.toLocaleString()}</span>
+          </div>
+          {earnings > 0 && (
+            <motion.div className="flex justify-between text-sm"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+              <span className="text-gray-400">Coins earned</span>
+              <span className="text-green-400 font-bold">+🥊{earnings.toLocaleString()}</span>
+            </motion.div>
+          )}
+          <div className="flex justify-between text-sm border-t border-gray-700 pt-2">
+            <span className="text-gray-400">Fan Coins balance</span>
+            <span className="text-yellow-400 font-bold">🥊{fanCoins.toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div className="space-y-2.5">
+          <motion.button onClick={onNewGame} whileTap={{ scale: 0.97 }}
+            className="w-full py-3 bg-gradient-to-r from-red-600 to-red-800 text-white font-black rounded-xl text-base hover:from-red-700 hover:to-red-900 shadow-lg transition-all">
+            🃏 PLAY AGAIN — FREE!
+          </motion.button>
+          <motion.button onClick={onGameSelection} whileTap={{ scale: 0.97 }}
+            className="w-full py-2.5 bg-gray-700 text-gray-200 font-bold rounded-xl hover:bg-gray-600 transition-colors text-sm border border-gray-600">
+            🎮 Choose Different Game
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── Main Component ────────────────────────────────────────────
 export default function PokerGame() {
   const { currentUser } = useAuth();
@@ -584,6 +636,8 @@ export default function PokerGame() {
   const [syncing, setSyncing]           = useState(false);
   const [rebuyLoading, setRebuyLoading] = useState(false);
   const [celebration, setCelebration]   = useState(null);
+  const [showGameOver, setShowGameOver] = useState(false);
+  const [gameOverData, setGameOverData] = useState(null);
 
   const [game, dispatch] = useReducer(reducer, INIT);
   const [raiseAmt, setRaiseAmt]   = useState(0);
@@ -661,7 +715,21 @@ export default function PokerGame() {
         setShowRebuy(true);
         return;
       }
-      if (game.players.slice(1).every(p => p.chips <= 0)) return; // all AI busted
+      if (game.players.slice(1).every(p => p.chips <= 0)) {
+        // All AI opponents eliminated — player wins the game
+        const finalChips = humanChips;
+        const earnings = Math.max(0, finalChips - STARTING_CHIPS);
+        setGameOverData({ finalChips, earnings });
+        setShowGameOver(true);
+        if (currentUser && earnings > 0) {
+          currentUser.getIdToken().then(token =>
+            axios.post(`${API_URL}/fancoins/poker-result`, { coinDelta: earnings }, { headers: { Authorization: `Bearer ${token}` } })
+              .then(res => { if (res.data?.fanCoin !== undefined) setFanCoins(res.data.fanCoin); })
+              .catch(() => {})
+          );
+        }
+        return;
+      }
       startNextHand(game.players, game.dealerIdx, game.handNumber);
     }, 2600);
     return () => clearTimeout(phaseTimer.current);
@@ -832,6 +900,17 @@ export default function PokerGame() {
       <AnimatePresence>
         {showRebuy && <RebuyModal fanCoins={fanCoins} rebuyInput={rebuyInput} setRebuyInput={setRebuyInput}
           onRebuy={handleRebuy} onLeave={cashOut} loading={rebuyLoading} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showGameOver && gameOverData && (
+          <GameOverScreen
+            finalChips={gameOverData.finalChips}
+            earnings={gameOverData.earnings}
+            fanCoins={fanCoins}
+            onNewGame={() => { setShowGameOver(false); setGameOverData(null); startGame(); }}
+            onGameSelection={() => navigate('/game')}
+          />
+        )}
       </AnimatePresence>
 
       {/* ── Header (compact) ── */}

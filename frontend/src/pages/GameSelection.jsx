@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Train, ArrowRight, Zap, Target } from 'lucide-react';
+import { Trophy, Train, ArrowRight, Zap, Target, Star } from 'lucide-react';
 
 const GameSelection = () => {
   const navigate = useNavigate();
@@ -51,6 +51,21 @@ const GameSelection = () => {
         'Balance syncs to your account'
       ],
       route: '/game/poker'
+    },
+    {
+      id: 'fantasy',
+      name: 'UFC Fantasy',
+      description: 'Pick fighters from real upcoming UFC events and earn Fan Coins based on how they actually perform. KO wins score higher than decisions — build your card wisely and climb the leaderboard!',
+      icon: <Star className="w-16 h-16 text-purple-400" />,
+      color: 'from-purple-700 to-purple-900',
+      features: [
+        'Real UFC event fight cards',
+        'Pick red or blue corner per fight',
+        'KO wins earn more points',
+        'Perfect card bonus coins',
+        'Fan Coin rewards after results'
+      ],
+      route: '/game/fantasy'
     }
   ];
 
@@ -65,7 +80,7 @@ const GameSelection = () => {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-8 mb-8">
         {games.map((game) => (
           <div
             key={game.id}
