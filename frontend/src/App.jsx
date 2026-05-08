@@ -228,7 +228,7 @@ function App() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col bg-gray-100">
+      <div className="flex-1 flex flex-col bg-gray-100 overflow-hidden">
         {/* Email Verification Banner */}
         {currentUser && !currentUser.emailVerified && showVerificationBanner && (
           <div className="bg-yellow-50 border-b-2 border-yellow-400 px-4 py-3">
@@ -260,8 +260,8 @@ function App() {
           </div>
         )}
 
-        {/* Top Bar */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gray-950 text-white shadow-lg flex-shrink-0">
+        {/* Top Bar — flex-shrink-0 ensures it never scrolls away */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gray-950 text-white shadow-lg flex-shrink-0 z-20">
           <div className="flex items-center gap-3">
             <button onClick={() => setIsOpen(true)}
               className="p-2 hover:bg-white/10 rounded-xl transition-colors">

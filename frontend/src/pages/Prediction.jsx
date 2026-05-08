@@ -291,31 +291,30 @@ export default function Prediction() {
 
     return (
       <motion.div whileTap={{ scale: 0.95 }} onClick={onSelect}
-        className={`cursor-pointer rounded-2xl p-3 flex flex-col items-center gap-2 transition-all border-2 ${
+        className={`cursor-pointer rounded-xl p-2 sm:p-3 flex flex-col items-center gap-1.5 transition-all border-2 ${
           isSelected
-            ? isRed ? 'border-red-500 bg-red-50 shadow-lg' : 'border-blue-500 bg-blue-50 shadow-lg'
-            : 'border-gray-100 bg-white hover:border-gray-300 hover:shadow-md'
+            ? isRed ? 'border-red-500 bg-red-50 shadow-md' : 'border-blue-500 bg-blue-50 shadow-md'
+            : 'border-gray-100 bg-white hover:border-gray-300'
         }`}
       >
         {fighterImage && imgOk ? (
           <img src={fighterImage} alt={fighter}
-            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover object-top border-4 ${isRed ? 'border-red-500' : 'border-blue-500'} shadow-md`}
+            className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover object-top border-3 sm:border-4 ${isRed ? 'border-red-500' : 'border-blue-500'} shadow`}
             onError={() => setImgOk(false)} />
         ) : (
-          <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-white font-black text-2xl border-4 shadow-md ${isRed ? 'bg-gradient-to-br from-red-500 to-red-800 border-red-500' : 'bg-gradient-to-br from-blue-500 to-blue-800 border-blue-500'}`}>
+          <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white font-black text-lg sm:text-2xl border-3 sm:border-4 shadow ${isRed ? 'bg-gradient-to-br from-red-500 to-red-800 border-red-500' : 'bg-gradient-to-br from-blue-500 to-blue-800 border-blue-500'}`}>
             {initials}
           </div>
         )}
-        <p className={`text-xs sm:text-sm font-black text-center leading-tight ${isSelected ? (isRed ? 'text-red-700' : 'text-blue-700') : 'text-gray-900'}`}>
+        <p className={`text-[11px] sm:text-xs font-black text-center leading-tight line-clamp-2 w-full ${isSelected ? (isRed ? 'text-red-700' : 'text-blue-700') : 'text-gray-900'}`}>
           {fighter}
         </p>
-        {isSelected && (
-          <div className={`w-5 h-5 rounded-full flex items-center justify-center ${isRed ? 'bg-red-600' : 'bg-blue-600'}`}>
+        {isSelected ? (
+          <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${isRed ? 'bg-red-600' : 'bg-blue-600'}`}>
             <Check className="w-3 h-3 text-white" />
           </div>
-        )}
-        {!isSelected && (
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isRed ? 'text-red-500 bg-red-50' : 'text-blue-500 bg-blue-50'}`}>
+        ) : (
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${isRed ? 'text-red-500 bg-red-50' : 'text-blue-500 bg-blue-50'}`}>
             {isRed ? 'RED' : 'BLUE'}
           </span>
         )}
@@ -326,23 +325,23 @@ export default function Prediction() {
   const FightCard = ({ fight, eventIndex, fightIndex }) => {
     const prediction = getPrediction(eventIndex, fightIndex);
     return (
-      <div className={`rounded-2xl border-2 overflow-hidden transition-all ${prediction ? 'border-green-300 shadow-md' : 'border-gray-100 hover:border-gray-300 hover:shadow-sm'}`}>
+      <div className={`rounded-xl border-2 overflow-hidden transition-all ${prediction ? 'border-green-300 shadow-md' : 'border-gray-100 hover:border-gray-200'}`}>
         {fight.weightClass && (
-          <div className="bg-gray-900 text-center py-1.5">
-            <span className="text-xs font-black text-gray-300 uppercase tracking-wider">{fight.weightClass}</span>
+          <div className="bg-gray-900 text-center py-1">
+            <span className="text-[10px] sm:text-xs font-black text-gray-300 uppercase tracking-wider">{fight.weightClass}</span>
           </div>
         )}
-        <div className="bg-white p-3 sm:p-4">
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
+        <div className="bg-white p-2 sm:p-3">
+          <div className="flex items-stretch gap-1.5 sm:gap-2">
+            <div className="flex-1 min-w-0">
               <FighterCard fighter={fight.fighter1} fighterImage={fight.fighter1Image}
                 onSelect={() => handlePrediction(eventIndex, fightIndex, fight.fighter1)}
                 isSelected={prediction === fight.fighter1} corner="red" />
             </div>
-            <div className="flex-shrink-0 text-center">
-              <span className="font-black text-red-600 text-base sm:text-xl">VS</span>
+            <div className="flex-shrink-0 flex items-center justify-center px-0.5">
+              <span className="font-black text-red-600 text-sm sm:text-base">VS</span>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <FighterCard fighter={fight.fighter2} fighterImage={fight.fighter2Image}
                 onSelect={() => handlePrediction(eventIndex, fightIndex, fight.fighter2)}
                 isSelected={prediction === fight.fighter2} corner="blue" />
@@ -424,7 +423,7 @@ export default function Prediction() {
 
       <div className="min-h-screen bg-gray-50">
         {/* Hero */}
-        <div className="bg-gradient-to-br from-gray-950 via-red-950 to-gray-900 text-white px-4 py-10">
+        <div className="bg-gradient-to-br from-gray-950 via-red-950 to-gray-900 text-white px-4 py-6 sm:py-10">
           <div className="max-w-5xl mx-auto">
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
               <h1 className="text-4xl font-black tracking-tight">🔮 Fight Predictions</h1>
@@ -446,7 +445,7 @@ export default function Prediction() {
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
           {/* Tip */}
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
             <span className="text-xl">💡</span>
@@ -501,7 +500,7 @@ export default function Prediction() {
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden"
                     >
-                      <div className="p-4 sm:p-6 bg-gray-50 space-y-6">
+                      <div className="p-3 sm:p-6 bg-gray-50 space-y-4 sm:space-y-6">
                         {mainCard.length > 0 && (
                           <div>
                             <div className="flex items-center gap-2 mb-4">
@@ -513,7 +512,7 @@ export default function Prediction() {
                                 {mainCard.filter((_, i) => getPrediction(eventIndex, i)).length}/{mainCard.length} picked
                               </span>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                               {mainCard.map((fight, fIdx) => (
                                 <FightCard key={fIdx} fight={fight} eventIndex={eventIndex} fightIndex={fIdx} />
                               ))}
@@ -532,7 +531,7 @@ export default function Prediction() {
                                 {prelims.filter((_, i) => getPrediction(eventIndex, i + mainCard.length)).length}/{prelims.length} picked
                               </span>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                               {prelims.map((fight, fIdx) => (
                                 <FightCard key={fIdx + mainCard.length} fight={fight} eventIndex={eventIndex} fightIndex={fIdx + mainCard.length} />
                               ))}
