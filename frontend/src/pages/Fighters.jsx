@@ -1,551 +1,367 @@
 import { useState, useEffect } from 'react';
-import { Search, X, Trophy, MapPin, Target, ArrowUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, X, Trophy, MapPin, Target, ArrowUp, ExternalLink, Filter } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL ||
+  (window.location.hostname === 'localhost'
+    ? 'http://localhost:5000/api'
+    : 'https://ufc-fan-app-backend.onrender.com/api');
 
-const Fighters = () => {
+const DIVISIONS = [
+  'All', 'Heavyweight', 'Light Heavyweight', 'Middleweight', 'Welterweight',
+  'Lightweight', 'Featherweight', 'Bantamweight', 'Flyweight',
+  "Women's Bantamweight", "Women's Flyweight", "Women's Strawweight",
+];
+
+const STATUS_FILTERS = [
+  { value: 'all', label: 'All Fighters' },
+  { value: 'champions', label: '👑 Champions' },
+  { value: 'active', label: '✅ Active' },
+  { value: 'retired', label: '🏁 Retired' },
+];
+
+const PER_PAGE = 12;
+
+function FighterCard({ fighter, idx }) {
+  const [imgOk, setImgOk] = useState(true);
+  const initials = fighter.name
+    ? fighter.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+    : '?';
+
+  const isChampion = fighter.champion;
+  const isRetired = fighter.status === 'retired';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: (idx % PER_PAGE) * 0.04, duration: 0.3 }}
+      className={`bg-white rounded-2xl shadow-md border-2 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group ${
+        isChampion ? 'border-yellow-400' : 'border-gray-100 hover:border-red-200'
+      }`}
+    >
+      {/* Image / header */}
+      <div className={`relative h-36 overflow-hidden ${isChampion ? 'bg-gradient-to-br from-yellow-500 to-amber-700' : 'bg-gradient-to-br from-red-700 to-gray-900'}`}>
+        {fighter.imageUrl && imgOk ? (
+          <img
+            src={fighter.imageUrl} alt={fighter.name}
+            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
+            onError={() => setImgOk(false)}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-5xl font-black text-white/30">{initials}</span>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+
+        {/* Badge */}
+        <div className="absolute top-2 right-2">
+          {isChampion ? (
+            <span className="flex items-center gap-1 bg-yellow-400 text-yellow-900 text-xs font-black px-2 py-0.5 rounded-full shadow">
+              <Trophy className="w-3 h-3" /> CHAMP
+            </span>
+          ) : isRetired ? (
+            <span className="bg-gray-600/80 text-white text-xs font-bold px-2 py-0.5 rounded-full">RETIRED</span>
+          ) : fighter.ranking && fighter.ranking <= 15 ? (
+            <span className="bg-blue-600/90 text-white text-xs font-bold px-2 py-0.5 rounded-full">#{fighter.ranking}</span>
+          ) : (
+            <span className="bg-green-600/80 text-white text-xs font-bold px-2 py-0.5 rounded-full">ACTIVE</span>
+          )}
+        </div>
+
+        {/* Name overlay */}
+        <div className="absolute bottom-2 left-3 right-3">
+          <p className="text-white font-black text-sm leading-tight truncate drop-shadow">{fighter.name}</p>
+          {fighter.nickname && (
+            <p className="text-red-300 text-xs font-medium truncate">"{fighter.nickname}"</p>
+          )}
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="p-3">
+        <div className="flex justify-between text-center mb-3">
+          <div>
+            <p className="text-lg font-black text-red-600">{fighter.knockouts ?? 0}</p>
+            <p className="text-xs text-gray-400 font-medium">KOs</p>
+          </div>
+          <div>
+            <p className="text-lg font-black text-blue-600">{fighter.submissions ?? 0}</p>
+            <p className="text-xs text-gray-400 font-medium">Subs</p>
+          </div>
+          <div>
+            <p className="text-lg font-black text-green-600">{fighter.wins ?? 0}</p>
+            <p className="text-xs text-gray-400 font-medium">Wins</p>
+          </div>
+        </div>
+
+        <div className="space-y-1 text-xs text-gray-600">
+          {fighter.division && (
+            <div className="flex items-center gap-1.5">
+              <Trophy className="w-3 h-3 text-red-400 flex-shrink-0" />
+              <span className="truncate">{fighter.division}</span>
+            </div>
+          )}
+          {fighter.record && (
+            <div className="flex items-center gap-1.5">
+              <Target className="w-3 h-3 text-red-400 flex-shrink-0" />
+              <span className="font-semibold">{fighter.record}</span>
+            </div>
+          )}
+          {fighter.nationality && (
+            <div className="flex items-center gap-1.5">
+              <MapPin className="w-3 h-3 text-red-400 flex-shrink-0" />
+              <span className="truncate">{fighter.nationality}</span>
+            </div>
+          )}
+        </div>
+
+        {fighter.url && (
+          <a href={fighter.url} target="_blank" rel="noopener noreferrer"
+            className="mt-3 flex items-center justify-center gap-1 text-xs text-red-600 font-semibold hover:text-red-800 transition-colors border-t border-gray-100 pt-2">
+            UFC Stats <ExternalLink className="w-3 h-3" />
+          </a>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+export default function Fighters() {
   const [fighters, setFighters] = useState([]);
-  const [filteredFighters, setFilteredFighters] = useState([]);
-  const [displayedFighters, setDisplayedFighters] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDivision, setSelectedDivision] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [filtered, setFiltered] = useState([]);
+  const [displayed, setDisplayed] = useState([]);
+  const [search, setSearch] = useState('');
+  const [division, setDivision] = useState('All');
+  const [status, setStatus] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMsg, setLoadMsg] = useState('Loading fighters…');
   const [error, setError] = useState(null);
-  const [loadingMessage, setLoadingMessage] = useState('Loading fighters...');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMoreFighters, setHasMoreFighters] = useState(true);
-  const [showBackToTop, setShowBackToTop] = useState(false);
-  const fightersPerPage = 11;
-
-  const divisions = [
-    "Heavyweight", "Light Heavyweight", "Middleweight", "Welterweight", 
-    "Lightweight", "Featherweight", "Bantamweight", "Flyweight",
-    "Women's Bantamweight", "Women's Flyweight", "Women's Strawweight"
-  ];
+  const [page, setPage] = useState(1);
+  const [showTop, setShowTop] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    const fetchFighters = async () => {
-      const startTime = Date.now();
-      
+    const load = async () => {
       try {
         setLoading(true);
-        setLoadingMessage('Connecting to server...');
-        
-        // First, try a quick health check to wake up the server
         try {
           await axios.get(`${API_URL}/health`, { timeout: 5000 });
-          setLoadingMessage('Server is ready, fetching fighters...');
-        } catch (healthErr) {
-          // Server might be cold starting
-          setLoadingMessage('Waking up server (this may take 30-60 seconds)...');
+        } catch {
+          setLoadMsg('Waking up server… this may take a moment');
         }
-        
-        // Fetch all fighters - backend now caches this
-        const response = await axios.get(`${API_URL}/fighters?limit=5000`, {
-          timeout: 60000 // 60 second timeout for cold starts
-        });
-        
-        const loadTime = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`⏱️  Loaded in ${loadTime}s`);
-        
-        // Handle the new format from ufc-fighter_details and ufc-fighter_tott collections
-        let fightersData;
-        if (response.data.fighters) {
-          // New format - object with fighters and pagination
-          fightersData = response.data.fighters;
-        } else if (Array.isArray(response.data)) {
-          // Fallback for array format
-          fightersData = response.data;
-        } else {
-          // Empty or error response
-          fightersData = [];
-        }
-        
-        console.log(`📊 Loaded ${fightersData.length} fighters from API`);
-        if (response.data._meta) {
-          console.log(`💾 Cached: ${response.data._meta.cached}, Response time: ${response.data._meta.responseTime}`);
-        }
-        
-        setFighters(fightersData);
-        setFilteredFighters(fightersData);
-        
-        // Set initial displayed fighters (first 11)
-        const initialFighters = fightersData.slice(0, fightersPerPage);
-        setDisplayedFighters(initialFighters);
-        setHasMoreFighters(fightersData.length > fightersPerPage);
-        
-        // Check if there's an error message from the API
-        if (response.data.error) {
-          setError(`No fighter data available: ${response.data.error}`);
-        } else {
-          setError(null);
-        }
+        const r = await axios.get(`${API_URL}/fighters?limit=5000`, { timeout: 60000 });
+        const data = r.data.fighters || (Array.isArray(r.data) ? r.data : []);
+        setFighters(data);
+        setError(null);
       } catch (err) {
-        console.error('Error fetching fighters:', err);
-        
-        if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-          setError('Server is taking too long to respond. It may be waking up from sleep. Please try again in a moment.');
-        } else if (err.response?.status === 503) {
-          setError('Server is starting up. Please wait 30-60 seconds and refresh the page.');
-        } else {
-          setError('Failed to load fighters. The server may be waking up from sleep (Render free tier). Please wait a moment and try again.');
-        }
+        setError('Failed to load fighters. Please try again.');
       } finally {
         setLoading(false);
       }
     };
-
-    fetchFighters();
+    load();
   }, []);
 
-  // Filter fighters based on search term, division, and status
   useEffect(() => {
-    let filtered = fighters;
-
-    // Filter by search term
-    if (searchTerm.trim()) {
-      filtered = filtered.filter(fighter =>
-        fighter.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        fighter.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        fighter.nationality?.toLowerCase().includes(searchTerm.toLowerCase())
+    let f = fighters;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      f = f.filter(x =>
+        x.name?.toLowerCase().includes(q) ||
+        x.nickname?.toLowerCase().includes(q) ||
+        x.nationality?.toLowerCase().includes(q)
       );
     }
+    if (division !== 'All') f = f.filter(x => x.division === division);
+    if (status === 'champions') f = f.filter(x => x.champion);
+    else if (status === 'active') f = f.filter(x => x.status === 'active');
+    else if (status === 'retired') f = f.filter(x => x.status === 'retired');
 
-    // Filter by division
-    if (selectedDivision !== 'all') {
-      filtered = filtered.filter(fighter => fighter.division === selectedDivision);
-    }
+    setFiltered(f);
+    setPage(1);
+    setDisplayed(f.slice(0, PER_PAGE));
+  }, [search, division, status, fighters]);
 
-    // Filter by status
-    if (statusFilter !== 'all') {
-      if (statusFilter === 'champions') {
-        filtered = filtered.filter(fighter => fighter.champion);
-      } else {
-        filtered = filtered.filter(fighter => fighter.status === statusFilter);
-      }
-    }
+  const loadMore = () => {
+    const next = page + 1;
+    setDisplayed(filtered.slice(0, next * PER_PAGE));
+    setPage(next);
+  };
 
-    setFilteredFighters(filtered);
-    
-    // Update displayed fighters based on filtered results
-    const initialFiltered = filtered.slice(0, fightersPerPage);
-    setDisplayedFighters(initialFiltered);
-    setHasMoreFighters(filtered.length > fightersPerPage);
-    setCurrentPage(1);
-  }, [searchTerm, selectedDivision, statusFilter, fighters]);
-
-  // Scroll detection for Back to Top button
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      // Show button when user scrolls down more than 300px
-      setShowBackToTop(scrollTop > 300);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setShowTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const clearSearch = () => {
-    setSearchTerm('');
-  };
+  const hasMore = displayed.length < filtered.length;
+  const isFiltering = search || division !== 'All' || status !== 'all';
 
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  };
-
-  const loadMoreFighters = () => {
-    if (loadingMore || !hasMoreFighters) return;
-    
-    setLoadingMore(true);
-    
-    // Calculate next page of fighters
-    const nextPage = currentPage + 1;
-    const startIndex = nextPage * fightersPerPage;
-    const endIndex = startIndex + fightersPerPage;
-    const nextBatch = filteredFighters.slice(startIndex, endIndex);
-    
-    if (nextBatch.length > 0) {
-      setDisplayedFighters(prev => [...prev, ...nextBatch]);
-      setCurrentPage(nextPage);
-      setHasMoreFighters(endIndex < filteredFighters.length);
-    } else {
-      setHasMoreFighters(false);
-    }
-    
-    setLoadingMore(false);
-  };
-
-
-  const getFlagEmoji = (nationality) => {
-    const flags = {
-      "American": "🇺🇸",
-      "Russian": "🇷🇺",
-      "British": "🇬🇧",
-      "Australian": "🇦🇺",
-      "Irish": "🇮🇪",
-      "Brazilian": "🇧🇷",
-      "Nigerian-New Zealand": "🇳🇬🇳🇿",
-      "Cameroonian-French": "🇨🇲🇫🇷"
-    };
-    return flags[nationality] || "🌍";
-  };
-
-  const getStatusBadge = (fighter) => {
-    if (fighter.champion) {
-      return <span className="bg-yellow-500 text-black px-2 py-1 rounded text-xs font-bold flex items-center"><Trophy className="w-3 h-3 mr-1" />CHAMPION</span>;
-    }
-    if (fighter.status === "retired") {
-      return <span className="bg-gray-500 text-white px-2 py-1 rounded text-xs">RETIRED</span>;
-    }
-    if (fighter.ranking && fighter.ranking <= 15) {
-      return <span className="bg-blue-500 text-white px-2 py-1 rounded text-xs">#{fighter.ranking} RANKED</span>;
-    }
-    return <span className="bg-green-500 text-white px-2 py-1 rounded text-xs">ACTIVE</span>;
-  };
-
-  if (loading) {
-    return (
-      <div className="flex flex-col justify-center items-center h-64 space-y-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-        <div className="text-center">
-          <p className="text-gray-700 font-medium">{loadingMessage}</p>
-          {loadingMessage.includes('Waking up') && (
-            <p className="text-sm text-gray-500 mt-2">
-              ⚠️ First load after inactivity may take up to 60 seconds (Render free tier limitation)
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-red-600 text-lg">{error}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">UFC Fighters</h1>
-        <p className="text-gray-600 mb-6">Live fighter data from ufc_fighter_details and ufc_fighter_tott collections - Discover profiles and stats of UFC's elite fighters</p>
-        
-        {/* Search Bar */}
-        <div className="relative max-w-md mb-4">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search fighters, nicknames, or nationality..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-red-500 focus:border-red-500"
-          />
-          {searchTerm && (
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-              <button
-                onClick={clearSearch}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-4 mb-4">
-          <select
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500 focus:border-red-500"
-            value={selectedDivision}
-            onChange={(e) => setSelectedDivision(e.target.value)}
-          >
-            <option value="all">All Divisions</option>
-            {divisions.map(division => (
-              <option key={division} value={division}>{division}</option>
-            ))}
-          </select>
-
-          <select
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-500 focus:border-red-500"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Fighters</option>
-            <option value="champions">Champions Only</option>
-            <option value="active">Active</option>
-            <option value="retired">Retired</option>
-          </select>
-        </div>
-        
-        {/* Total Fighters Counter */}
-        <div className="bg-gradient-to-r from-red-600 to-red-800 text-white rounded-lg p-4 max-w-md mx-auto mb-6">
-          <div className="flex items-center justify-center space-x-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold">
-                {searchTerm || selectedDivision !== 'all' || statusFilter !== 'all' 
-                  ? filteredFighters.length 
-                  : fighters.length
-                }
-              </div>
-              <div className="text-sm opacity-90">
-                {searchTerm || selectedDivision !== 'all' || statusFilter !== 'all' 
-                  ? 'Filtered Fighters' 
-                  : 'Total Fighters'
-                }
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">{displayedFighters.length}</div>
-              <div className="text-sm opacity-90">Displayed</div>
-            </div>
-          </div>
-          {(searchTerm || selectedDivision !== 'all' || statusFilter !== 'all') && (
-            <div className="mt-2 text-xs opacity-75">
-              {searchTerm && `Search: "${searchTerm}"`}
-              {selectedDivision !== 'all' && ` • Division: ${selectedDivision}`}
-              {statusFilter !== 'all' && ` • Status: ${statusFilter}`}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {displayedFighters.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-400 text-6xl mb-4">🥊</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
-            {searchTerm ? 'No Fighters Found' : 'No Fighters Available'}
-          </h3>
-          <p className="text-gray-500">
-            {searchTerm ? `Try a different search term` : 'No data available from ufc_fighter_details and ufc_fighter_tott collections. Please populate these collections with fighter data.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {displayedFighters.map((fighter) => (
-            <div
-              key={fighter._id}
-              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden border border-gray-200"
-            >
-              {/* Fighter Header */}
-              <div className="h-32 bg-gradient-to-r from-red-600 to-red-800 flex items-center justify-center relative overflow-hidden">
-                {fighter.imageUrl ? (
-                  <div className="w-full h-full relative">
-                    <img 
-                      src={fighter.imageUrl} 
-                      alt={fighter.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-                    <div className="absolute bottom-2 left-2 right-2 text-white text-center">
-                      <div className="text-xs font-semibold">UFC Fighter</div>
-                    </div>
-                    <div className="absolute top-2 right-2">
-                      {getStatusBadge(fighter)}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-white text-center">
-                    <div className="text-2xl mb-1">🥊</div>
-                    <p className="text-xs font-semibold">UFC Fighter</p>
-                    <div className="absolute top-2 right-2">
-                      {getStatusBadge(fighter)}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Fighter Content */}
-              <div className="p-4">
-                <h3 className="text-sm font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
-                  {fighter.name}
-                </h3>
-                {fighter.nickname && (
-                  <p className="text-xs text-red-600 font-medium mb-2">"{fighter.nickname}"</p>
-                )}
-                
-                <div className="space-y-1">
-                  {/* Division */}
-                  {fighter.division && (
-                    <div className="flex items-center text-gray-600">
-                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      <span className="text-xs font-medium truncate">{fighter.division}</span>
-                    </div>
-                  )}
-                  
-                  {/* Height */}
-                  {fighter.height && fighter.height !== '--' && (
-                    <div className="flex items-center text-gray-600">
-                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V1a1 1 0 011-1h2a1 1 0 011 1v18a1 1 0 01-1 1H4a1 1 0 01-1-1V1a1 1 0 011-1h2a1 1 0 011 1v3m0 0h8" />
-                      </svg>
-                      <span className="text-xs font-medium truncate">Height: {fighter.height}</span>
-                    </div>
-                  )}
-
-                  {/* Weight */}
-                  {fighter.weight && fighter.weight !== '--' && (
-                    <div className="flex items-center text-gray-600">
-                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                      </svg>
-                      <span className="text-xs font-medium truncate">Weight: {fighter.weight}</span>
-                    </div>
-                  )}
-
-                  {/* Reach */}
-                  {fighter.reach && fighter.reach !== '--' && (
-                    <div className="flex items-center text-gray-600">
-                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                      <span className="text-xs font-medium truncate">Reach: {fighter.reach}</span>
-                    </div>
-                  )}
-
-                  {/* Stance */}
-                  {fighter.stance && fighter.stance !== 'NaN' && (
-                    <div className="flex items-center text-gray-600">
-                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                      <span className="text-xs font-medium truncate">Stance: {fighter.stance}</span>
-                    </div>
-                  )}
-
-                  {/* Date of Birth */}
-                  {fighter.dob && (
-                    <div className="flex items-center text-gray-600">
-                      <svg className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-xs font-medium truncate">DOB: {fighter.dob}</span>
-                    </div>
-                  )}
-
-                  {/* Nationality */}
-                  {fighter.nationality && (
-                    <div className="flex items-center text-gray-600">
-                      <MapPin className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" />
-                      <span className="text-xs font-medium truncate">{getFlagEmoji(fighter.nationality)} {fighter.nationality}</span>
-                    </div>
-                  )}
-
-                  {/* Record */}
-                  {fighter.record && (
-                    <div className="flex items-center text-gray-600">
-                      <Target className="w-3 h-3 mr-2 text-red-600 flex-shrink-0" />
-                      <span className="text-xs font-medium truncate">Record: {fighter.record}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Stats */}
-                <div className="mt-3 flex justify-between text-center">
-                  <div>
-                    <p className="text-lg font-bold text-red-600">{fighter.knockouts || 0}</p>
-                    <p className="text-xs text-gray-500">KOs</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-blue-600">{fighter.submissions || 0}</p>
-                    <p className="text-xs text-gray-500">Subs</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-green-600">{fighter.wins || 0}</p>
-                    <p className="text-xs text-gray-500">Wins</p>
-                  </div>
-                </div>
-
-                {/* UFC Stats Link */}
-                {fighter.url && (
-                  <div className="mt-3 pt-2 border-t border-gray-200">
-                    <a 
-                      href={fighter.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center text-xs text-blue-600 hover:text-blue-800 transition-colors"
-                    >
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                      View UFC Stats
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Show More Button */}
-      {hasMoreFighters && displayedFighters.length > 0 && (
-        <div className="mt-8 text-center">
-          <button
-            onClick={loadMoreFighters}
-            disabled={loadingMore}
-            className="bg-red-600 text-white px-8 py-3 rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
-          >
-            {loadingMore ? (
-              <div className="flex items-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Loading more fighters...
-              </div>
-            ) : (
-              `Show More Fighters (${filteredFighters.length - displayedFighters.length} remaining)`
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Footer Stats */}
-      {fighters.length > 0 && (
-        <div className="mt-12 bg-gray-50 rounded-lg p-6">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              {searchTerm ? `Showing ${displayedFighters.length} of ${filteredFighters.length} fighters` : `Showing ${displayedFighters.length} of ${fighters.length} fighters`}
-            </h3>
-            <p className="text-gray-600 text-sm">
-              {searchTerm ? `Filtered by "${searchTerm}"` : 'Live data from ufc_fighter_details and ufc_fighter_tott collections'}
-            </p>
-            {hasMoreFighters && (
-              <p className="text-gray-500 text-xs mt-2">
-                Click "Show More" to load additional fighters
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Floating Back to Top Button */}
-      {showBackToTop && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-6 right-6 bg-red-600 hover:bg-red-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 z-50 group"
-          aria-label="Back to top"
-        >
-          <ArrowUp className="h-6 w-6 group-hover:scale-110 transition-transform duration-200" />
-        </button>
-      )}
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+      <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+      <p className="text-gray-600 font-semibold text-center max-w-xs">{loadMsg}</p>
     </div>
   );
-};
 
-export default Fighters;
+  if (error) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="text-center">
+        <div className="text-5xl mb-4">⚠️</div>
+        <h3 className="text-xl font-bold text-gray-700 mb-2">Couldn't load fighters</h3>
+        <p className="text-gray-500 text-sm mb-4">{error}</p>
+        <button onClick={() => window.location.reload()}
+          className="bg-red-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-red-700 transition-colors">
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-gray-950 via-red-950 to-gray-900 text-white px-4 py-10">
+        <div className="max-w-5xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="flex items-end justify-between flex-wrap gap-4 mb-4">
+              <div>
+                <h1 className="text-4xl font-black tracking-tight">🥊 UFC Fighters</h1>
+                <p className="text-gray-400 mt-1 text-sm">
+                  {fighters.length.toLocaleString()} fighters · {isFiltering ? `${filtered.length} match` : 'All divisions'}
+                </p>
+              </div>
+              <button onClick={() => setShowFilters(v => !v)}
+                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
+                <Filter className="w-4 h-4" />
+                {showFilters ? 'Hide Filters' : 'Filters'}
+                {isFiltering && <span className="w-2 h-2 bg-red-400 rounded-full" />}
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="relative max-w-xl">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type="text" placeholder="Search by name, nickname, or nationality…"
+                value={search} onChange={e => setSearch(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-400 rounded-xl py-2.5 pl-11 pr-10 text-sm focus:outline-none focus:border-red-400 transition-all" />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Filters panel */}
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }} className="overflow-hidden mt-4">
+                  <div className="space-y-3">
+                    {/* Status pills */}
+                    <div className="flex gap-2 flex-wrap">
+                      {STATUS_FILTERS.map(s => (
+                        <button key={s.value} onClick={() => setStatus(s.value)}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all ${
+                            status === s.value ? 'bg-red-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                          }`}>
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Division pills */}
+                    <div className="flex gap-2 flex-wrap">
+                      {DIVISIONS.map(d => (
+                        <button key={d} onClick={() => setDivision(d)}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap transition-all ${
+                            division === d ? 'bg-yellow-400 text-yellow-900' : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                          }`}>
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Active filter chips */}
+        {isFiltering && (
+          <div className="flex gap-2 flex-wrap mb-4">
+            {search && (
+              <span className="flex items-center gap-1 bg-red-100 text-red-700 text-xs font-semibold px-3 py-1 rounded-full">
+                "{search}" <button onClick={() => setSearch('')}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {division !== 'All' && (
+              <span className="flex items-center gap-1 bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full">
+                {division} <button onClick={() => setDivision('All')}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {status !== 'all' && (
+              <span className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full">
+                {STATUS_FILTERS.find(s => s.value === status)?.label}
+                <button onClick={() => setStatus('all')}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            <button onClick={() => { setSearch(''); setDivision('All'); setStatus('all'); }}
+              className="text-xs text-gray-400 hover:text-gray-600 font-semibold underline">
+              Clear all
+            </button>
+          </div>
+        )}
+
+        {filtered.length === 0 ? (
+          <div className="text-center py-20 text-gray-400">
+            <div className="text-5xl mb-3">🔍</div>
+            <p className="font-semibold text-lg">No fighters found</p>
+            <p className="text-sm mt-1">Try adjusting your search or filters</p>
+            <button onClick={() => { setSearch(''); setDivision('All'); setStatus('all'); }}
+              className="mt-4 text-sm text-red-600 font-semibold hover:underline">Clear filters</button>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {displayed.map((fighter, i) => (
+                <FighterCard key={fighter._id || i} fighter={fighter} idx={i} />
+              ))}
+            </div>
+
+            {hasMore && (
+              <div className="mt-10 text-center">
+                <button onClick={loadMore}
+                  className="bg-gradient-to-r from-red-600 to-red-800 text-white font-black px-8 py-3 rounded-xl hover:from-red-700 hover:to-red-900 transition-all shadow-lg">
+                  Show More ({filtered.length - displayed.length} remaining)
+                </button>
+              </div>
+            )}
+
+            <p className="text-center text-xs text-gray-400 mt-6">
+              Showing {displayed.length} of {filtered.length} fighters
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* Back to top */}
+      <AnimatePresence>
+        {showTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed bottom-6 right-6 bg-red-600 hover:bg-red-700 text-white p-3 rounded-full shadow-xl z-50 transition-colors">
+            <ArrowUp className="w-5 h-5" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

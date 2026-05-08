@@ -1,484 +1,300 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { User, Calendar, Shield, Edit2, Save, X, Crown, CheckCircle } from 'lucide-react';
+import { Edit2, Save, X, Crown, CheckCircle, Swords, Target, Zap, Shield } from 'lucide-react';
 import axios from 'axios';
 
-// Use localhost in development, production URL as fallback
-const API_URL = import.meta.env.VITE_API_URL || 
-  (window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000/api' 
+const API_URL = import.meta.env.VITE_API_URL ||
+  (window.location.hostname === 'localhost'
+    ? 'http://localhost:5000/api'
     : 'https://ufc-fan-app-backend.onrender.com/api');
 
-// Default avatar options
 const DEFAULT_AVATARS = [
-  { id: 'avatar1', color: 'from-red-500 to-red-700', emoji: '🥊', name: 'Fighter Red' },
-  { id: 'avatar2', color: 'from-blue-500 to-blue-700', emoji: '🥋', name: 'Fighter Blue' },
-  { id: 'avatar3', color: 'from-yellow-500 to-yellow-700', emoji: '👑', name: 'Champion' },
-  { id: 'avatar4', color: 'from-green-500 to-green-700', emoji: '⚔️', name: 'Warrior' },
-  { id: 'avatar5', color: 'from-purple-500 to-purple-700', emoji: '🔥', name: 'Legend' },
-  { id: 'avatar6', color: 'from-gray-700 to-gray-900', emoji: '🏆', name: 'Master' }
+  { id: 'avatar1', color: 'from-red-500 to-red-700',     emoji: '🥊', name: 'Fighter Red'  },
+  { id: 'avatar2', color: 'from-blue-500 to-blue-700',   emoji: '🥋', name: 'Fighter Blue' },
+  { id: 'avatar3', color: 'from-yellow-500 to-yellow-700', emoji: '👑', name: 'Champion'   },
+  { id: 'avatar4', color: 'from-green-500 to-green-700', emoji: '⚔️', name: 'Warrior'      },
+  { id: 'avatar5', color: 'from-purple-500 to-purple-700', emoji: '🔥', name: 'Legend'     },
+  { id: 'avatar6', color: 'from-gray-700 to-gray-900',   emoji: '🏆', name: 'Master'       },
 ];
+
+function getAvatar(avatarId) {
+  return DEFAULT_AVATARS.find(a => a.id === avatarId) || DEFAULT_AVATARS[0];
+}
 
 export default function Profile() {
   const { currentUser, getAuthToken, updateUserProfile } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [profile, setProfile] = useState(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  
-  const [formData, setFormData] = useState({
-    displayName: '',
-    username: '',
-    profileImage: '',
-    bio: ''
-  });
+  const [profile, setProfile]   = useState(null);
+  const [error, setError]       = useState('');
+  const [success, setSuccess]   = useState('');
+  const [formData, setFormData] = useState({ displayName: '', username: '', profileImage: 'avatar1', bio: '' });
 
-  useEffect(() => {
-    console.log('👤 Profile component mounted');
-    console.log('Current user:', currentUser);
-    console.log('Has getAuthToken?', typeof getAuthToken === 'function');
-    console.log('Has updateUserProfile?', typeof updateUserProfile === 'function');
-    
-    if (currentUser) {
-      console.log('✅ User is logged in, fetching profile...');
-      fetchProfile();
-    } else {
-      console.log('⚠️ No user logged in');
-    }
-  }, [currentUser]);
+  useEffect(() => { if (currentUser) fetchProfile(); }, [currentUser]);
 
-  const fetchProfile = async () => {
+  async function fetchProfile() {
     try {
       setLoading(true);
       const token = await getAuthToken();
-      const response = await axios.get(`${API_URL}/users/profile`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setProfile(response.data);
-      // Ensure profileImage defaults to avatar1 if not set
-      const defaultProfileImage = response.data.profileImage || 'avatar1';
-      setFormData({
-        displayName: response.data.displayName || '',
-        username: response.data.username || '',
-        profileImage: defaultProfileImage,
-        bio: response.data.bio || ''
-      });
-      
-      // If profileImage is not set in backend, save default
-      if (!response.data.profileImage) {
-        try {
-          const updateResponse = await axios.put(
-            `${API_URL}/users/profile`,
-            { profileImage: 'avatar1' },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          setProfile(updateResponse.data.user);
-        } catch (err) {
-          console.warn('Could not set default profile image:', err);
-        }
+      const res = await axios.get(`${API_URL}/users/profile`, { headers: { Authorization: `Bearer ${token}` } });
+      setProfile(res.data);
+      const img = res.data.profileImage || 'avatar1';
+      setFormData({ displayName: res.data.displayName || '', username: res.data.username || '', profileImage: img, bio: res.data.bio || '' });
+      if (!res.data.profileImage) {
+        axios.put(`${API_URL}/users/profile`, { profileImage: 'avatar1' }, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      setError('Failed to load profile');
-    } finally {
-      setLoading(false);
-    }
-  };
+    } catch { setError('Failed to load profile'); }
+    finally { setLoading(false); }
+  }
 
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-    setSaving(true);
-
+    setError(''); setSuccess(''); setSaving(true);
     try {
-      console.log('🔄 Starting profile update...');
-      console.log('Current user:', currentUser);
-      console.log('Form data:', formData);
-      
-      // Get auth token
-      let token;
-      try {
-        token = await getAuthToken();
-        console.log('✅ Auth token obtained');
-      } catch (authError) {
-        console.error('❌ Failed to get auth token:', authError);
-        throw new Error('Authentication failed. Please log in again.');
+      const token = await getAuthToken();
+      const res = await axios.put(`${API_URL}/users/profile`, formData, { headers: { Authorization: `Bearer ${token}` } });
+      setProfile(res.data.user);
+      if (formData.displayName !== currentUser?.displayName) {
+        await updateUserProfile(formData.displayName).catch(() => {});
       }
-      
-      const response = await axios.put(`${API_URL}/users/profile`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      console.log('✅ Backend profile updated:', response.data.user);
-      setProfile(response.data.user);
-      
-      // Update Firebase Auth profile to reflect the display name change
-      if (formData.displayName && formData.displayName !== currentUser?.displayName) {
-        try {
-          console.log('🔄 Updating Firebase Auth display name from', currentUser?.displayName, 'to', formData.displayName);
-          await updateUserProfile(formData.displayName);
-          console.log('✅ Firebase Auth profile updated with display name');
-        } catch (firebaseError) {
-          console.warn('⚠️ Could not update Firebase profile:', firebaseError.message);
-          // Don't fail the whole update if Firebase update fails
-        }
-      }
-      
-      // Refresh profile from backend to ensure everything is in sync
       await fetchProfile();
-      
-      setSuccess('Profile updated successfully! 🎉');
+      setSuccess('Profile updated! 🎉');
       setEditMode(false);
-      
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
-      console.error('❌ Error updating profile:', error);
-      console.error('Error message:', error.message);
-      console.error('Error response:', error.response?.data);
-      
-      const errorMessage = error.message || 
-                          error.response?.data?.error || 
-                          error.response?.data?.message ||
-                          'Failed to update profile';
-      
-      setError(errorMessage);
-      console.error('Displayed error:', errorMessage);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setFormData({
-      displayName: profile.displayName || '',
-      username: profile.username || '',
-      profileImage: profile.profileImage || 'avatar1',
-      bio: profile.bio || ''
-    });
-    setEditMode(false);
-    setError('');
-  };
-
-  const getAvatarDisplay = (avatarId) => {
-    // Ensure we always have a valid avatar ID, default to avatar1
-    const validAvatarId = avatarId && DEFAULT_AVATARS.find(a => a.id === avatarId) 
-      ? avatarId 
-      : 'avatar1';
-    const avatar = DEFAULT_AVATARS.find(a => a.id === validAvatarId) || DEFAULT_AVATARS[0];
-    return (
-      <div className={`w-full h-full rounded-full bg-gradient-to-br ${avatar.color} flex items-center justify-center text-4xl sm:text-5xl md:text-6xl`}>
-        {avatar.emoji}
-      </div>
-    );
-  };
-
-  if (!currentUser) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign In Required</h2>
-          <p className="text-gray-600">Please sign in to view your profile.</p>
-        </div>
-      </div>
-    );
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to update');
+    } finally { setSaving(false); }
   }
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    );
+  function handleCancel() {
+    setFormData({ displayName: profile?.displayName || '', username: profile?.username || '', profileImage: profile?.profileImage || 'avatar1', bio: profile?.bio || '' });
+    setEditMode(false); setError('');
   }
 
-  const memberSince = profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-US', { 
-    month: 'long', 
-    year: 'numeric' 
-  }) : 'Unknown';
+  if (!currentUser) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-lg p-10 text-center max-w-sm">
+        <div className="text-5xl mb-4">🔒</div>
+        <h2 className="text-xl font-black text-gray-900 mb-2">Sign In Required</h2>
+        <p className="text-gray-500 text-sm">Sign in to view and edit your profile.</p>
+      </div>
+    </div>
+  );
+
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  const avatar   = getAvatar(profile?.profileImage || 'avatar1');
+  const gp       = profile?.gameProgress;
+  const memberSince = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : 'Unknown';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Success Message */}
-      {success && (
-        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-md">
-          <div className="flex items-center">
-            <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
-            <p className="text-green-700 font-medium">{success}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
-          <div className="flex items-center justify-between">
-            <p className="text-red-700">{error}</p>
-            <button onClick={() => setError('')} className="text-red-500 hover:text-red-700">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Profile Header Card */}
-      <div className="bg-gradient-to-r from-red-600 to-red-800 rounded-lg shadow-lg overflow-hidden">
-        <div className="p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-              <User className="w-8 h-8" />
-              My Profile
-            </h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero header */}
+      <div className="bg-gradient-to-br from-gray-950 via-red-950 to-gray-900">
+        <div className="max-w-3xl mx-auto px-4 pt-10 pb-16 text-center">
+          {/* Avatar */}
+          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="mx-auto w-24 h-24 rounded-full shadow-2xl ring-4 ring-white/20 mb-4 relative">
+            <div className={`w-full h-full rounded-full bg-gradient-to-br ${avatar.color} flex items-center justify-center text-5xl`}>
+              {avatar.emoji}
+            </div>
             {!editMode && (
-              <button
-                onClick={() => setEditMode(true)}
-                className="flex items-center gap-2 bg-white text-red-600 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors font-medium"
-              >
+              <button onClick={() => setEditMode(true)}
+                className="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:text-red-600 transition-colors">
                 <Edit2 className="w-4 h-4" />
-                Edit Profile
               </button>
             )}
-          </div>
+          </motion.div>
 
-          <div className="flex items-center gap-6">
-            {/* Profile Image */}
-            <div className="w-32 h-32 flex-shrink-0">
-              {getAvatarDisplay(formData.profileImage)}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <h1 className="text-2xl font-black text-white">{profile?.displayName || currentUser?.displayName || 'Fighter'}</h1>
+            {profile?.username && <p className="text-red-300 text-sm mt-0.5">@{profile.username}</p>}
+            <div className="flex items-center justify-center gap-3 mt-2 flex-wrap">
+              <span className={`text-xs font-bold px-3 py-1 rounded-full ${profile?.isPremium ? 'bg-yellow-400 text-yellow-900' : 'bg-white/10 text-gray-300'}`}>
+                {profile?.isPremium ? '👑 Premium' : '🆓 Free'}
+              </span>
+              <span className="text-xs text-gray-400">Member since {memberSince}</span>
             </div>
-
-            {/* User Info */}
-            <div className="flex-1 text-white">
-              <h2 className="text-2xl font-bold mb-2">{formData.displayName || profile?.displayName || 'UFC Fan'}</h2>
-              {formData.username && (
-                <p className="text-red-100 text-sm mb-3">@{formData.username}</p>
-              )}
-              
-              {/* Subscription Badge */}
-              {profile?.isPremium ? (
-                <div className="inline-flex items-center gap-2 bg-yellow-400 text-gray-900 px-4 py-2 rounded-full font-bold text-sm">
-                  <Crown className="w-5 h-5" />
-                  Premium Member
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-full font-medium text-sm">
-                  <Shield className="w-5 h-5" />
-                  Free Member
-                </div>
-              )}
-            </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
-      {/* Edit Form / Profile Details */}
-      {editMode ? (
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Edit Profile</h3>
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Display Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Display Name
-              </label>
-              <input
-                type="text"
-                value={formData.displayName}
-                onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="Enter your display name"
-                minLength={2}
-                maxLength={30}
-                required
-              />
-              <p className="mt-1 text-xs text-gray-500">2-30 characters, your public name</p>
+      <div className="max-w-3xl mx-auto px-4 -mt-8 pb-12 space-y-4">
+        {/* Success/Error */}
+        <AnimatePresence>
+          {success && (
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-xl text-sm font-semibold shadow">
+              <CheckCircle className="w-4 h-4 flex-shrink-0" />{success}
+            </motion.div>
+          )}
+          {error && (
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-semibold shadow">
+              <X className="w-4 h-4 flex-shrink-0" />{error}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Edit form */}
+        {editMode ? (
+          <motion.form initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            onSubmit={handleSubmit}
+            className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-black text-gray-900">Edit Profile</h2>
+              <button type="button" onClick={handleCancel} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Username */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Username <span className="text-gray-400">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="Enter your username"
-                minLength={3}
-                maxLength={20}
-              />
-              <p className="mt-1 text-xs text-gray-500">3-20 characters, displayed on leaderboards</p>
-            </div>
+            <div className="space-y-4">
+              {/* Avatar picker */}
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Avatar</label>
+                <div className="grid grid-cols-6 gap-2">
+                  {DEFAULT_AVATARS.map(av => (
+                    <button key={av.id} type="button" onClick={() => setFormData(f => ({ ...f, profileImage: av.id }))}
+                      className={`aspect-square rounded-xl bg-gradient-to-br ${av.color} flex items-center justify-center text-xl transition-all ${
+                        formData.profileImage === av.id ? 'ring-3 ring-offset-2 ring-red-500 scale-110' : 'opacity-70 hover:opacity-100'
+                      }`}>
+                      {av.emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            {/* Bio */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Bio
-              </label>
-              <textarea
-                value={formData.bio}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="Tell us about yourself..."
-                rows={3}
-                maxLength={200}
-              />
-              <p className="mt-1 text-xs text-gray-500">{formData.bio.length}/200 characters</p>
-            </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Display Name</label>
+                <input type="text" value={formData.displayName}
+                  onChange={e => setFormData(f => ({ ...f, displayName: e.target.value }))}
+                  maxLength={30} minLength={2} required
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" />
+              </div>
 
-            {/* Profile Image Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Profile Avatar
-              </label>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
-                {DEFAULT_AVATARS.map((avatar) => (
-                  <button
-                    key={avatar.id}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, profileImage: avatar.id })}
-                    className={`relative w-full aspect-square rounded-lg overflow-hidden border-4 transition-all ${
-                      formData.profileImage === avatar.id
-                        ? 'border-red-600 ring-4 ring-red-200'
-                        : 'border-gray-300 hover:border-red-400'
-                    }`}
-                  >
-                    <div className={`w-full h-full bg-gradient-to-br ${avatar.color} flex items-center justify-center text-3xl`}>
-                      {avatar.emoji}
-                    </div>
-                    {formData.profileImage === avatar.id && (
-                      <div className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1">
-                        <CheckCircle className="w-4 h-4" />
-                      </div>
-                    )}
-                  </button>
-                ))}
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Username (optional)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">@</span>
+                  <input type="text" value={formData.username}
+                    onChange={e => setFormData(f => ({ ...f, username: e.target.value }))}
+                    maxLength={20} placeholder="yourhandle"
+                    className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-2.5 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
+                  Bio <span className="text-gray-300 font-normal normal-case">({(formData.bio || '').length}/200)</span>
+                </label>
+                <textarea value={formData.bio}
+                  onChange={e => setFormData(f => ({ ...f, bio: e.target.value.slice(0, 200) }))}
+                  rows={3} placeholder="Tell the community about yourself…"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" />
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center gap-2 bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+            <div className="flex gap-3 mt-6">
+              <button type="submit" disabled={saving}
+                className="flex-1 bg-gradient-to-r from-red-600 to-red-800 text-white font-black py-2.5 rounded-xl hover:from-red-700 hover:to-red-900 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
                 <Save className="w-4 h-4" />
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? 'Saving…' : 'Save Changes'}
               </button>
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={saving}
-                className="flex items-center gap-2 bg-gray-200 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <X className="w-4 h-4" />
+              <button type="button" onClick={handleCancel}
+                className="px-5 bg-gray-100 text-gray-600 font-bold py-2.5 rounded-xl hover:bg-gray-200 transition-colors">
                 Cancel
               </button>
             </div>
-          </form>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Account Information */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-red-600" />
-              Account Information
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-500">Display Name</p>
-                <p className="text-gray-900 font-medium">{profile?.displayName || 'Not set'}</p>
+          </motion.form>
+        ) : (
+          <>
+            {/* Info card */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-black text-gray-900">Account Info</h2>
+                <button onClick={() => setEditMode(true)}
+                  className="flex items-center gap-1.5 text-sm text-red-600 font-bold hover:text-red-700">
+                  <Edit2 className="w-3.5 h-3.5" /> Edit
+                </button>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Username</p>
-                <p className="text-gray-900 font-medium">{profile?.username ? `@${profile.username}` : 'Not set'}</p>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                  <span className="text-gray-500">Display Name</span>
+                  <span className="font-semibold text-gray-900">{profile?.displayName || '—'}</span>
+                </div>
+                {profile?.username && (
+                  <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                    <span className="text-gray-500">Username</span>
+                    <span className="font-semibold text-gray-900">@{profile.username}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                  <span className="text-gray-500">Email</span>
+                  <span className="font-semibold text-gray-900 truncate max-w-[200px]">{currentUser?.email}</span>
+                </div>
+                {profile?.bio && (
+                  <div className="py-2">
+                    <p className="text-gray-500 mb-1">Bio</p>
+                    <p className="text-gray-800 text-sm">{profile.bio}</p>
+                  </div>
+                )}
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Bio</p>
-                <p className="text-gray-700">{profile?.bio || 'No bio yet'}</p>
-              </div>
-            </div>
-          </div>
+            </motion.div>
 
-          {/* Membership Details */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-red-600" />
-              Membership Details
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-500">Status</p>
-                <p className="text-gray-900 font-medium">
-                  {profile?.isPremium ? (
-                    <span className="text-yellow-600 font-bold flex items-center gap-1">
-                      <Crown className="w-4 h-4" />
-                      Premium
-                    </span>
-                  ) : (
-                    <span className="text-gray-600">Free</span>
-                  )}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Member Since</p>
-                <p className="text-gray-900 font-medium flex items-center gap-1">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  {memberSince}
-                </p>
-              </div>
-              {!profile?.isPremium && (
-                <div className="pt-3 border-t border-gray-200">
-                  <p className="text-sm text-gray-600 mb-2">Upgrade to Premium for unlimited game energy!</p>
-                  <button className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 px-4 py-2 rounded-md hover:from-yellow-500 hover:to-yellow-700 transition-colors font-bold flex items-center justify-center gap-2">
-                    <Crown className="w-5 h-5" />
-                    Upgrade to Premium
-                  </button>
+            {/* Game stats */}
+            {gp && (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+                className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                <h2 className="text-base font-black text-gray-900 mb-4 flex items-center gap-2">
+                  <Swords className="w-4 h-4 text-red-600" /> Game Progress
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Fan Coins', value: `🥊${(gp.fanCoin ?? 0).toLocaleString()}`, color: 'text-yellow-600' },
+                    { label: 'Total Wins',  value: gp.totalWins  ?? 0, color: 'text-green-600' },
+                    { label: 'Total Losses', value: gp.totalLosses ?? 0, color: 'text-red-600' },
+                    { label: 'Level', value: gp.fighterLevel || 'Rookie', color: 'text-purple-600' },
+                  ].map(s => (
+                    <div key={s.label} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                      <div className={`text-lg font-black ${s.color}`}>{s.value}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-          </div>
+              </motion.div>
+            )}
 
-          {/* Game Stats (if available) */}
-          {profile?.gameProgress && (
-            <div className="bg-white rounded-lg shadow-md p-6 md:col-span-2">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Crown className="w-5 h-5 text-red-600" />
-                Game Progress
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <p className="text-2xl font-bold text-red-600">{profile.gameProgress.level || 0}</p>
-                  <p className="text-sm text-gray-600">Level</p>
+            {/* Membership */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className={`rounded-2xl shadow-lg border p-6 ${profile?.isPremium ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200' : 'bg-white border-gray-100'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-black text-gray-900 flex items-center gap-2">
+                    <Crown className={`w-4 h-4 ${profile?.isPremium ? 'text-yellow-500' : 'text-gray-400'}`} />
+                    {profile?.isPremium ? 'Premium Member' : 'Free Membership'}
+                  </h2>
+                  <p className="text-gray-500 text-xs mt-0.5">Member since {memberSince}</p>
                 </div>
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600">{profile.gameProgress.currentXP || 0}</p>
-                  <p className="text-sm text-gray-600">Total XP</p>
-                </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <p className="text-2xl font-bold text-green-600">{profile.gameProgress.trainingSessions || 0}</p>
-                  <p className="text-sm text-gray-600">Training Sessions</p>
-                </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <p className="text-2xl font-bold text-purple-600">{profile.gameProgress.fightsWon || 0}</p>
-                  <p className="text-sm text-gray-600">Fights Won</p>
-                </div>
+                {!profile?.isPremium && (
+                  <a href="/support"
+                    className="text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black px-4 py-2 rounded-xl hover:opacity-90 transition-opacity">
+                    Upgrade
+                  </a>
+                )}
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            </motion.div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
-

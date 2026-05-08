@@ -1,327 +1,300 @@
-import { useEffect, useState } from "react";
-import { Search, RefreshCw, ExternalLink, Calendar, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, RefreshCw, ExternalLink, Clock, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-const API_URL = "https://ufc-fan-app-backend.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL ||
+  (window.location.hostname === 'localhost'
+    ? 'http://localhost:5000/api'
+    : 'https://ufc-fan-app-backend.onrender.com/api');
 
-// Check if admin token exists in localStorage (set by admin if needed)
-const getAdminToken = () => {
-  try {
-    return localStorage.getItem('adminToken') || null;
-  } catch {
-    return null;
-  }
-};
+const getAdminToken = () => { try { return localStorage.getItem('adminToken') || null; } catch { return null; } };
 
-export default function News() {
-  const [news, setNews] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit] = useState(30);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
-  const [hasAdminToken] = useState(() => getAdminToken() !== null);
+function readTime(text) {
+  if (!text) return '2 min';
+  return `${Math.max(1, Math.ceil(text.split(/\s+/).length / 200))} min`;
+}
 
-  useEffect(() => {
-    fetchNews();
-  }, [page]);
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = (Date.now() - new Date(dateStr)) / 1000;
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
 
-  const fetchNews = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const params = new URLSearchParams({
-        limit: limit.toString(),
-        page: page.toString()
-      });
-      
-      const response = await fetch(`${API_URL}/news?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch news');
-      }
-      
-      const data = await response.json();
-      setNews(data.articles || []);
-      setTotal(data.total || 0);
-      setTotalPages(data.totalPages || 0);
-    } catch (err) {
-      setError("Failed to fetch UFC news. Please try again later.");
-      console.error('News fetch error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+const CATEGORIES = ['All', 'UFC', 'MMA', 'Fighting', 'Boxing'];
 
-  const refreshNews = async () => {
-    const adminToken = getAdminToken();
-    if (!adminToken) {
-      setError("Admin token not found. Refresh is only available to administrators.");
-      return;
-    }
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-2xl shadow-md overflow-hidden animate-pulse border border-gray-100">
+      <div className="h-44 bg-gray-200" />
+      <div className="p-4 space-y-2">
+        <div className="h-3 bg-gray-200 rounded w-1/3" />
+        <div className="h-4 bg-gray-200 rounded" />
+        <div className="h-4 bg-gray-200 rounded w-4/5" />
+      </div>
+    </div>
+  );
+}
 
-    setRefreshing(true);
-    try {
-      const response = await fetch(`${API_URL}/news/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-token': adminToken
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Refresh result:', data);
-        // Refresh the current page
-        await fetchNews();
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to refresh news');
-      }
-    } catch (err) {
-      setError(err.message || "Failed to refresh news. Please try again later.");
-      console.error('Refresh error:', err);
-    } finally {
-      setRefreshing(false);
-    }
-  };
+function ArticleCard({ article, featured = false }) {
+  const src = article.urlToImage || article.image;
+  const [imgOk, setImgOk] = useState(true);
 
-  const filteredNews = news.filter(article => {
-    const matchesSearch = article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         article.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         article.content?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Unknown date';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const calculateReadTime = (text) => {
-    if (!text) return '2 min read';
-    const wordsPerMinute = 200;
-    const words = text.split(/\s+/).length;
-    const minutes = Math.ceil(words / wordsPerMinute);
-    return `${minutes} min read`;
-  };
-
-  // Loading skeleton
-  if (loading && news.length === 0) {
+  if (featured) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">UFC News</h1>
-          <p className="text-gray-600">Latest updates from the world of mixed martial arts</p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white rounded-lg shadow-lg overflow-hidden animate-pulse">
-              <div className="w-full h-48 bg-gray-300"></div>
-              <div className="p-6">
-                <div className="h-4 bg-gray-300 rounded mb-2"></div>
-                <div className="h-4 bg-gray-300 rounded w-3/4 mb-4"></div>
-                <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-5/6"></div>
-              </div>
+      <motion.a
+        href={article.url} target="_blank" rel="noopener noreferrer"
+        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+        className="group block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl hover:border-red-200 transition-all"
+      >
+        <div className="sm:flex h-full">
+          {src && imgOk ? (
+            <div className="sm:w-2/5 h-52 sm:h-auto overflow-hidden flex-shrink-0">
+              <img src={src} alt={article.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={() => setImgOk(false)} />
             </div>
-          ))}
+          ) : (
+            <div className="sm:w-2/5 h-52 sm:h-auto bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center flex-shrink-0">
+              <span className="text-5xl">🥊</span>
+            </div>
+          )}
+          <div className="p-5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
+                <span className="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full">FEATURED</span>
+                <span>{article.sourceName || article.source}</span>
+                <span>·</span>
+                <span>{timeAgo(article.publishedAt)}</span>
+              </div>
+              <h2 className="font-black text-gray-900 text-xl leading-snug line-clamp-3 group-hover:text-red-700 transition-colors">
+                {article.title}
+              </h2>
+              <p className="text-gray-500 text-sm mt-2 line-clamp-2">{article.description}</p>
+            </div>
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                <Clock className="w-3 h-3" /> {readTime(article.content || article.description)}
+              </span>
+              <span className="text-red-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                Read more <ExternalLink className="w-4 h-4" />
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  if (error && news.length === 0) {
-    return (
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-          <p className="font-bold">Error Loading News</p>
-          <p>{error}</p>
-          <button
-            onClick={fetchNews}
-            className="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
+      </motion.a>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">UFC News</h1>
-            <p className="text-gray-600">Latest updates from the world of mixed martial arts</p>
-          </div>
-          {hasAdminToken && (
-            <div className="text-right">
-              <button
-                onClick={refreshNews}
-                disabled={refreshing}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50 flex items-center gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                {refreshing ? 'Refreshing...' : 'Refresh News'}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Error Banner (if error but has news) */}
-      {error && news.length > 0 && (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
-          <p>{error}</p>
-        </div>
-      )}
-
-      {/* Search */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search news..."
-            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="mt-4 flex items-center justify-between">
-          <span className="text-gray-700 font-medium">
-            Showing {filteredNews.length} of {total} articles
-          </span>
-          {totalPages > 1 && (
-            <span className="text-gray-500 text-sm">
-              Page {page} of {totalPages}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* News Grid */}
-      {filteredNews.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No news articles found.</p>
-          <p className="text-gray-400">Try adjusting your search or check back later.</p>
+    <motion.a
+      href={article.url} target="_blank" rel="noopener noreferrer"
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+      className="group bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden hover:shadow-lg hover:border-red-200 transition-all flex flex-col"
+    >
+      {src && imgOk ? (
+        <div className="h-44 overflow-hidden">
+          <img src={src} alt={article.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={() => setImgOk(false)} />
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {filteredNews.map((article, index) => (
-              <article key={article.url || index} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                {article.image && (
-                  <div className="relative">
-                    <img
-                      src={article.image}
-                      alt={article.title}
-                      className="w-full h-48 object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
-
-                <div className="p-6">
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>{formatDate(article.publishedAt)}</span>
-                    {article.source && (
-                      <>
-                        <span>•</span>
-                        <span>{article.source}</span>
-                      </>
-                    )}
-                  </div>
-
-                  <h2 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
-                    {article.title}
-                  </h2>
-
-                  <p className="text-gray-600 mb-4 line-clamp-3">
-                    {article.description || article.content}
-                  </p>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Clock className="h-4 w-4" />
-                      <span>{calculateReadTime(article.content || article.description)}</span>
-                    </div>
-                    
-                    <a
-                      href={article.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
-                    >
-                      Read More
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-4 mt-8">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </button>
-              
-              <span className="text-gray-700">
-                Page {page} of {totalPages}
-              </span>
-              
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Info Notice */}
-      <div className="mt-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
-        <h2 className="text-2xl font-bold mb-4">📰 UFC News Feed</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="font-semibold mb-2">Automated Updates</h3>
-            <p className="text-blue-100">News is automatically synced from NewsAPI and cached in our database for fast loading.</p>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-2">Real-time Content</h3>
-            <p className="text-blue-100">Articles are updated regularly to bring you the latest UFC developments and breaking news.</p>
-          </div>
+        <div className="h-44 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+          <span className="text-4xl opacity-40">🥊</span>
         </div>
+      )}
+      <div className="p-4 flex flex-col flex-1">
+        <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1.5">
+          <span className="font-semibold text-gray-500">{article.sourceName || article.source}</span>
+          <span>·</span>
+          <span>{timeAgo(article.publishedAt)}</span>
+        </div>
+        <h3 className="font-bold text-gray-900 text-sm line-clamp-3 group-hover:text-red-700 transition-colors flex-1">
+          {article.title}
+        </h3>
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-xs text-gray-400 flex items-center gap-1">
+            <Clock className="w-3 h-3" /> {readTime(article.content || article.description)}
+          </span>
+          <span className="text-red-600 text-xs font-bold flex items-center gap-1">
+            Read <ExternalLink className="w-3 h-3" />
+          </span>
+        </div>
+      </div>
+    </motion.a>
+  );
+}
+
+export default function News() {
+  const [news, setNews]           = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState(null);
+  const [search, setSearch]       = useState('');
+  const [category, setCategory]   = useState('All');
+  const [page, setPage]           = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal]         = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const hasAdmin = Boolean(getAdminToken());
+
+  const fetchNews = useCallback(async (p = page) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await fetch(`${API_URL}/news?limit=30&page=${p}`);
+      if (!r.ok) throw new Error('Failed');
+      const data = await r.json();
+      setNews(data.articles || []);
+      setTotal(data.total || 0);
+      setTotalPages(data.totalPages || 0);
+    } catch {
+      setError('Failed to load news. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [page]);
+
+  useEffect(() => { fetchNews(page); }, [page]);
+
+  const handleRefresh = async () => {
+    const token = getAdminToken();
+    if (!token) return;
+    setRefreshing(true);
+    try {
+      await fetch(`${API_URL}/news/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+      });
+      await fetchNews(1);
+    } catch {}
+    setRefreshing(false);
+  };
+
+  const filtered = news.filter(a => {
+    const matchSearch = !search ||
+      a.title?.toLowerCase().includes(search.toLowerCase()) ||
+      a.description?.toLowerCase().includes(search.toLowerCase());
+    const matchCat = category === 'All' ||
+      a.title?.toLowerCase().includes(category.toLowerCase()) ||
+      a.description?.toLowerCase().includes(category.toLowerCase());
+    return matchSearch && matchCat;
+  });
+
+  const [featured, ...rest] = filtered;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white px-4 py-10">
+        <div className="max-w-5xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h1 className="text-4xl font-black tracking-tight">📰 UFC News</h1>
+                <p className="text-gray-400 mt-1 text-sm">Latest from the world of MMA · {total} articles</p>
+              </div>
+              {hasAdmin && (
+                <button onClick={handleRefresh} disabled={refreshing}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-50">
+                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  {refreshing ? 'Refreshing…' : 'Refresh Feed'}
+                </button>
+              )}
+            </div>
+
+            {/* Search */}
+            <div className="mt-6 relative max-w-xl">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text" placeholder="Search articles…"
+                value={search} onChange={e => setSearch(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 text-white placeholder-gray-400 rounded-xl py-2.5 pl-11 pr-10 text-sm focus:outline-none focus:border-red-500 focus:bg-white/15 transition-all"
+              />
+              {search && (
+                <button onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Category pills */}
+            <div className="flex gap-2 mt-4 flex-wrap">
+              {CATEGORIES.map(c => (
+                <button key={c} onClick={() => setCategory(c)}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all ${
+                    category === c
+                      ? 'bg-red-600 text-white'
+                      : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                  }`}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center justify-between">
+            <span className="text-sm font-semibold">{error}</span>
+            <button onClick={() => fetchNews(page)} className="text-red-600 font-bold text-sm hover:underline">Retry</button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="space-y-6">
+            <div className="h-64 bg-white rounded-2xl animate-pulse border border-gray-100" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {Array(6).fill(0).map((_, i) => <SkeletonCard key={i} />)}
+            </div>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20 text-gray-400">
+            <div className="text-5xl mb-3">📭</div>
+            <p className="font-semibold text-lg">No articles found</p>
+            <p className="text-sm mt-1">Try a different search or category</p>
+            <button onClick={() => { setSearch(''); setCategory('All'); }}
+              className="mt-4 text-sm text-red-600 font-semibold hover:underline">Clear filters</button>
+          </div>
+        ) : (
+          <>
+            {/* Featured */}
+            {featured && !search && (
+              <div className="mb-6">
+                <ArticleCard article={featured} featured />
+              </div>
+            )}
+
+            {/* Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <AnimatePresence>
+                {(search ? filtered : rest).map((a, i) => (
+                  <ArticleCard key={a.url || i} article={a} />
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 mt-10">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm">
+                  <ChevronLeft className="w-4 h-4" /> Prev
+                </button>
+                <span className="text-sm text-gray-600 font-medium">
+                  {page} / {totalPages}
+                </span>
+                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm">
+                  Next <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
