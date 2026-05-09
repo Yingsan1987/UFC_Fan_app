@@ -472,6 +472,92 @@ router.post('/reward', requireAuth, async (req, res) => {
   }
 });
 
+// ── Train a specific stat (POST /api/train-to-ufc/train-stat) ────────────────
+// Consumes 1 energy, improves stat by 1-3 pts, awards XP. Resets energy daily.
+router.post('/train-stat', requireAuth, async (req, res) => {
+  try {
+    const firebaseUid = req.user.uid;
+    const { stat } = req.body; // 'striking' | 'speed' | 'stamina' | 'grappling' | 'luck'
+
+    const validStats = ['striking', 'speed', 'stamina', 'grappling', 'luck'];
+    if (!validStats.includes(stat)) {
+      return res.status(400).json({ message: 'Invalid stat. Must be one of: ' + validStats.join(', ') });
+    }
+
+    const avatar = await TrainToUFCAvatar.findOne({ firebaseUid });
+    if (!avatar) {
+      return res.status(404).json({ message: 'Avatar not found. Create one first.' });
+    }
+
+    // Reset energy if new calendar day
+    const now = new Date();
+    const lastReset = avatar.lastEnergyReset ? new Date(avatar.lastEnergyReset) : new Date(0);
+    const isNewDay =
+      now.getFullYear() !== lastReset.getFullYear() ||
+      now.getMonth()    !== lastReset.getMonth()    ||
+      now.getDate()     !== lastReset.getDate();
+
+    if (isNewDay) {
+      avatar.energy = 3;
+      avatar.lastEnergyReset = now;
+    }
+
+    // Weekly reset (Monday)
+    const lastWeekReset = avatar.lastWeeklyReset ? new Date(avatar.lastWeeklyReset) : new Date(0);
+    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    if (dayOfWeek === 1 && now - lastWeekReset > weekMs) {
+      avatar.weeklyTrainSessions = 0;
+      avatar.lastWeeklyReset = now;
+    }
+
+    if (avatar.energy <= 0) {
+      return res.status(400).json({
+        message: '⚡ No energy left! Come back tomorrow for 3 more sessions.',
+        energy: 0,
+        nextReset: 'Tomorrow at midnight'
+      });
+    }
+
+    // Calculate stat gain (1-3 random)
+    const gain = Math.floor(Math.random() * 3) + 1;
+    const xpGained = gain * 5;
+
+    // Cap stat at 100
+    const currentStat = avatar.stats[stat] || 50;
+    const newStatValue = Math.min(100, currentStat + gain);
+    avatar.stats[stat] = newStatValue;
+
+    avatar.energy -= 1;
+    avatar.xp += xpGained;
+    avatar.trainingSessions += 1;
+    avatar.totalTrainingPoints += gain;
+    avatar.weeklyTrainSessions = (avatar.weeklyTrainSessions || 0) + 1;
+
+    // Level up (every 100 XP)
+    const newLevel = Math.floor(avatar.xp / 100) + 1;
+    if (newLevel > avatar.level) avatar.level = newLevel;
+
+    await avatar.save();
+
+    res.json({
+      message: `+${gain} ${stat.toUpperCase()} gained! +${xpGained} XP`,
+      stat,
+      gain,
+      newValue: newStatValue,
+      xpGained,
+      energy: avatar.energy,
+      xp: avatar.xp,
+      level: avatar.level,
+      trainingSessions: avatar.trainingSessions,
+      weeklyTrainSessions: avatar.weeklyTrainSessions,
+    });
+  } catch (error) {
+    console.error('Error training stat:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Place fighter on specific train spot
 router.post('/place-fighter', requireAuth, async (req, res) => {
   try {

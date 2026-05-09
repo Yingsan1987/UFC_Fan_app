@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const FantasyEntry    = require('../models/FantasyEntry');
 const UpcomingEvent   = require('../models/UpcomingEvent');
+const UFCEvent        = require('../models/UFCEvent');
 const GameProgress    = require('../models/GameProgress');
 const FanCoinTransaction = require('../models/FanCoinTransaction');
 const { requireAuth, optionalAuth } = require('../middleware/authMiddleware');
@@ -28,37 +29,85 @@ function coinsFromPoints(points, totalPicks, correctPicks) {
 }
 
 // ── GET /api/fantasy/contests ─────────────────────────────────────────────────
-// Returns upcoming events grouped as fantasy contests, with completed-fight counts
+// Returns upcoming events as fantasy contests, merged from UpcomingEvent + UFCEvent collections
 router.get('/contests', async (req, res) => {
   try {
-    const fights = await UpcomingEvent.find().lean();
-
     const eventMap = {};
+
+    // ── Source 1: ufc_upcoming_events collection ──
+    const fights = await UpcomingEvent.find().lean();
     fights.forEach(fight => {
       const key = fight.event_title;
       if (!key) return;
 
       if (!eventMap[key]) {
         eventMap[key] = {
-          eventName:      key,
-          eventDate:      fight.event_date,
-          location:       fight.event_location,
-          fights:         [],
-          totalFights:    0,
+          eventName:       key,
+          eventDate:       fight.event_date,
+          location:        fight.event_location,
+          fights:          [],
+          totalFights:     0,
           completedFights: 0,
         };
       }
 
       eventMap[key].fights.push({
-        fighter1:   fight.red_fighter?.name  || '',
-        fighter2:   fight.blue_fighter?.name || '',
-        weightClass: fight.weight_class || '',
-        status:     fight.status  || 'upcoming',
-        winner:     fight.winner  || null,
-        method:     fight.method  || null,
+        fighter1:    fight.red_fighter?.name  || '',
+        fighter2:    fight.blue_fighter?.name || '',
+        weightClass: fight.weight_class       || '',
+        status:      fight.status             || 'upcoming',
+        winner:      fight.winner             || null,
+        method:      fight.method             || null,
       });
       eventMap[key].totalFights++;
       if (fight.status === 'completed') eventMap[key].completedFights++;
+    });
+
+    // ── Source 2: ufc_events collection (UFCEvent model) ──
+    // Covers events stored via the admin event-entry flow not yet in ufc_upcoming_events
+    const ufcEvents = await UFCEvent.find().lean();
+    ufcEvents.forEach(event => {
+      const key = event.eventName;
+      if (!key) return;
+      if (eventMap[key]) return; // already populated from Source 1
+
+      const cardSections = [
+        ...(event.fightCard?.mainEvent           || []),
+        ...(event.fightCard?.coMainEvent         || []),
+        ...(event.fightCard?.mainCard            || []),
+        ...(event.fightCard?.preliminaryCard     || []),
+        ...(event.fightCard?.earlyPreliminaryCard|| []),
+      ];
+
+      if (cardSections.length === 0) return;
+
+      const mapped = cardSections
+        .filter(f => f.fighter1 || f.fighter2)
+        .map(f => ({
+          fighter1:    f.fighter1 || '',
+          fighter2:    f.fighter2 || '',
+          weightClass: f.weightClass || '',
+          status:      f.winner ? 'completed' : (event.status || 'upcoming'),
+          winner:      f.winner  || null,
+          method:      f.method  || null,
+        }));
+
+      if (mapped.length === 0) return;
+
+      const dateStr = event.eventDate
+        ? (event.eventDate instanceof Date
+            ? event.eventDate.toISOString().split('T')[0]
+            : String(event.eventDate))
+        : '';
+
+      eventMap[key] = {
+        eventName:       key,
+        eventDate:       dateStr,
+        location:        event.location || '',
+        fights:          mapped,
+        totalFights:     mapped.length,
+        completedFights: mapped.filter(f => f.status === 'completed').length,
+      };
     });
 
     const events = Object.values(eventMap)

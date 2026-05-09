@@ -99,6 +99,28 @@ const trainToUFCAvatarSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+
+  // Daily Energy System (3 training sessions per day)
+  energy: {
+    type: Number,
+    default: 3,
+    min: 0,
+    max: 3
+  },
+  lastEnergyReset: {
+    type: Date,
+    default: Date.now
+  },
+
+  // Weekly train session tracking
+  weeklyTrainSessions: {
+    type: Number,
+    default: 0
+  },
+  lastWeeklyReset: {
+    type: Date,
+    default: Date.now
+  },
   
   // Train Status
   onTrain: {
