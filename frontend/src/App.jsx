@@ -333,6 +333,7 @@ function App() {
             <Route path="/prediction" element={<Prediction />} />
             <Route path="/game" element={<GameSelection />} />
             <Route path="/game/road-to-ufc" element={<RoadToUFC />} />
+            <Route path="/game/road-to-ufc/play" element={<Game />} />
             <Route path="/game/train-to-ufc" element={<TrainToUFC />} />
             <Route path="/game/poker" element={<PokerGame />} />
             <Route path="/game/fantasy" element={<FantasyGame />} />
