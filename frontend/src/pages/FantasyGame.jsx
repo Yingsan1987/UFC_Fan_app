@@ -9,6 +9,15 @@ const API_URL = import.meta.env.VITE_API_URL ||
     ? 'http://localhost:5000/api'
     : 'https://ufc-fan-app-backend.onrender.com/api');
 
+const ADMIN_EMAIL = 'yingsan1987@gmail.com';
+
+const WEIGHT_CLASSES = [
+  'Strawweight', 'Flyweight', 'Bantamweight', 'Featherweight',
+  'Lightweight', 'Welterweight', 'Middleweight', 'Light Heavyweight', 'Heavyweight',
+  'Women\'s Strawweight', 'Women\'s Flyweight', 'Women\'s Bantamweight', 'Women\'s Featherweight',
+  'Catchweight',
+];
+
 // ── Scoring reference ─────────────────────────────────────────────────────────
 const SCORING = [
   { label: 'Correct Pick (Decision)',   pts: '+10 pts' },
@@ -384,6 +393,136 @@ function DraftView({ event, onSubmit, onBack, submitting }) {
   );
 }
 
+// ── Admin Panel ───────────────────────────────────────────────────────────────
+function AdminPanel({ currentUser, onEventCreated }) {
+  const emptyFight = { redFighter: '', blueFighter: '', weightClass: 'Lightweight' };
+  const [eventTitle,    setEventTitle]    = useState('');
+  const [eventDate,     setEventDate]     = useState(new Date().toISOString().split('T')[0]);
+  const [eventLocation, setEventLocation] = useState('');
+  const [fights,        setFights]        = useState([{ ...emptyFight }, { ...emptyFight }, { ...emptyFight }]);
+  const [saving,        setSaving]        = useState(false);
+  const [msg,           setMsg]           = useState('');
+
+  const updateFight = (i, field, val) =>
+    setFights(prev => prev.map((f, idx) => idx === i ? { ...f, [field]: val } : f));
+
+  const addFight    = () => setFights(prev => [...prev, { ...emptyFight }]);
+  const removeFight = (i) => setFights(prev => prev.filter((_, idx) => idx !== i));
+
+  const save = async () => {
+    if (!eventTitle.trim()) { setMsg('⚠️ Event title is required'); return; }
+    const valid = fights.filter(f => f.redFighter.trim() && f.blueFighter.trim());
+    if (valid.length === 0) { setMsg('⚠️ Add at least one fight with both fighters'); return; }
+    setSaving(true);
+    setMsg('');
+    try {
+      const token = await currentUser.getIdToken();
+      const res = await axios.post(`${API_URL}/upcoming-events/admin-add`, {
+        eventTitle: eventTitle.trim(),
+        eventDate,
+        eventLocation: eventLocation.trim(),
+        fights: valid,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      setMsg(`✅ ${res.data.message}`);
+      onEventCreated();
+    } catch (err) {
+      setMsg(`❌ ${err.response?.data?.error || 'Failed to save'}`);
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Event info */}
+      <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+        <h3 className="text-white font-black text-sm mb-3">🛠 Add / Replace Event Fight Card</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="text-gray-400 text-xs font-bold block mb-1">Event Title</label>
+            <input value={eventTitle} onChange={e => setEventTitle(e.target.value)}
+              placeholder="e.g. UFC 328" maxLength={80}
+              className="w-full bg-gray-700 text-white text-sm px-3 py-2 rounded-lg border border-gray-600 focus:border-red-500 outline-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-gray-400 text-xs font-bold block mb-1">Date</label>
+              <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)}
+                className="w-full bg-gray-700 text-white text-sm px-3 py-2 rounded-lg border border-gray-600 focus:border-red-500 outline-none" />
+            </div>
+            <div>
+              <label className="text-gray-400 text-xs font-bold block mb-1">Location</label>
+              <input value={eventLocation} onChange={e => setEventLocation(e.target.value)}
+                placeholder="e.g. Las Vegas, NV"
+                className="w-full bg-gray-700 text-white text-sm px-3 py-2 rounded-lg border border-gray-600 focus:border-red-500 outline-none" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Fights */}
+      <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-white font-black text-sm">Fight Card ({fights.length} fights)</h3>
+          <button onClick={addFight}
+            className="text-xs bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg font-bold transition-colors">
+            + Add Fight
+          </button>
+        </div>
+        <div className="space-y-3">
+          {fights.map((f, i) => (
+            <div key={i} className="bg-gray-900 rounded-xl p-3 border border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-400 text-xs font-bold">Fight #{i + 1}{i === 0 ? ' — Main Event' : i === 1 ? ' — Co-Main' : ''}</span>
+                {fights.length > 1 && (
+                  <button onClick={() => removeFight(i)} className="text-gray-600 hover:text-red-400 text-xs">✕</button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                  <label className="text-red-400 text-xs font-bold block mb-1">🔴 Red Corner</label>
+                  <input value={f.redFighter} onChange={e => updateFight(i, 'redFighter', e.target.value)}
+                    placeholder="Fighter name"
+                    className="w-full bg-gray-800 text-white text-xs px-2.5 py-1.5 rounded-lg border border-gray-600 focus:border-red-500 outline-none" />
+                </div>
+                <div>
+                  <label className="text-blue-400 text-xs font-bold block mb-1">🔵 Blue Corner</label>
+                  <input value={f.blueFighter} onChange={e => updateFight(i, 'blueFighter', e.target.value)}
+                    placeholder="Fighter name"
+                    className="w-full bg-gray-800 text-white text-xs px-2.5 py-1.5 rounded-lg border border-gray-600 focus:border-blue-500 outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs font-bold block mb-1">Weight Class</label>
+                <select value={f.weightClass} onChange={e => updateFight(i, 'weightClass', e.target.value)}
+                  className="w-full bg-gray-800 text-white text-xs px-2.5 py-1.5 rounded-lg border border-gray-600 focus:border-red-500 outline-none">
+                  {WEIGHT_CLASSES.map(wc => <option key={wc} value={wc}>{wc}</option>)}
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {msg && (
+        <div className={`text-sm font-semibold px-4 py-3 rounded-xl ${
+          msg.startsWith('✅') ? 'bg-green-900/50 border border-green-700 text-green-300' :
+          'bg-red-900/50 border border-red-700 text-red-300'
+        }`}>
+          {msg}
+        </div>
+      )}
+
+      <motion.button whileTap={{ scale: 0.97 }} onClick={save} disabled={saving}
+        className="w-full py-3 rounded-xl font-black text-base bg-gradient-to-r from-red-600 to-red-800 text-white hover:from-red-700 hover:to-red-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg">
+        {saving ? 'Saving…' : '💾 Save Fight Card'}
+      </motion.button>
+      <p className="text-gray-500 text-xs text-center">
+        Saving replaces any existing fights for this event title.
+      </p>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function FantasyGame() {
   const { currentUser } = useAuth();
@@ -507,6 +646,7 @@ export default function FantasyGame() {
               { id: 'contests', label: '🥊 Contests' },
               { id: 'entries',  label: '📋 My Picks' },
               { id: 'how',      label: '❓ How to Play' },
+              ...(currentUser?.email === ADMIN_EMAIL ? [{ id: 'admin', label: '🛠 Admin' }] : []),
             ].map(t => (
               <button key={t.id} onClick={() => handleTabChange(t.id)}
                 className={`flex-1 py-2.5 text-sm font-bold transition-colors ${
@@ -585,6 +725,21 @@ export default function FantasyGame() {
 
           {/* ── How to play tab ── */}
           {tab === 'how' && <HowToPlay />}
+
+          {/* ── Admin tab ── */}
+          {tab === 'admin' && currentUser?.email === ADMIN_EMAIL && (
+            <div className="bg-gray-950 rounded-2xl p-4 border border-gray-700">
+              <AdminPanel
+                currentUser={currentUser}
+                onEventCreated={() => {
+                  // Refresh contests after adding an event
+                  axios.get(`${API_URL}/fantasy/contests`)
+                    .then(r => setContests(r.data))
+                    .catch(() => {});
+                }}
+              />
+            </div>
+          )}
         </>
       )}
     </div>
