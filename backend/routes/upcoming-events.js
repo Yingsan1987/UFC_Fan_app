@@ -3,6 +3,54 @@ const router = express.Router();
 const UpcomingEvent = require('../models/UpcomingEvent');
 const FighterImages = require('../models/FighterImages');
 const { createFuzzyFinder } = require('../utils/nameMatcher');
+const { requireAuth } = require('../middleware/authMiddleware');
+
+const ADMIN_EMAIL = 'yingsan1987@gmail.com';
+
+// ── POST /api/upcoming-events/admin-add ───────────────────────────────────────
+// Admin-only: upsert a full fight card for an event into ufc_upcoming_events
+router.post('/admin-add', requireAuth, async (req, res) => {
+  try {
+    if (req.user?.email !== ADMIN_EMAIL) {
+      return res.status(403).json({ error: 'Admin access only' });
+    }
+
+    const { eventTitle, eventDate, eventLocation, fights } = req.body;
+
+    if (!eventTitle || !Array.isArray(fights) || fights.length === 0) {
+      return res.status(400).json({ error: 'eventTitle and at least one fight are required' });
+    }
+
+    // Remove existing entries for this event so we can replace cleanly
+    await UpcomingEvent.deleteMany({ event_title: eventTitle });
+
+    const docs = fights
+      .filter(f => f.redFighter && f.blueFighter)
+      .map(f => ({
+        event_title:    eventTitle,
+        event_date:     eventDate  || '',
+        event_location: eventLocation || '',
+        weight_class:   f.weightClass || '',
+        red_fighter:    { name: f.redFighter.trim()  },
+        blue_fighter:   { name: f.blueFighter.trim() },
+        status: 'upcoming',
+        winner: null,
+        result: null,
+        method: null,
+      }));
+
+    if (docs.length === 0) {
+      return res.status(400).json({ error: 'No valid fights (both fighters required)' });
+    }
+
+    await UpcomingEvent.insertMany(docs);
+
+    res.json({ message: `${docs.length} fights created for ${eventTitle}`, count: docs.length });
+  } catch (err) {
+    console.error('Admin add event error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Get upcoming events with fighter images
 router.get('/', async (req, res) => {
