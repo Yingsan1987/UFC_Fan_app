@@ -24,7 +24,7 @@ const DAILY_TIPS = [
   'Picking a fighter who fights frequently means faster progression.',
   'Champion wins earn 5 Fan Coins each — the best return in the game.',
   'Fan Coins accumulate across careers — every retired champion adds to your total.',
-  'Check the Events page the day after a UFC event to see your fighter's result.',
+  "Check the Events page the day after a UFC event to see your fighter's result.",
   "A fighter on a winning streak is the best choice for Main Card & Champion stages.",
 ];
 
