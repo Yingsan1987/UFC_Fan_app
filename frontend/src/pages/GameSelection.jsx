@@ -56,6 +56,19 @@ const GAMES = [
     features: ['Real event cards', 'KO = more points', 'Perfect card bonus', 'Fan Coin rewards'],
     route: '/game/fantasy',
   },
+  {
+    id: 'slots',
+    name: 'UFC Slots',
+    emoji: '🎰',
+    tagline: 'Spin the fighter reels — jackpot awaits!',
+    description: 'A 5×4 slot machine packed with UFC fighters. Exchange Fan Coins for slot coins and spin for big wins — Line Jackpots, Scatter Hits, Rivalry Bonuses, Diagonal Strikes, and a Grand Jackpot worth 1000× your bet!',
+    color: 'from-pink-600 to-red-900',
+    bg: 'bg-pink-50',
+    border: 'border-pink-400',
+    badge: 'bg-pink-100 text-pink-800',
+    features: ['14 win types', 'Bonus free spins', 'Wild fighters', 'Grand Jackpot 1000×'],
+    route: '/game/slots',
+  },
 ];
 
 export default function GameSelection() {

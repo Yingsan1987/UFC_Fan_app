@@ -21,6 +21,7 @@ import RoadToUFC from './pages/RoadToUFC';
 import TrainToUFC from './pages/TrainToUFC';
 import PokerGame from './pages/PokerGame';
 import FantasyGame from './pages/FantasyGame';
+import UFCSlots from './pages/UFCSlots';
 import Profile from './pages/Profile';
 import AuthModal from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
@@ -337,6 +338,7 @@ function App() {
             <Route path="/game/train-to-ufc" element={<TrainToUFC />} />
             <Route path="/game/poker" element={<PokerGame />} />
             <Route path="/game/fantasy" element={<FantasyGame />} />
+            <Route path="/game/slots" element={<UFCSlots />} />
             <Route path="/news" element={<News />} />
             <Route path="/live-chat" element={
               <LiveChat 
