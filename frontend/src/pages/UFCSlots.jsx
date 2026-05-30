@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Info, X, Shield } from 'lucide-react';
+import { ArrowLeft, Info, X, Shield, Volume2, VolumeX } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL ||
@@ -44,24 +44,17 @@ function wr() {
 function rndRow() { return Array.from({ length: COLS }, wr); }
 function rndGrid() { return Array.from({ length: ROWS }, rndRow); }
 function diffFrom(id) { let d; do { d = wr(); } while (d === id); return d; }
-function mostFreq(arr) {
-  const f = {}; arr.forEach(v => { f[v] = (f[v] || 0) + 1; });
-  return Number(Object.entries(f).sort((a, b) => b[1] - a[1])[0][0]);
-}
 
 // ─── Image map: fighter.id → imageUrl ───────────────────────────
 function buildImageMap(apiData) {
   const map = {};
   const src = (apiData || []).filter(f => f?.imageUrl);
   FIGHTERS.forEach(sf => {
-    // 1. exact full name
     let hit = src.find(f => f.name?.toLowerCase() === sf.name.toLowerCase());
     if (hit) { map[sf.id] = hit.imageUrl; return; }
-    // 2. last name
     const last = sf.name.split(' ').pop().toLowerCase();
     hit = src.find(f => f.name?.toLowerCase().includes(last));
     if (hit) { map[sf.id] = hit.imageUrl; return; }
-    // 3. any significant word
     const words = sf.name.toLowerCase().split(' ').filter(w => w.length > 3);
     hit = src.find(f => words.some(w => f.name?.toLowerCase().includes(w)));
     if (hit) map[sf.id] = hit.imageUrl;
@@ -70,14 +63,263 @@ function buildImageMap(apiData) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SOUND ENGINE  — pure Web Audio API, no external files
+// ═══════════════════════════════════════════════════════════════
+function useSlotSounds() {
+  const ctxRef    = useRef(null);
+  const masterRef = useRef(null);
+  const musicRef  = useRef(null);
+  const musicStarted = useRef(false);
+  const [muted, setMuted] = useState(false);
+  const mutedRef  = useRef(false);
+
+  const getCtx = () => {
+    if (!ctxRef.current) {
+      ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      masterRef.current = ctxRef.current.createGain();
+      masterRef.current.gain.value = 1;
+      masterRef.current.connect(ctxRef.current.destination);
+    }
+    if (ctxRef.current.state === 'suspended') ctxRef.current.resume();
+    return ctxRef.current;
+  };
+
+  const toggleMute = () => {
+    const next = !mutedRef.current;
+    mutedRef.current = next;
+    setMuted(next);
+    if (masterRef.current && ctxRef.current) {
+      masterRef.current.gain.setTargetAtTime(next ? 0 : 1, ctxRef.current.currentTime, 0.05);
+    }
+  };
+
+  // ── Low-level primitives ─────────────────────────────────────
+  const tone = (freq, dur, type = 'sine', vol = 0.3, start = null) => {
+    try {
+      const ctx = getCtx(); const t = start ?? ctx.currentTime;
+      const osc = ctx.createOscillator(); const g = ctx.createGain();
+      osc.type = type; osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(g); g.connect(masterRef.current);
+      osc.start(t); osc.stop(t + dur + 0.02);
+    } catch {}
+  };
+
+  const noiseBurst = (dur, vol = 0.2, loFreq = 200, hiFreq = 4000, start = null) => {
+    try {
+      const ctx = getCtx(); const t = start ?? ctx.currentTime;
+      const sr = ctx.sampleRate;
+      const buf = ctx.createBuffer(1, Math.ceil(sr * dur), sr);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const flt = ctx.createBiquadFilter();
+      flt.type = 'bandpass'; flt.frequency.value = (loFreq + hiFreq) / 2;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(flt); flt.connect(g); g.connect(masterRef.current);
+      src.start(t);
+    } catch {}
+  };
+
+  // ── Sound effects ────────────────────────────────────────────
+
+  const spinStart = () => {
+    noiseBurst(0.35, 0.14, 300, 5000);
+    tone(75, 0.18, 'sine', 0.18);
+  };
+
+  const colStop = (col) => {
+    const freqs = [100, 88, 108, 94, 104];
+    tone(freqs[col], 0.13, 'sine', 0.38);
+    noiseBurst(0.04, 0.22, 150, 700);
+  };
+
+  const nearMissRise = () => {
+    try {
+      const ctx = getCtx();
+      const osc = ctx.createOscillator(); const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(260, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(560, ctx.currentTime + 0.9);
+      g.gain.setValueAtTime(0.1, ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.15);
+      osc.connect(g); g.connect(masterRef.current);
+      osc.start(); osc.stop(ctx.currentTime + 1.2);
+    } catch {}
+  };
+
+  const heartbreak = () => {
+    try {
+      const ctx = getCtx();
+      [[370, 0], [270, 0.14], [190, 0.28], [130, 0.42]].forEach(([f, dt]) => {
+        tone(f, 0.22, 'sawtooth', 0.11, ctx.currentTime + dt);
+      });
+    } catch {}
+  };
+
+  const smallWin = () => {
+    try {
+      const ctx = getCtx();
+      [[523, 0], [659, 0.1], [784, 0.2]].forEach(([f, dt]) => tone(f, 0.3, 'sine', 0.22, ctx.currentTime + dt));
+      noiseBurst(0.08, 0.12, 600, 2000, ctx.currentTime + 0.02);
+    } catch {}
+  };
+
+  const bigWin = () => {
+    try {
+      const ctx = getCtx();
+      [[523,0],[659,0.09],[784,0.18],[1047,0.3],[1319,0.5]].forEach(([f, dt]) => tone(f, 0.42, 'sine', 0.28, ctx.currentTime + dt));
+      for (let i = 0; i < 5; i++) noiseBurst(0.06, 0.15, 600, 2500, ctx.currentTime + i * 0.1);
+    } catch {}
+  };
+
+  const jackpotSound = () => {
+    try {
+      const ctx = getCtx();
+      [[523,0],[659,0.09],[784,0.18],[1047,0.3],[784,0.5],[1047,0.62],[1319,0.76],[1047,0.9],[1319,1.06],[1568,1.22]]
+        .forEach(([f, dt]) => tone(f, 0.48, 'sine', 0.32, ctx.currentTime + dt));
+      for (let i = 0; i < 12; i++) noiseBurst(0.06, 0.18, 900, 3500, ctx.currentTime + i * 0.11);
+    } catch {}
+  };
+
+  const megaWin = () => {
+    try {
+      const ctx = getCtx();
+      [[392,0],[523,0.08],[659,0.16],[784,0.25],[1047,0.38],[1319,0.58]].forEach(([f,dt]) => tone(f, 0.45, 'sine', 0.3, ctx.currentTime + dt));
+      for (let i = 0; i < 8; i++) noiseBurst(0.07, 0.16, 700, 3000, ctx.currentTime + i * 0.1);
+    } catch {}
+  };
+
+  const bonusTrigger = () => {
+    try {
+      const ctx = getCtx();
+      [392, 494, 587, 740, 988, 1175].forEach((f, i) => tone(f, 0.36, 'triangle', 0.26, ctx.currentTime + i * 0.07));
+      noiseBurst(0.12, 0.1, 400, 2000, ctx.currentTime);
+    } catch {}
+  };
+
+  const coinTick = () => {
+    tone(1100 + Math.random() * 400, 0.045, 'sine', 0.09);
+  };
+
+  const claimChime = () => {
+    try {
+      const ctx = getCtx();
+      [[784,0],[988,0.1],[1175,0.2],[1568,0.35]].forEach(([f,dt]) => tone(f, 0.5, 'sine', 0.28, ctx.currentTime + dt));
+    } catch {}
+  };
+
+  // ── Background music (casino beat) ──────────────────────────
+  const startMusic = () => {
+    if (musicStarted.current) return;
+    musicStarted.current = true;
+    const ctx = getCtx();
+    const bpm = 118;
+    const beat = 60 / bpm;        // ~0.508s per beat
+    const eighth = beat / 2;      // ~0.254s per 8th note
+    let next = ctx.currentTime + 0.05;
+    let step = 0;
+
+    // 16-step pattern (2 bars of 8th notes)
+    const kicks   = new Set([0, 8]);
+    const snares  = new Set([4, 12]);
+    const hihats  = new Set([0,2,4,6,8,10,12,14]);
+    const bassMap = { 0: 65, 4: 49, 8: 65, 12: 43 }; // C2, G1, C2, F1
+
+    const schedStep = (t, s) => {
+      const ss = s % 16;
+      try {
+        if (kicks.has(ss)) {
+          const osc = ctx.createOscillator(); const g = ctx.createGain();
+          osc.frequency.setValueAtTime(110, t);
+          osc.frequency.exponentialRampToValueAtTime(38, t + 0.12);
+          g.gain.setValueAtTime(0.55, t);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+          osc.connect(g); g.connect(masterRef.current);
+          osc.start(t); osc.stop(t + 0.22);
+        }
+        if (snares.has(ss)) {
+          const sr = ctx.sampleRate;
+          const buf = ctx.createBuffer(1, Math.ceil(sr * 0.14), sr);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+          const src = ctx.createBufferSource(); src.buffer = buf;
+          const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1900; f.Q.value = 0.8;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+          src.connect(f); f.connect(g); g.connect(masterRef.current); src.start(t);
+        }
+        if (hihats.has(ss)) {
+          const sr = ctx.sampleRate;
+          const buf = ctx.createBuffer(1, Math.ceil(sr * 0.035), sr);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+          const src = ctx.createBufferSource(); src.buffer = buf;
+          const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 9000;
+          const g = ctx.createGain();
+          const vol = ss % 4 === 0 ? 0.07 : 0.035;
+          g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
+          src.connect(f); f.connect(g); g.connect(masterRef.current); src.start(t);
+        }
+        if (bassMap[ss] !== undefined) {
+          const osc = ctx.createOscillator(); const g = ctx.createGain();
+          osc.type = 'sine'; osc.frequency.value = bassMap[ss];
+          g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.0001, t + beat * 1.6);
+          osc.connect(g); g.connect(masterRef.current);
+          osc.start(t); osc.stop(t + beat * 1.7);
+        }
+        // Subtle melodic blip every 4 steps
+        if (ss === 2 || ss === 6 || ss === 10 || ss === 14) {
+          const melFreqs = [784, 659, 880, 740];
+          const idx = Math.floor(ss / 4);
+          tone(melFreqs[idx], 0.12, 'triangle', 0.04, t);
+        }
+      } catch {}
+    };
+
+    const loop = () => {
+      const c = ctxRef.current;
+      if (!c) return;
+      while (next < c.currentTime + 0.28) {
+        schedStep(next, step);
+        next += eighth;
+        step++;
+      }
+      musicRef.current = setTimeout(loop, 80);
+    };
+    loop();
+  };
+
+  const stopMusic = () => {
+    clearTimeout(musicRef.current);
+    musicStarted.current = false;
+  };
+
+  useEffect(() => {
+    return () => {
+      stopMusic();
+      try { ctxRef.current?.close(); } catch {}
+    };
+  }, []);
+
+  return {
+    spinStart, colStop, nearMissRise, heartbreak,
+    smallWin, bigWin, megaWin, jackpotSound,
+    bonusTrigger, coinTick, claimChime,
+    startMusic, stopMusic, muted, toggleMute,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
 // OUTCOME ENGINE  — controls house edge (~79% RTP)
-// Win rates: jackpot 0.03% | megawin 0.3% | bigwin 3% |
-//            smallwin 18% | nearmiss 22% | loss 56.67%
 // ═══════════════════════════════════════════════════════════════
 function determineOutcome(isBonusSpin = false) {
   const r = Math.random();
   if (isBonusSpin) {
-    // Bonus spins: ~48% win rate (exciting but not too generous)
     if (r < 0.001)  return 'jackpot';
     if (r < 0.01)   return 'megawin';
     if (r < 0.08)   return 'bigwin';
@@ -95,72 +337,47 @@ function determineOutcome(isBonusSpin = false) {
 
 function generateGrid(outcome) {
   let g = rndGrid();
-
   if (outcome === 'loss') {
-    // Pure random; strip any accidental wins
     for (let attempt = 0; attempt < 6; attempt++) {
-      g = rndGrid();
-      if (!hasAnyWin(g)) break;
+      g = rndGrid(); if (!hasAnyWin(g)) break;
     }
     return { grid: g, nearMissRow: -1 };
   }
-
   if (outcome === 'nearmiss') {
-    // Pattern on one row: F F X F F  (4 visible matches, no 3-consecutive → no win)
-    // The middle column (2) stops LAST in animation → maximum heartbreak
-    const row = Math.floor(Math.random() * ROWS);
-    const f   = wr();
+    const row = Math.floor(Math.random() * ROWS); const f = wr();
     g = rndGrid();
-    g[row][0] = f; g[row][1] = f;
-    g[row][2] = diffFrom(f);          // heartbreaker cell
-    g[row][3] = f; g[row][4] = f;
+    g[row][0] = f; g[row][1] = f; g[row][2] = diffFrom(f); g[row][3] = f; g[row][4] = f;
     return { grid: g, nearMissRow: row };
   }
-
   if (outcome === 'smallwin') {
-    // Guarantee one 3-in-a-row on one row
-    const row = Math.floor(Math.random() * ROWS);
-    const f   = wr();
-    g = rndGrid();
+    const row = Math.floor(Math.random() * ROWS); const f = wr(); g = rndGrid();
     g[row][0] = f; g[row][1] = f; g[row][2] = f;
     g[row][3] = diffFrom(f); g[row][4] = diffFrom(f);
     return { grid: g, nearMissRow: -1 };
   }
-
   if (outcome === 'bigwin') {
-    // Guarantee 4-in-a-row on a row (and a near-miss feel on last col)
     const row = Math.floor(Math.random() * ROWS);
-    const f   = FIGHTERS[Math.random() < 0.5 ? 3 : wr()].id;
-    g = rndGrid();
-    for (let c = 0; c < 4; c++) g[row][c] = f;
-    g[row][4] = diffFrom(f);          // one short of 5 — near-miss feel
+    const f = FIGHTERS[Math.random() < 0.5 ? 3 : wr()].id; g = rndGrid();
+    for (let c = 0; c < 4; c++) g[row][c] = f; g[row][4] = diffFrom(f);
     return { grid: g, nearMissRow: -1 };
   }
-
   if (outcome === 'megawin') {
-    // Full row of same fighter
     const row = Math.floor(Math.random() * ROWS);
-    const f   = FIGHTERS[Math.floor(Math.random() * 3)].id; // legendary fighter
-    g = rndGrid();
+    const f = FIGHTERS[Math.floor(Math.random() * 3)].id; g = rndGrid();
     for (let c = 0; c < COLS; c++) g[row][c] = f;
     return { grid: g, nearMissRow: -1 };
   }
-
   if (outcome === 'jackpot') {
-    // 14-20 cells of same legendary fighter (triggers mega/legendary scatter)
-    const f = FIGHTERS[Math.floor(Math.random() * 3)].id;
-    g = rndGrid();
+    const f = FIGHTERS[Math.floor(Math.random() * 3)].id; g = rndGrid();
     for (let r = 0; r < ROWS; r++)
       for (let c = 0; c < COLS; c++)
         if (Math.random() < 0.85) g[r][c] = f;
     return { grid: g, nearMissRow: -1 };
   }
-
   return { grid: g, nearMissRow: -1 };
 }
 
 function hasAnyWin(grid) {
-  // Quick horizontal check
   for (let r = 0; r < ROWS; r++) {
     let run = 1;
     for (let c = 1; c < COLS; c++) {
@@ -173,18 +390,15 @@ function hasAnyWin(grid) {
 
 // ─── Full win evaluation ─────────────────────────────────────────
 function evaluateWins(grid, bet, wildId, streakBonus) {
-  const wins = [];
-  const highlighted = new Set();
+  const wins = []; const highlighted = new Set();
   const key = (r, c) => `${r},${c}`;
   const isMatch = (a, b) => wildId !== null && (a === wildId || b === wildId) ? true : a === b;
-
   const addWin = (type, cells, base, emoji, tier = 'normal') => {
     const mult = streakBonus ? Math.round(base * 1.5) : base;
     cells.forEach(([r, c]) => highlighted.add(key(r, c)));
     wins.push({ type, cells, multiplier: mult, payout: bet * mult, emoji, tier });
   };
-
-  // Horizontal paylines
+  // Horizontal
   for (let r = 0; r < ROWS; r++) {
     let c = 0;
     while (c < COLS) {
@@ -193,15 +407,14 @@ function evaluateWins(grid, bet, wildId, streakBonus) {
       const len = end - c;
       if (len >= 3) {
         const cells = Array.from({ length: len }, (_, i) => [r, c + i]);
-        if      (len === 5) addWin('LINE JACKPOT!',   cells, 25,  '🎰', 'jackpot');
-        else if (len === 4) addWin('Four in a Row!',  cells,  8,  '💥', 'high');
-        else                addWin('Three in a Row!', cells,  2,  '⚡', 'normal');
+        if      (len === 5) addWin('LINE JACKPOT!',   cells, 25, '🎰', 'jackpot');
+        else if (len === 4) addWin('Four in a Row!',  cells,  8, '💥', 'high');
+        else                addWin('Three in a Row!', cells,  2, '⚡', 'normal');
       }
       c = end;
     }
   }
-
-  // Vertical matches
+  // Vertical
   for (let c = 0; c < COLS; c++) {
     let r = 0;
     while (r < ROWS) {
@@ -216,17 +429,13 @@ function evaluateWins(grid, bet, wildId, streakBonus) {
       r = end;
     }
   }
-
-  // Main diagonal ↘
+  // Diagonals
   { const d = Array.from({ length: ROWS }, (_, i) => [i, i]);
     if (d.every(([r, c]) => isMatch(grid[r][c], grid[0][0])))
       addWin('Diagonal Strike!', d, 30, '↘️', 'high'); }
-
-  // Anti-diagonal ↙
   { const d = Array.from({ length: ROWS }, (_, i) => [i, COLS - 1 - i]);
     if (d.every(([r, c]) => isMatch(grid[r][c], grid[0][COLS - 1])))
       addWin('Counter Diagonal!', d, 30, '↙️', 'high'); }
-
   // Double diagonal
   { const d1 = Array.from({ length: ROWS }, (_, i) => [i, i]);
     const d2 = Array.from({ length: ROWS }, (_, i) => [i, COLS - 1 - i]);
@@ -237,13 +446,11 @@ function evaluateWins(grid, bet, wildId, streakBonus) {
       const cells = [...d1, ...d2].filter(([r, c]) => { const k = `${r},${c}`; if (seen.has(k)) return false; seen.add(k); return true; });
       addWin('DOUBLE DIAGONAL!', cells, 80, '✖️', 'jackpot');
     } }
-
   // Corner quad
   { const corners = [[0,0],[0,COLS-1],[ROWS-1,0],[ROWS-1,COLS-1]];
     if (corners.every(([r,c]) => isMatch(grid[r][c], grid[0][0])))
       addWin('Corner Quad!', corners, 25, '🔲', 'high'); }
-
-  // Cross pattern
+  // Cross
   { const mR = 1, mC = 2, rF = grid[mR][0], cF = grid[0][mC];
     const rowOk = Array.from({length:COLS},(_,c)=>grid[mR][c]).every(f=>isMatch(f,rF));
     const colOk = Array.from({length:ROWS},(_,r)=>grid[r][mC]).every(f=>isMatch(f,cF));
@@ -252,13 +459,11 @@ function evaluateWins(grid, bet, wildId, streakBonus) {
                      ...Array.from({length:ROWS},(_,r)=>[r,mC]).filter(([r])=>r!==mR)];
       addWin('Cross Pattern!', cells, 40, '✝️', 'high');
     } }
-
   // Full board
   { if (grid.every(row => row.every(f => isMatch(f, grid[0][0])))) {
       const cells = []; for (let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) cells.push([r,c]);
       addWin('GRAND JACKPOT!!!', cells, 1000, '🏆', 'jackpot');
     } }
-
   // Scatter
   const cnt = {};
   for (let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) { const f=grid[r][c]; (cnt[f]=cnt[f]||[]).push([r,c]); }
@@ -270,7 +475,6 @@ function evaluateWins(grid, bet, wildId, streakBonus) {
     else if (n>=5)  addWin('Scatter Win!',         cells,  20, '💫', 'high');
     else if (n>=4)  addWin('Scatter Hit!',         cells,   8, '⭐', 'normal');
   }
-
   // Rivalry
   for (let r=0;r<ROWS;r++) {
     if (grid[r].includes(0) && grid[r].includes(1)) {
@@ -278,21 +482,18 @@ function evaluateWins(grid, bet, wildId, streakBonus) {
       addWin('McGregor vs Khabib!', cells, 15, '🥊', 'high');
     }
   }
-  // Triple Champions
   for (let r=0;r<ROWS;r++) {
     if (grid[r].includes(0)&&grid[r].includes(1)&&grid[r].includes(2)) {
       const cells = grid[r].flatMap((f,c)=>[0,1,2].includes(f)?[[r,c]]:[]);
       addWin('TRIPLE CHAMPIONS!', cells, 60, '👑', 'jackpot');
     }
   }
-  // Near-miss KO (4 of 5 same)
   for (let r=0;r<ROWS;r++) {
     const freq={}; grid[r].forEach(f=>{freq[f]=(freq[f]||0)+1;});
     for(const [fId,n] of Object.entries(freq)) {
       if(n===4){const cells=grid[r].flatMap((f,c)=>f===+fId?[[r,c]]:[]);addWin('Near-Miss KO!',cells,5,'🎯','normal');}
     }
   }
-
   return { wins, highlighted };
 }
 
@@ -305,8 +506,6 @@ function SlotCell({ fighterId, isHighlighted, isSpinning, justStopped, isHeartbr
 
   return (
     <div className="relative w-full h-full overflow-hidden rounded-md select-none">
-
-      {/* Reel content — key change triggers slide-in from top */}
       <motion.div
         key={isSpinning ? `sp-${(spinFrame + fighterId) % 97}` : `st-${fighterId}`}
         className="absolute inset-0"
@@ -318,8 +517,7 @@ function SlotCell({ fighterId, isHighlighted, isSpinning, justStopped, isHeartbr
           <img src={imgSrc} alt={fighter.name}
             className="w-full h-full object-cover object-top"
             style={{ filter: isSpinning ? 'brightness(0.5) blur(1.5px)' : 'brightness(1)', transition: 'filter 0.08s' }}
-            onError={() => setImgOk(false)}
-            draggable={false}
+            onError={() => setImgOk(false)} draggable={false}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-0.5"
@@ -331,7 +529,6 @@ function SlotCell({ fighterId, isHighlighted, isSpinning, justStopped, isHeartbr
         )}
       </motion.div>
 
-      {/* Scanline moving downward during spin */}
       {isSpinning && (
         <motion.div className="absolute inset-x-0 pointer-events-none z-10"
           style={{ height: '38%', background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0) 100%)' }}
@@ -340,7 +537,6 @@ function SlotCell({ fighterId, isHighlighted, isSpinning, justStopped, isHeartbr
         />
       )}
 
-      {/* Anticipation ring — shown just before heartbreaker col stops */}
       {isAnticipating && (
         <motion.div className="absolute inset-0 rounded-md pointer-events-none z-20"
           animate={{ boxShadow: ['0 0 0px rgba(251,191,36,0)', '0 0 20px 6px rgba(251,191,36,0.8)', '0 0 0px rgba(251,191,36,0)'] }}
@@ -349,7 +545,6 @@ function SlotCell({ fighterId, isHighlighted, isSpinning, justStopped, isHeartbr
         />
       )}
 
-      {/* Column-stop flash */}
       <AnimatePresence>
         {justStopped && (
           <motion.div className="absolute inset-0 bg-white/40 pointer-events-none z-20 rounded-md"
@@ -359,7 +554,6 @@ function SlotCell({ fighterId, isHighlighted, isSpinning, justStopped, isHeartbr
         )}
       </AnimatePresence>
 
-      {/* Heartbreaker shake */}
       <AnimatePresence>
         {isHeartbreaker && (
           <motion.div className="absolute inset-0 rounded-md pointer-events-none z-20"
@@ -371,7 +565,6 @@ function SlotCell({ fighterId, isHighlighted, isSpinning, justStopped, isHeartbr
         )}
       </AnimatePresence>
 
-      {/* Win shimmer sweep */}
       {isHighlighted && (
         <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden rounded-md">
           <motion.div className="absolute inset-y-0 w-2/3"
@@ -382,7 +575,6 @@ function SlotCell({ fighterId, isHighlighted, isSpinning, justStopped, isHeartbr
         </div>
       )}
 
-      {/* Pulsing border */}
       <motion.div className="absolute inset-0 rounded-md pointer-events-none z-30"
         animate={isHighlighted
           ? { boxShadow: ['0 0 6px 2px rgba(251,191,36,0.5)', '0 0 16px 5px rgba(251,191,36,1)', '0 0 6px 2px rgba(251,191,36,0.5)'], borderColor: '#fbbf24' }
@@ -420,28 +612,31 @@ function BonusBar({ spinsDone, total }) {
 }
 
 // ─── Bonus reveal screen ─────────────────────────────────────────
-function BonusReveal({ results, total, onClaim }) {
-  const [visible, setVisible]      = useState(0);
-  const [counter, setCounter]      = useState(0);
-  const [done, setDone]            = useState(false);
+function BonusReveal({ results, total, onClaim, onTick, onClaimSound }) {
+  const [visible, setVisible]   = useState(0);
+  const [counter, setCounter]   = useState(0);
+  const [done, setDone]         = useState(false);
   const counterReady = visible >= results.length;
 
-  // Reveal spin results one by one
   useEffect(() => {
     if (visible >= results.length) return;
     const t = setTimeout(() => setVisible(v => v + 1), 320);
     return () => clearTimeout(t);
   }, [visible, results.length]);
 
-  // Animate total counter after all results shown
   useEffect(() => {
     if (!counterReady || counter >= total) return;
     const step = Math.max(1, Math.ceil(total / 55));
     const t = setInterval(() => {
-      setCounter(v => { const n = Math.min(v + step, total); if (n >= total) setDone(true); return n; });
+      setCounter(v => {
+        const n = Math.min(v + step, total);
+        if (n >= total) setDone(true);
+        onTick?.();
+        return n;
+      });
     }, 18);
     return () => clearInterval(t);
-  }, [counterReady, counter, total]);
+  }, [counterReady, counter, total, onTick]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -455,7 +650,6 @@ function BonusReveal({ results, total, onClaim }) {
           <p className="text-purple-400 text-sm">{BONUS_SPINS} free spins played</p>
         </motion.div>
 
-        {/* Per-spin results */}
         <div className="space-y-1.5 mb-5 max-h-52 overflow-y-auto pr-1">
           {results.map((res, i) => (
             <AnimatePresence key={i}>
@@ -464,11 +658,9 @@ function BonusReveal({ results, total, onClaim }) {
                   className={`flex items-center justify-between rounded-xl px-3 py-2 ${res.total > 0 ? 'bg-purple-900/50 border border-purple-700/40' : 'bg-gray-900/60'}`}>
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-[10px] font-black text-purple-400 flex-shrink-0">#{i+1}</span>
-                    {res.total > 0 ? (
-                      <span className="text-xs text-purple-200 truncate">{res.wins[0]?.emoji} {res.wins[0]?.type}</span>
-                    ) : (
-                      <span className="text-xs text-gray-600">No win</span>
-                    )}
+                    {res.total > 0
+                      ? <span className="text-xs text-purple-200 truncate">{res.wins[0]?.emoji} {res.wins[0]?.type}</span>
+                      : <span className="text-xs text-gray-600">No win</span>}
                   </div>
                   <span className={`font-black text-sm flex-shrink-0 ml-2 ${res.total > 0 ? 'text-green-400' : 'text-gray-700'}`}>
                     {res.total > 0 ? `+${res.total.toLocaleString()}` : '--'}
@@ -479,19 +671,16 @@ function BonusReveal({ results, total, onClaim }) {
           ))}
         </div>
 
-        {/* Animated total */}
         <AnimatePresence>
           {counterReady && (
             <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               className="text-center bg-gradient-to-br from-yellow-600 via-amber-500 to-orange-600 rounded-2xl p-5 mb-4 relative overflow-hidden">
-              {/* Shine */}
               <motion.div className="absolute inset-y-0 w-1/2 pointer-events-none"
                 style={{ background: 'linear-gradient(105deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)' }}
                 animate={{ x: ['-100%', '300%'] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'linear' }} />
               <p className="text-yellow-100 font-bold text-xs mb-1 uppercase tracking-wider">Total Bonus Payout</p>
               <motion.div key={counter} className="text-4xl font-black text-white leading-none">
-                {counter.toLocaleString()}
-                <span className="text-2xl ml-1">🪙</span>
+                {counter.toLocaleString()}<span className="text-2xl ml-1">🪙</span>
               </motion.div>
             </motion.div>
           )}
@@ -499,7 +688,7 @@ function BonusReveal({ results, total, onClaim }) {
 
         {done && (
           <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            onClick={onClaim}
+            onClick={() => { onClaimSound?.(); onClaim(); }}
             className="w-full py-4 rounded-2xl font-black text-lg bg-gradient-to-r from-green-600 to-emerald-500 text-white shadow-lg shadow-green-500/30 transition-all hover:scale-105">
             💰 CLAIM {total.toLocaleString()} COINS!
           </motion.button>
@@ -531,6 +720,7 @@ export default function UFCSlots() {
   const navigate = useNavigate();
   const { currentUser, getAuthToken } = useAuth();
   const isAdmin = currentUser?.email === ADMIN_EMAIL;
+  const sounds  = useSlotSounds();
 
   // Wallet
   const [ufcCoins, setUfcCoins]       = useState(0);
@@ -541,7 +731,6 @@ export default function UFCSlots() {
   const [bet, setBet]                 = useState(50);
   const [grid, setGrid]               = useState(() => rndGrid());
   const [spinning, setSpinning]       = useState(false);
-  // Per-column stop tracking (replaces single count)
   const [stoppedCols, setStoppedCols] = useState([true,true,true,true,true]);
   const [justStopped, setJustStopped] = useState([false,false,false,false,false]);
   const [heartbreakerCol, setHeartbreakerCol] = useState(-1);
@@ -555,16 +744,14 @@ export default function UFCSlots() {
   const [sessionNet, setSessionNet]   = useState(0);
   const [recentWins, setRecentWins]   = useState([]);
   const [jackpotFlash, setJackpotFlash] = useState(false);
+  const [nearMissMsg, setNearMissMsg] = useState(null);
 
-  // Near-miss state
-  const [nearMissMsg, setNearMissMsg] = useState(null); // null | 'hold' | 'heartbreak'
-
-  // Bonus round state
-  const [bonusPhase, setBonusPhase]   = useState(null); // null | 'active' | 'revealing'
-  const [bonusResults, setBonusResults] = useState([]);
+  // Bonus round
+  const [bonusPhase, setBonusPhase]       = useState(null);
+  const [bonusResults, setBonusResults]   = useState([]);
   const [bonusSpinsDone, setBonusSpinsDone] = useState(0);
-  const [bonusTotal, setBonusTotal]   = useState(0);
-  const [bonusMsg, setBonusMsg]       = useState(null);
+  const [bonusTotal, setBonusTotal]       = useState(0);
+  const [bonusMsg, setBonusMsg]           = useState(null);
 
   // UI
   const [loading, setLoading]             = useState(false);
@@ -578,8 +765,7 @@ export default function UFCSlots() {
 
   useEffect(() => {
     const update = () => {
-      const el = gridContainerRef.current;
-      if (!el) return;
+      const el = gridContainerRef.current; if (!el) return;
       const { width, height } = el.getBoundingClientRect();
       const avW = width * 0.97, avH = height * 0.97;
       const ratio = COLS / ROWS;
@@ -593,11 +779,11 @@ export default function UFCSlots() {
     return () => ro.disconnect();
   }, []);
 
-  // Refs
-  const finalGridRef  = useRef(null);
-  const nearMissRef   = useRef(-1); // near-miss row
-  const spinInterval  = useRef(null);
-  const allTimeouts   = useRef([]);
+  const finalGridRef = useRef(null);
+  const nearMissRef  = useRef(-1);
+  const spinInterval = useRef(null);
+  const allTimeouts  = useRef([]);
+  const musicOn      = useRef(false);
 
   const addTimeout = (fn, ms) => {
     const t = setTimeout(fn, ms);
@@ -605,28 +791,23 @@ export default function UFCSlots() {
     return t;
   };
 
-  // Load fighter images
   useEffect(() => {
     axios.get(`${API_URL}/fighters`)
       .then(res => setFighterImages(buildImageMap(res.data)))
       .catch(() => {});
   }, []);
 
-  // Fetch UFC coin balance
   useEffect(() => {
     if (!currentUser) return;
     (async () => {
       try {
         const token = await getAuthToken();
-        const res = await axios.get(`${API_URL}/fancoins/poker-status`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(`${API_URL}/fancoins/poker-status`, { headers: { Authorization: `Bearer ${token}` } });
         setUfcCoins(res.data.fanCoin ?? 0);
       } catch {}
     })();
   }, [currentUser, getAuthToken]);
 
-  // Computed display grid
   const displayGrid = Array.from({ length: ROWS }, (_, r) =>
     Array.from({ length: COLS }, (_, c) =>
       stoppedCols[c]
@@ -635,27 +816,26 @@ export default function UFCSlots() {
     )
   );
 
-  const canSpin = !spinning && bonusPhase === null &&
-    (isAdmin || slotCoins >= bet);
+  const canSpin = !spinning && bonusPhase === null && (isAdmin || slotCoins >= bet);
 
   // ── Core spin logic ──────────────────────────────────────────
   const doSpin = (isBonusSpin = false) => {
     if (spinning) return;
 
-    // Deduct coins
+    // Start music on first interaction
+    if (!musicOn.current) { musicOn.current = true; sounds.startMusic(); }
+
+    sounds.spinStart();
+
     if (!isAdmin && !isBonusSpin) setSlotCoins(p => p - bet);
 
-    // Wild
-    const wild = Math.random() < 0.03 ? Math.floor(Math.random() * FIGHTERS.length) : null;
-
-    // Outcome engine
-    const outcome  = determineOutcome(isBonusSpin);
-    const isNM     = outcome === 'nearmiss';
+    const wild    = Math.random() < 0.03 ? Math.floor(Math.random() * FIGHTERS.length) : null;
+    const outcome = determineOutcome(isBonusSpin);
+    const isNM    = outcome === 'nearmiss';
     const { grid: fg, nearMissRow } = generateGrid(outcome);
     finalGridRef.current = fg;
     nearMissRef.current  = nearMissRow;
 
-    // Reset visuals
     setSpinning(true);
     setStoppedCols([false,false,false,false,false]);
     setJustStopped([false,false,false,false,false]);
@@ -670,39 +850,34 @@ export default function UFCSlots() {
 
     spinInterval.current = setInterval(() => setSpinFrame(f => f + 1), 80);
 
-    // Column stop sequence
-    // Near-miss: cols 0,1,3,4 stop first, then col 2 (middle/heartbreaker) stops LAST
     const stopOrder = isNM ? [0, 1, 3, 4, 2] : [0, 1, 2, 3, 4];
     const stopTimes = isNM ? [620, 840, 1060, 1280, 2200] : [620, 840, 1060, 1280, 1500];
 
     stopOrder.forEach((col, i) => {
       addTimeout(() => {
+        sounds.colStop(col);
         setStoppedCols(prev => { const n = [...prev]; n[col] = true; return n; });
         setJustStopped(prev => { const n = [...prev]; n[col] = true; return n; });
         addTimeout(() => setJustStopped(prev => { const n=[...prev]; n[col]=false; return n; }), 480);
-
-        // Show heartbreaker shake when the last near-miss column lands
         if (isNM && i === stopOrder.length - 1) {
           setHeartbreakerCol(col);
           setNearMissMsg('heartbreak');
+          sounds.heartbreak();
           addTimeout(() => { setHeartbreakerCol(-1); setNearMissMsg(null); }, 2200);
         }
       }, stopTimes[i]);
     });
 
-    // Anticipation text + glow — shown just before the last column lands (near-miss only)
     if (isNM) {
-      addTimeout(() => { setAnticipatingCol(2); setNearMissMsg('hold'); }, 1380);
+      addTimeout(() => { setAnticipatingCol(2); setNearMissMsg('hold'); sounds.nearMissRise(); }, 1380);
       addTimeout(() => setAnticipatingCol(-1), 2250);
     }
 
-    // Big-win anticipation: col 4 stops normally but glows if row would win
     if (outcome === 'bigwin') {
       addTimeout(() => setAnticipatingCol(4), 1200);
       addTimeout(() => setAnticipatingCol(-1), 1600);
     }
 
-    // Resolve everything
     const resolveMs = isNM ? 2500 : 1800;
     addTimeout(() => {
       clearInterval(spinInterval.current);
@@ -716,6 +891,16 @@ export default function UFCSlots() {
       setWins(w);
       setHighlighted(h);
       setTotalWin(winTotal);
+
+      // Play appropriate win sound
+      if (winTotal > 0) {
+        const topTier = w.find(x => x.tier === 'jackpot')?.tier ?? w.find(x => x.tier === 'high')?.tier ?? 'normal';
+        const mult    = w.reduce((m, x) => Math.max(m, x.multiplier), 0);
+        if (mult >= 150 || topTier === 'jackpot') sounds.jackpotSound();
+        else if (mult >= 25) sounds.megaWin();
+        else if (mult >= 8)  sounds.bigWin();
+        else                 sounds.smallWin();
+      }
 
       if (isBonusSpin) {
         setBonusResults(prev => [...prev, { wins: w, total: winTotal }]);
@@ -737,9 +922,10 @@ export default function UFCSlots() {
           setStreak(0);
         }
 
-        // Bonus round trigger — 5% chance
+        // Bonus round trigger
         if (Math.random() < 0.05) {
           addTimeout(() => {
+            sounds.bonusTrigger();
             setBonusPhase('active');
             setBonusResults([]);
             setBonusSpinsDone(0);
@@ -770,7 +956,6 @@ export default function UFCSlots() {
     setSlotCoins(p => p + earned);
     setSessionNet(p => p + earned);
     setShowWinOverlay(false);
-    // Persist bonus coins
     if (earned > 0 && currentUser && !isAdmin) {
       try {
         const token = await getAuthToken();
@@ -823,7 +1008,7 @@ export default function UFCSlots() {
     );
   }
 
-  const topWin = wins.find(w => w.tier === 'jackpot') ?? wins.find(w => w.tier === 'high') ?? wins[0];
+  const topWin  = wins.find(w => w.tier === 'jackpot') ?? wins.find(w => w.tier === 'high') ?? wins[0];
   const cellGap = Math.max(2, Math.floor(gridDim.w / 80));
   const cellW   = Math.floor((gridDim.w - cellGap * (COLS - 1) - 8) / COLS);
   const cellH   = Math.floor((gridDim.h - cellGap * (ROWS - 1) - 8) / ROWS);
@@ -845,7 +1030,13 @@ export default function UFCSlots() {
       {/* Bonus reveal screen */}
       <AnimatePresence>
         {bonusPhase === 'revealing' && (
-          <BonusReveal results={bonusResults} total={bonusTotal} onClaim={handleClaimBonus} />
+          <BonusReveal
+            results={bonusResults}
+            total={bonusTotal}
+            onClaim={handleClaimBonus}
+            onTick={sounds.coinTick}
+            onClaimSound={sounds.claimChime}
+          />
         )}
       </AnimatePresence>
 
@@ -856,7 +1047,17 @@ export default function UFCSlots() {
           <h1 className="text-sm font-black tracking-widest text-red-400 uppercase leading-tight">🎰 UFC Slots 🎰</h1>
           <p className="text-[10px] text-gray-500">5×4 Grid • Casino Difficulty</p>
         </div>
-        <button onClick={() => setShowPaytable(true)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"><Info size={20} /></button>
+        <div className="flex items-center gap-1">
+          {/* Mute toggle */}
+          <button
+            onClick={sounds.toggleMute}
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+            title={sounds.muted ? 'Unmute' : 'Mute'}
+          >
+            {sounds.muted ? <VolumeX size={20} className="text-gray-500" /> : <Volume2 size={20} className="text-gray-300" />}
+          </button>
+          <button onClick={() => setShowPaytable(true)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"><Info size={20} /></button>
+        </div>
       </div>
 
       {/* Wallet bar */}
@@ -893,11 +1094,9 @@ export default function UFCSlots() {
       </div>
 
       {/* Bonus accumulator bar */}
-      {bonusPhase === 'active' && (
-        <BonusBar spinsDone={bonusSpinsDone} total={bonusTotal} />
-      )}
+      {bonusPhase === 'active' && <BonusBar spinsDone={bonusSpinsDone} total={bonusTotal} />}
 
-      {/* Near-miss overlay text */}
+      {/* Near-miss banners */}
       <AnimatePresence>
         {nearMissMsg === 'hold' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -923,21 +1122,16 @@ export default function UFCSlots() {
         </div>
       )}
 
-      {/* ── Machine + Grid ── */}
+      {/* Machine + Grid */}
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-2 py-1">
-
-        {/* Chrome top */}
         <div className="w-full max-w-lg">
           <div className="bg-gradient-to-b from-gray-700 via-gray-800 to-gray-900 rounded-t-2xl px-3 pt-1 pb-0.5 border-t-2 border-x-2 border-gray-600">
             <LightStrip count={11} colors={['#ef4444', '#fbbf24', '#ef4444']} />
           </div>
         </div>
-
-        {/* Machine body */}
         <div className="w-full max-w-lg bg-gradient-to-b from-gray-900 to-gray-950 border-x-2 border-gray-600 flex-1 min-h-0"
           style={{ boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8)' }}>
           <div ref={gridContainerRef} className="w-full h-full flex items-center justify-center p-2">
-            {/* Actual grid */}
             <div style={{
               width: gridDim.w, height: gridDim.h,
               display: 'grid',
@@ -973,8 +1167,6 @@ export default function UFCSlots() {
             </div>
           </div>
         </div>
-
-        {/* Chrome bottom */}
         <div className="w-full max-w-lg">
           <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-b-2xl px-3 pb-1 pt-0.5 border-b-2 border-x-2 border-gray-600">
             <LightStrip count={11} colors={['#fbbf24', '#ef4444', '#fbbf24']} />
@@ -984,7 +1176,6 @@ export default function UFCSlots() {
 
       {/* Controls */}
       <div className="flex-shrink-0 px-3 pt-1 pb-2 space-y-1.5 max-w-lg mx-auto w-full">
-        {/* Bet */}
         <div className="flex items-center gap-2 bg-gray-900 rounded-xl px-2.5 py-1.5">
           <span className="text-[10px] text-gray-500 font-bold w-7 flex-shrink-0">BET</span>
           <div className="flex gap-1 flex-1">
@@ -997,7 +1188,6 @@ export default function UFCSlots() {
           </div>
         </div>
 
-        {/* Spin */}
         <motion.button whileTap={{ scale: 0.96 }} onClick={() => canSpin && doSpin(false)} disabled={!canSpin}
           className={`w-full py-4 rounded-2xl font-black text-xl tracking-wide transition-all duration-200 relative overflow-hidden ${
             bonusPhase === 'active'
@@ -1018,7 +1208,6 @@ export default function UFCSlots() {
             : isAdmin ? '🛠 ADMIN SPIN (FREE)' : '🎰  SPIN'}
         </motion.button>
 
-        {/* Cash out / no coins hint */}
         <div className="flex items-center gap-2">
           {!isAdmin && slotCoins >= COINS_PER_UFC && (
             <motion.button initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -1041,7 +1230,7 @@ export default function UFCSlots() {
         </div>
       </div>
 
-      {/* ── Bonus trigger flash ── */}
+      {/* Bonus trigger flash */}
       <AnimatePresence>
         {bonusMsg && (
           <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
@@ -1054,7 +1243,7 @@ export default function UFCSlots() {
         )}
       </AnimatePresence>
 
-      {/* ── Win Overlay ── */}
+      {/* Win Overlay */}
       <AnimatePresence>
         {showWinOverlay && wins.length > 0 && bonusPhase === null && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -1176,6 +1365,7 @@ export default function UFCSlots() {
                 <p>💔 <strong className="text-white">Near-Miss:</strong> Middle reel stops LAST — false hope guaranteed</p>
                 <p>🔥 <strong className="text-white">Win Streak (3+):</strong> +50% on all multipliers</p>
                 <p>⚡ <strong className="text-white">Wild (3%):</strong> One random fighter substitutes for any</p>
+                <p>🔊 <strong className="text-white">Sound:</strong> Toggle with the speaker icon in the header</p>
                 <p>🏠 <strong className="text-white">House edge:</strong> ~21% RTP. This is a casino — most spins lose</p>
               </div>
               <button onClick={() => setShowPaytable(false)}
