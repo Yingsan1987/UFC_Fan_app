@@ -17,20 +17,51 @@ const BET_OPTIONS   = [10, 25, 50, 100, 250, 500];
 const ADMIN_EMAIL   = 'yingsan1987@gmail.com';
 const BONUS_SPINS   = 7;
 
-// ─── 12 UFC fighter symbols ──────────────────────────────────────
+// ─── 40 UFC fighter symbols ──────────────────────────────────────
 const FIGHTERS = [
-  { id: 0,  name: 'Conor McGregor',        short: 'MC', color: '#fbbf24', bg: '#78350f', tier: 3, emoji: '🇮🇪' },
-  { id: 1,  name: 'Khabib Nurmagomedov',   short: 'KH', color: '#6ee7b7', bg: '#064e3b', tier: 3, emoji: '🦅' },
-  { id: 2,  name: 'Jon Jones',             short: 'JJ', color: '#c4b5fd', bg: '#3b0764', tier: 3, emoji: '🦁' },
-  { id: 3,  name: 'Islam Makhachev',       short: 'IM', color: '#67e8f9', bg: '#0c4a6e', tier: 2, emoji: '🌊' },
-  { id: 4,  name: 'Kamaru Usman',          short: 'KU', color: '#f9a8d4', bg: '#831843', tier: 2, emoji: '👑' },
-  { id: 5,  name: 'Francis Ngannou',       short: 'FN', color: '#fdba74', bg: '#7c2d12', tier: 2, emoji: '💪' },
-  { id: 6,  name: 'Israel Adesanya',       short: 'IA', color: '#93c5fd', bg: '#1e3a5f', tier: 2, emoji: '💀' },
-  { id: 7,  name: 'Alexander Volkanovski', short: 'AV', color: '#fca5a5', bg: '#7f1d1d', tier: 1, emoji: '🦈' },
-  { id: 8,  name: 'Charles Oliveira',      short: 'CO', color: '#bbf7d0', bg: '#14532d', tier: 1, emoji: '🌿' },
-  { id: 9,  name: 'Alex Pereira',          short: 'AP', color: '#fda4af', bg: '#881337', tier: 1, emoji: '⚡' },
-  { id: 10, name: 'Leon Edwards',          short: 'LE', color: '#d8b4fe', bg: '#581c87', tier: 1, emoji: '🎯' },
-  { id: 11, name: 'Dustin Poirier',        short: 'DP', color: '#93c5fd', bg: '#1e40af', tier: 1, emoji: '💎' },
+  // Tier 3 — Legends (weight 1, rarest)
+  { id: 0,  name: 'Conor McGregor',        short: 'MAC',  color: '#fbbf24', bg: '#78350f', tier: 3, emoji: '🇮🇪', special: 'precision' },
+  { id: 1,  name: 'Khabib Nurmagomedov',   short: 'KHB',  color: '#6ee7b7', bg: '#064e3b', tier: 3, emoji: '🦅', special: 'eagle' },
+  { id: 2,  name: 'Jon Jones',             short: 'JBJ',  color: '#c4b5fd', bg: '#3b0764', tier: 3, emoji: '🦁', special: 'goat' },
+  { id: 3,  name: 'Anderson Silva',        short: 'AND',  color: '#fbbf24', bg: '#713f12', tier: 3, emoji: '🕷️', special: null },
+  { id: 4,  name: 'Georges St-Pierre',     short: 'GSP',  color: '#bef264', bg: '#1a2e05', tier: 3, emoji: '🇨🇦', special: null },
+  // Tier 2 — Current Champions (weight 2)
+  { id: 5,  name: 'Islam Makhachev',       short: 'ISL',  color: '#67e8f9', bg: '#0c4a6e', tier: 2, emoji: '🌊', special: 'bonus' },
+  { id: 6,  name: 'Alex Pereira',          short: 'PET',  color: '#fda4af', bg: '#881337', tier: 2, emoji: '⚡', special: 'ko_bonus' },
+  { id: 7,  name: 'Ilia Topuria',          short: 'TOP',  color: '#fde68a', bg: '#78350f', tier: 2, emoji: '🇬🇪', special: 'mini_jackpot' },
+  { id: 8,  name: 'Kamaru Usman',          short: 'USM',  color: '#f9a8d4', bg: '#831843', tier: 2, emoji: '👑', special: null },
+  { id: 9,  name: 'Leon Edwards',          short: 'LEO',  color: '#d8b4fe', bg: '#581c87', tier: 2, emoji: '🎯', special: null },
+  { id: 10, name: 'Francis Ngannou',       short: 'NGN',  color: '#fdba74', bg: '#7c2d12', tier: 2, emoji: '💪', special: null },
+  { id: 11, name: 'Israel Adesanya',       short: 'IZZ',  color: '#93c5fd', bg: '#1e3a5f', tier: 2, emoji: '💀', special: null },
+  { id: 12, name: 'Alexander Volkanovski', short: 'VOL',  color: '#fca5a5', bg: '#7f1d1d', tier: 2, emoji: '🦈', special: null },
+  { id: 13, name: 'Sean O\'Malley',        short: 'SUG',  color: '#fbcfe8', bg: '#831843', tier: 2, emoji: '🍭', special: null },
+  { id: 14, name: 'Tom Aspinall',          short: 'ASP',  color: '#bfdbfe', bg: '#1e3a5f', tier: 2, emoji: '🇬🇧', special: null },
+  { id: 15, name: 'Dricus du Plessis',     short: 'DDP',  color: '#bbf7d0', bg: '#14532d', tier: 2, emoji: '🇿🇦', special: null },
+  // Tier 1 — Fan Favourites (weight 3)
+  { id: 16, name: 'Charles Oliveira',      short: 'DOB',  color: '#a7f3d0', bg: '#065f46', tier: 1, emoji: '🌿', special: null },
+  { id: 17, name: 'Dustin Poirier',        short: 'DIA',  color: '#93c5fd', bg: '#1e40af', tier: 1, emoji: '💎', special: null },
+  { id: 18, name: 'Max Holloway',          short: 'BLH',  color: '#fde68a', bg: '#78350f', tier: 1, emoji: '🌺', special: null },
+  { id: 19, name: 'Justin Gaethje',        short: 'HIG',  color: '#fed7aa', bg: '#7c2d12', tier: 1, emoji: '💥', special: null },
+  { id: 20, name: 'Robert Whittaker',      short: 'BOB',  color: '#fca5a5', bg: '#7f1d1d', tier: 1, emoji: '🇦🇺', special: null },
+  { id: 21, name: 'Colby Covington',       short: 'COV',  color: '#fbbf24', bg: '#92400e', tier: 1, emoji: '🇺🇸', special: null },
+  { id: 22, name: 'Jorge Masvidal',        short: 'GNG',  color: '#fdba74', bg: '#7c2d12', tier: 1, emoji: '✈️', special: null },
+  { id: 23, name: 'Belal Muhammad',        short: 'REM',  color: '#c4b5fd', bg: '#3b0764', tier: 1, emoji: '🕊️', special: null },
+  { id: 24, name: 'Jan Blachowicz',        short: 'JAN',  color: '#bfdbfe', bg: '#1e3a5f', tier: 1, emoji: '🇵🇱', special: null },
+  { id: 25, name: 'Jiri Prochazka',        short: 'JIR',  color: '#fda4af', bg: '#881337', tier: 1, emoji: '⚔️', special: null },
+  { id: 26, name: 'Ciryl Gane',            short: 'BON',  color: '#d1fae5', bg: '#064e3b', tier: 1, emoji: '🇫🇷', special: null },
+  { id: 27, name: 'Stipe Miocic',          short: 'STI',  color: '#e0f2fe', bg: '#0c4a6e', tier: 1, emoji: '🔨', special: null },
+  { id: 28, name: 'Jamahal Hill',          short: 'SWT',  color: '#fbbf24', bg: '#78350f', tier: 1, emoji: '🌴', special: null },
+  { id: 29, name: 'Sean Strickland',       short: 'STK',  color: '#e2e8f0', bg: '#1e293b', tier: 1, emoji: '🤠', special: null },
+  { id: 30, name: 'Merab Dvalishvili',     short: 'MER',  color: '#99f6e4', bg: '#134e4a', tier: 1, emoji: '⚙️', special: null },
+  { id: 31, name: 'Aljamain Sterling',     short: 'FUN',  color: '#fde68a', bg: '#78350f', tier: 1, emoji: '🥇', special: null },
+  { id: 32, name: 'Brian Ortega',          short: 'TCH',  color: '#c084fc', bg: '#3b0764', tier: 1, emoji: '🐉', special: null },
+  { id: 33, name: 'Paddy Pimblett',        short: 'BDG',  color: '#93c5fd', bg: '#1e3a5f', tier: 1, emoji: '🫐', special: null },
+  { id: 34, name: 'Valentina Shevchenko',  short: 'BUL',  color: '#f0abfc', bg: '#581c87', tier: 1, emoji: '🎯', special: null },
+  { id: 35, name: 'Zhang Weili',           short: 'MAG',  color: '#fca5a5', bg: '#7f1d1d', tier: 1, emoji: '🐉', special: null },
+  { id: 36, name: 'Amanda Nunes',          short: 'LIO',  color: '#fbbf24', bg: '#78350f', tier: 1, emoji: '🦁', special: null },
+  { id: 37, name: 'Nate Diaz',             short: 'NAT',  color: '#6ee7b7', bg: '#064e3b', tier: 1, emoji: '🌊', special: null },
+  { id: 38, name: 'Michael Bisping',       short: 'CNT',  color: '#93c5fd', bg: '#1e3a5f', tier: 1, emoji: '🇬🇧', special: null },
+  { id: 39, name: 'Tony Ferguson',         short: 'ELC',  color: '#fbbf24', bg: '#713f12', tier: 1, emoji: '🌮', special: null },
 ];
 const WEIGHTS      = FIGHTERS.map(f => f.tier === 3 ? 1 : f.tier === 2 ? 2 : 3);
 const TOTAL_WEIGHT = WEIGHTS.reduce((a, b) => a + b, 0);
@@ -219,16 +250,15 @@ function useSlotSounds() {
     musicStarted.current = true;
     const ctx = getCtx();
     const bpm = 118;
-    const beat = 60 / bpm;        // ~0.508s per beat
-    const eighth = beat / 2;      // ~0.254s per 8th note
+    const beat = 60 / bpm;
+    const eighth = beat / 2;
     let next = ctx.currentTime + 0.05;
     let step = 0;
 
-    // 16-step pattern (2 bars of 8th notes)
     const kicks   = new Set([0, 8]);
     const snares  = new Set([4, 12]);
     const hihats  = new Set([0,2,4,6,8,10,12,14]);
-    const bassMap = { 0: 65, 4: 49, 8: 65, 12: 43 }; // C2, G1, C2, F1
+    const bassMap = { 0: 65, 4: 49, 8: 65, 12: 43 };
 
     const schedStep = (t, s) => {
       const ss = s % 16;
@@ -272,7 +302,6 @@ function useSlotSounds() {
           osc.connect(g); g.connect(masterRef.current);
           osc.start(t); osc.stop(t + beat * 1.7);
         }
-        // Subtle melodic blip every 4 steps
         if (ss === 2 || ss === 6 || ss === 10 || ss === 14) {
           const melFreqs = [784, 659, 880, 740];
           const idx = Math.floor(ss / 4);
@@ -315,7 +344,7 @@ function useSlotSounds() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// OUTCOME ENGINE  — controls house edge (~79% RTP)
+// OUTCOME ENGINE  — reduced win rates (~12% normal)
 // ═══════════════════════════════════════════════════════════════
 function determineOutcome(isBonusSpin = false) {
   const r = Math.random();
@@ -323,22 +352,23 @@ function determineOutcome(isBonusSpin = false) {
     if (r < 0.001)  return 'jackpot';
     if (r < 0.01)   return 'megawin';
     if (r < 0.08)   return 'bigwin';
-    if (r < 0.48)   return 'smallwin';
-    if (r < 0.63)   return 'nearmiss';
+    if (r < 0.40)   return 'smallwin';
+    if (r < 0.60)   return 'nearmiss';
     return 'loss';
   }
-  if (r < 0.0003)  return 'jackpot';
-  if (r < 0.003)   return 'megawin';
-  if (r < 0.033)   return 'bigwin';
-  if (r < 0.213)   return 'smallwin';
-  if (r < 0.433)   return 'nearmiss';
+  // Normal: ~12% win rate
+  if (r < 0.0002)  return 'jackpot';
+  if (r < 0.002)   return 'megawin';
+  if (r < 0.02)    return 'bigwin';
+  if (r < 0.12)    return 'smallwin';
+  if (r < 0.40)    return 'nearmiss';
   return 'loss';
 }
 
 function generateGrid(outcome) {
   let g = rndGrid();
   if (outcome === 'loss') {
-    for (let attempt = 0; attempt < 6; attempt++) {
+    for (let attempt = 0; attempt < 12; attempt++) {
       g = rndGrid(); if (!hasAnyWin(g)) break;
     }
     return { grid: g, nearMissRow: -1 };
@@ -357,18 +387,18 @@ function generateGrid(outcome) {
   }
   if (outcome === 'bigwin') {
     const row = Math.floor(Math.random() * ROWS);
-    const f = FIGHTERS[Math.random() < 0.5 ? 3 : wr()].id; g = rndGrid();
+    const f = FIGHTERS[Math.random() < 0.5 ? 5 : wr()].id; g = rndGrid();
     for (let c = 0; c < 4; c++) g[row][c] = f; g[row][4] = diffFrom(f);
     return { grid: g, nearMissRow: -1 };
   }
   if (outcome === 'megawin') {
     const row = Math.floor(Math.random() * ROWS);
-    const f = FIGHTERS[Math.floor(Math.random() * 3)].id; g = rndGrid();
+    const f = FIGHTERS[Math.floor(Math.random() * 5)].id; g = rndGrid();
     for (let c = 0; c < COLS; c++) g[row][c] = f;
     return { grid: g, nearMissRow: -1 };
   }
   if (outcome === 'jackpot') {
-    const f = FIGHTERS[Math.floor(Math.random() * 3)].id; g = rndGrid();
+    const f = FIGHTERS[Math.floor(Math.random() * 5)].id; g = rndGrid();
     for (let r = 0; r < ROWS; r++)
       for (let c = 0; c < COLS; c++)
         if (Math.random() < 0.85) g[r][c] = f;
@@ -385,7 +415,11 @@ function hasAnyWin(grid) {
       else run = 1;
     }
   }
-  return false;
+  const cnt = {};
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      cnt[grid[r][c]] = (cnt[grid[r][c]] || 0) + 1;
+  return Object.values(cnt).some(n => n >= 5);
 }
 
 // ─── Full win evaluation ─────────────────────────────────────────
@@ -713,6 +747,184 @@ function LightStrip({ count = 11, colors = ['#ef4444', '#fbbf24'] }) {
   );
 }
 
+// ─── Brawl Overlay ───────────────────────────────────────────────
+function BrawlOverlay({ wins, totalWin, winnerFighterId, fighterImages, bet, onDismiss }) {
+  const winner = FIGHTERS[winnerFighterId] ?? FIGHTERS[0];
+  const [oppId] = useState(() => {
+    let id;
+    do { id = Math.floor(Math.random() * FIGHTERS.length); } while (id === winnerFighterId);
+    return id;
+  });
+  const opponent = FIGHTERS[oppId];
+  const rounds = wins.slice(0, 3);
+
+  const [phase, setPhase] = useState('intro');   // intro | fighting | result
+  const [revealedRounds, setRevealedRounds] = useState(0);
+  const [oppHp, setOppHp] = useState(100);
+  const [punching, setPunching] = useState(false);
+  const [roundPayouts, setRoundPayouts] = useState([]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setPhase('fighting'), 600);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (phase !== 'fighting') return;
+    if (revealedRounds >= rounds.length) {
+      const t = setTimeout(() => setPhase('result'), 600);
+      return () => clearTimeout(t);
+    }
+    const win = rounds[revealedRounds];
+    const t1 = setTimeout(() => setPunching(true), 150);
+    const t2 = setTimeout(() => {
+      setPunching(false);
+      const dmg = Math.floor(22 + revealedRounds * 18);
+      setOppHp(h => Math.max(5, h - dmg));
+      setRoundPayouts(p => [...p, win.payout]);
+    }, 450);
+    const t3 = setTimeout(() => setRevealedRounds(r => r + 1), 1050);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [phase, revealedRounds, rounds.length]);
+
+  const winnerImg = fighterImages?.[winner.id];
+  const oppImg    = fighterImages?.[opponent.id];
+  const isKO      = totalWin >= bet * 15;
+  const isTKO     = totalWin >= bet * 8;
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      className="fixed inset-0 z-40 bg-black/93 flex flex-col items-center justify-center p-4 overflow-hidden">
+
+      {/* FIGHT! header */}
+      <motion.div initial={{ scale: 3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.35, type: 'spring', stiffness: 300 }}
+        className="text-center mb-3">
+        <div className="text-4xl font-black tracking-widest text-red-400"
+          style={{ textShadow: '0 0 24px rgba(239,68,68,0.9), 0 0 48px rgba(239,68,68,0.4)' }}>
+          ⚡ FIGHT! ⚡
+        </div>
+        <div className="text-xs text-gray-500 mt-0.5 font-bold tracking-wider">
+          {winner.name} vs {opponent.name}
+        </div>
+      </motion.div>
+
+      {/* Fighters */}
+      <div className="flex items-end gap-6 mb-4">
+        {/* Winner */}
+        <div className="flex flex-col items-center gap-1.5">
+          <motion.div
+            animate={punching ? { x: [0, 44, 0] } : {}}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-yellow-400 relative shadow-lg shadow-yellow-500/30">
+            {winnerImg
+              ? <img src={winnerImg} className="w-full h-full object-cover object-top" alt={winner.name} />
+              : <div className="w-full h-full flex flex-col items-center justify-center gap-1" style={{ backgroundColor: winner.bg }}>
+                  <span className="text-4xl">{winner.emoji}</span>
+                  <span className="text-xs font-black" style={{ color: winner.color }}>{winner.short}</span>
+                </div>
+            }
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ boxShadow: 'inset 0 0 12px rgba(251,191,36,0.3)' }} />
+          </motion.div>
+          <span className="text-[11px] font-black text-yellow-400">{winner.short}</span>
+          <div className="w-24 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div className="h-full bg-green-500 rounded-full w-full" />
+          </div>
+          <span className="text-[9px] text-green-400">100 HP</span>
+        </div>
+
+        {/* Centre */}
+        <div className="flex flex-col items-center gap-1 pb-7">
+          <span className="text-2xl font-black text-white">VS</span>
+          <div className="text-[10px] text-gray-500 font-bold">
+            Rd {Math.min(revealedRounds + 1, rounds.length)}/{rounds.length}
+          </div>
+        </div>
+
+        {/* Opponent */}
+        <div className="flex flex-col items-center gap-1.5">
+          <motion.div
+            animate={punching ? { x: [0, -14, -5, 0] } : {}}
+            transition={{ duration: 0.22 }}
+            className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-red-600 relative shadow-lg shadow-red-500/20">
+            {oppImg
+              ? <img src={oppImg} className="w-full h-full object-cover object-top" alt={opponent.name} />
+              : <div className="w-full h-full flex flex-col items-center justify-center gap-1" style={{ backgroundColor: opponent.bg }}>
+                  <span className="text-4xl">{opponent.emoji}</span>
+                  <span className="text-xs font-black" style={{ color: opponent.color }}>{opponent.short}</span>
+                </div>
+            }
+            <AnimatePresence>
+              {punching && (
+                <motion.div className="absolute inset-0 bg-red-500/60 pointer-events-none"
+                  initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0] }} transition={{ duration: 0.35 }} />
+              )}
+            </AnimatePresence>
+          </motion.div>
+          <span className="text-[11px] font-black text-red-400">{opponent.short}</span>
+          <div className="w-24 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <motion.div className="h-full bg-red-500 rounded-full"
+              animate={{ width: `${oppHp}%` }} transition={{ duration: 0.4 }} />
+          </div>
+          <motion.span key={oppHp} initial={{ color: '#ef4444', scale: 1.3 }} animate={{ color: '#9ca3af', scale: 1 }}
+            className="text-[9px] font-bold">{oppHp} HP</motion.span>
+        </div>
+      </div>
+
+      {/* Round-by-round results */}
+      <div className="w-full max-w-xs space-y-1.5 mb-4 min-h-[60px]">
+        {rounds.map((win, i) => (
+          <AnimatePresence key={i}>
+            {i < revealedRounds && (
+              <motion.div initial={{ x: -40, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
+                className={`flex items-center justify-between rounded-xl px-3 py-2 border ${
+                  win.tier === 'jackpot' ? 'bg-yellow-900/40 border-yellow-700/40' :
+                  win.tier === 'high'    ? 'bg-purple-900/40 border-purple-700/40' :
+                                          'bg-gray-900/70 border-gray-700/40'
+                }`}>
+                <div className="flex items-center gap-2">
+                  <span className="text-base leading-none">{win.emoji}</span>
+                  <div>
+                    <p className="text-[10px] text-gray-500 font-bold">ROUND {i + 1}</p>
+                    <p className="text-xs text-white font-semibold leading-tight">{win.type}</p>
+                  </div>
+                </div>
+                <span className={`text-sm font-black ${win.tier === 'jackpot' ? 'text-yellow-400' : win.tier === 'high' ? 'text-purple-300' : 'text-green-400'}`}>
+                  +{win.payout.toLocaleString()}
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        ))}
+      </div>
+
+      {/* Final result */}
+      <AnimatePresence>
+        {phase === 'result' && (
+          <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            className="text-center">
+            <motion.div
+              animate={{ scale: [1, 1.12, 1] }}
+              transition={{ duration: 0.5, repeat: 2 }}
+              className={`text-3xl font-black mb-1 ${isKO ? 'text-red-400' : isTKO ? 'text-orange-400' : 'text-white'}`}>
+              {isKO ? '🥊 KO!!' : isTKO ? '⚡ TKO!' : '🏆 WIN!'}
+            </motion.div>
+            <div className="text-4xl font-black text-yellow-400 mb-4">
+              +{totalWin.toLocaleString()} <span className="text-2xl">🪙</span>
+            </div>
+            <motion.button whileTap={{ scale: 0.95 }} onClick={onDismiss}
+              className="px-8 py-3.5 rounded-2xl font-black text-lg bg-gradient-to-r from-green-600 to-emerald-500 text-white shadow-lg shadow-green-500/30">
+              💰 CLAIM WINNINGS!
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
@@ -738,13 +950,19 @@ export default function UFCSlots() {
   const [spinFrame, setSpinFrame]     = useState(0);
   const [wins, setWins]               = useState([]);
   const [highlighted, setHighlighted] = useState(new Set());
-  const [showWinOverlay, setShowWinOverlay] = useState(false);
   const [totalWin, setTotalWin]       = useState(0);
   const [streak, setStreak]           = useState(0);
   const [sessionNet, setSessionNet]   = useState(0);
   const [recentWins, setRecentWins]   = useState([]);
   const [jackpotFlash, setJackpotFlash] = useState(false);
   const [nearMissMsg, setNearMissMsg] = useState(null);
+
+  // Brawl overlay (replaces win overlay)
+  const [showBrawl, setShowBrawl]         = useState(false);
+  const [brawlWinnerId, setBrawlWinnerId] = useState(0);
+
+  // Champion specials
+  const [specialChampMsg, setSpecialChampMsg] = useState(null);
 
   // Bonus round
   const [bonusPhase, setBonusPhase]       = useState(null);
@@ -783,6 +1001,7 @@ export default function UFCSlots() {
   const nearMissRef  = useRef(-1);
   const spinInterval = useRef(null);
   const allTimeouts  = useRef([]);
+  const bonusMsgTimeoutRef = useRef(null); // separate ref — NOT cleared on spin start
   const musicOn      = useRef(false);
 
   const addTimeout = (fn, ms) => {
@@ -843,8 +1062,9 @@ export default function UFCSlots() {
     setAnticipatingCol(-1);
     setWins([]);
     setHighlighted(new Set());
-    setShowWinOverlay(false);
+    setShowBrawl(false);
     setNearMissMsg(null);
+    // NOTE: do NOT clear bonusMsgTimeoutRef here
     allTimeouts.current.forEach(clearTimeout);
     allTimeouts.current = [];
 
@@ -886,11 +1106,51 @@ export default function UFCSlots() {
       setGrid(fg.map(r => [...r]));
 
       const { wins: w, highlighted: h } = evaluateWins(fg, bet, wild, streak >= 3);
-      const winTotal = w.reduce((s, x) => s + x.payout, 0);
+      let winTotal = w.reduce((s, x) => s + x.payout, 0);
 
       setWins(w);
       setHighlighted(h);
       setTotalWin(winTotal);
+
+      // Find most common fighter in highlighted cells → brawl winner
+      const hlFighters = [];
+      for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++)
+          if (h.has(`${r},${c}`)) hlFighters.push(fg[r][c]);
+      const freq = {};
+      hlFighters.forEach(id => freq[id] = (freq[id] || 0) + 1);
+      const wFid = hlFighters.length > 0
+        ? Number(Object.entries(freq).sort((a,b) => b[1]-a[1])[0][0])
+        : fg[0][0];
+      setBrawlWinnerId(wFid);
+
+      // Champion specials
+      let adjWinTotal = winTotal;
+      let specialMsg = null;
+      if (hlFighters.includes(0) && winTotal > 0) { // McGregor precision
+        adjWinTotal = Math.round(winTotal * 1.5);
+        specialMsg = '☘️ McGregor Precision! ×1.5 bonus!';
+      }
+      if (hlFighters.includes(6) && winTotal > 0) { // Pereira KO bonus
+        adjWinTotal = Math.round(adjWinTotal * 2);
+        specialMsg = '⚡ Poatan KO Power! ×2 bonus!';
+      }
+      if (hlFighters.includes(7) && winTotal > 0) { // Topuria mini jackpot
+        adjWinTotal += bet * 50;
+        specialMsg = '🇬🇪 Topuria KO! Mini Jackpot +' + (bet * 50) + '!';
+      }
+      if (adjWinTotal !== winTotal) {
+        setTotalWin(adjWinTotal);
+        winTotal = adjWinTotal;
+      }
+      if (specialMsg) {
+        setSpecialChampMsg(specialMsg);
+        setTimeout(() => setSpecialChampMsg(null), 3000);
+      }
+
+      // Islam bonus trigger chance boost
+      const islamBonus = hlFighters.includes(5) && winTotal > 0;
+      const bonusTriggerChance = islamBonus ? 0.25 : 0.05;
 
       // Play appropriate win sound
       if (winTotal > 0) {
@@ -913,7 +1173,7 @@ export default function UFCSlots() {
           setSlotCoins(p => p + winTotal);
           setStreak(p => p + 1);
           setRecentWins(p => [{ wins: w, total: winTotal, ts: Date.now() }, ...p.slice(0, 4)]);
-          setShowWinOverlay(true);
+          setShowBrawl(true);
           if (w.some(x => x.tier === 'jackpot')) {
             setJackpotFlash(true);
             addTimeout(() => setJackpotFlash(false), 900);
@@ -923,7 +1183,7 @@ export default function UFCSlots() {
         }
 
         // Bonus round trigger
-        if (Math.random() < 0.05) {
+        if (Math.random() < bonusTriggerChance) {
           addTimeout(() => {
             sounds.bonusTrigger();
             setBonusPhase('active');
@@ -931,7 +1191,9 @@ export default function UFCSlots() {
             setBonusSpinsDone(0);
             setBonusTotal(0);
             setBonusMsg('✨ BONUS ROUND! 7 Free Spins — collecting all wins…');
-            addTimeout(() => setBonusMsg(null), 3500);
+            // Use separate ref so this timeout is not wiped by the next spin
+            clearTimeout(bonusMsgTimeoutRef.current);
+            bonusMsgTimeoutRef.current = setTimeout(() => setBonusMsg(null), 3500);
           }, winTotal > 0 ? 2000 : 400);
         }
       }
@@ -955,7 +1217,7 @@ export default function UFCSlots() {
     setBonusPhase(null);
     setSlotCoins(p => p + earned);
     setSessionNet(p => p + earned);
-    setShowWinOverlay(false);
+    setShowBrawl(false);
     if (earned > 0 && currentUser && !isAdmin) {
       try {
         const token = await getAuthToken();
@@ -993,6 +1255,7 @@ export default function UFCSlots() {
   useEffect(() => () => {
     clearInterval(spinInterval.current);
     allTimeouts.current.forEach(clearTimeout);
+    clearTimeout(bonusMsgTimeoutRef.current);
   }, []);
 
   if (!currentUser) {
@@ -1040,6 +1303,20 @@ export default function UFCSlots() {
         )}
       </AnimatePresence>
 
+      {/* Brawl overlay */}
+      <AnimatePresence>
+        {showBrawl && wins.length > 0 && bonusPhase === null && (
+          <BrawlOverlay
+            wins={wins}
+            totalWin={totalWin}
+            winnerFighterId={brawlWinnerId}
+            fighterImages={fighterImages}
+            bet={bet}
+            onDismiss={() => setShowBrawl(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex-shrink-0 bg-gradient-to-r from-gray-900 via-red-950 to-gray-900 border-b border-red-900/50 px-3 py-2 flex items-center justify-between">
         <button onClick={() => navigate('/game')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"><ArrowLeft size={20} /></button>
@@ -1048,7 +1325,6 @@ export default function UFCSlots() {
           <p className="text-[10px] text-gray-500">5×4 Grid • Casino Difficulty</p>
         </div>
         <div className="flex items-center gap-1">
-          {/* Mute toggle */}
           <button
             onClick={sounds.toggleMute}
             className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
@@ -1111,6 +1387,16 @@ export default function UFCSlots() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="flex-shrink-0 bg-red-950/80 border-b border-red-700/50 px-3 py-1.5 text-center">
             <p className="text-sm font-black text-red-400">💔 SO CLOSE! THE MIDDLE REEL BROKE IT! 😫</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Champion special message */}
+      <AnimatePresence>
+        {specialChampMsg && (
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            className="flex-shrink-0 bg-amber-950/80 border-b border-amber-700/50 px-3 py-1.5 text-center">
+            <p className="text-sm font-black text-amber-300">{specialChampMsg}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1243,50 +1529,6 @@ export default function UFCSlots() {
         )}
       </AnimatePresence>
 
-      {/* Win Overlay */}
-      <AnimatePresence>
-        {showWinOverlay && wins.length > 0 && bonusPhase === null && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/80 flex items-end sm:items-center justify-center p-4"
-            onClick={() => setShowWinOverlay(false)}>
-            <motion.div initial={{ y: 80, scale: 0.88 }} animate={{ y: 0, scale: 1 }}
-              exit={{ y: 80, scale: 0.88 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-              onClick={e => e.stopPropagation()}
-              className={`w-full max-w-sm rounded-3xl p-5 text-center shadow-2xl relative overflow-hidden ${
-                topWin?.tier === 'jackpot'
-                  ? 'bg-gradient-to-br from-yellow-500 via-amber-500 to-orange-600'
-                  : topWin?.tier === 'high'
-                  ? 'bg-gradient-to-br from-purple-700 via-violet-700 to-pink-700'
-                  : 'bg-gradient-to-br from-green-800 to-emerald-700'
-              }`}>
-              <motion.div className="absolute inset-y-0 w-1/2 pointer-events-none"
-                style={{ background: 'linear-gradient(105deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)' }}
-                animate={{ x: ['-100%', '300%'] }} transition={{ duration: 2, repeat: Infinity, ease: 'linear', repeatDelay: 0.5 }} />
-              <div className="relative">
-                <div className="text-5xl mb-1">{topWin?.tier==='jackpot'?'🏆':topWin?.tier==='high'?'💎':'🎉'}</div>
-                <h2 className="text-xl font-black text-white mb-0.5">{topWin?.tier==='jackpot'?'JACKPOT!!!':'YOU WIN!'}</h2>
-                <div className="text-4xl font-black text-white mb-3">
-                  +{totalWin.toLocaleString()}<span className="text-lg font-bold opacity-80"> coins</span>
-                </div>
-                <div className="space-y-1 mb-4 max-h-40 overflow-y-auto text-left">
-                  {wins.map((w, i) => (
-                    <div key={i} className="flex items-center justify-between bg-black/20 rounded-lg px-3 py-1.5">
-                      <span className="text-white/90 text-xs font-semibold truncate mr-2">{w.emoji} {w.type}</span>
-                      <span className="text-white font-black text-xs whitespace-nowrap">{w.multiplier}× +{w.payout}</span>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={() => setShowWinOverlay(false)}
-                  className="w-full py-3 bg-black/25 hover:bg-black/40 rounded-xl font-bold text-white text-sm transition-all">
-                  Keep Spinning!
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Exchange Modal */}
       <AnimatePresence>
         {showExchange && (
@@ -1365,8 +1607,12 @@ export default function UFCSlots() {
                 <p>💔 <strong className="text-white">Near-Miss:</strong> Middle reel stops LAST — false hope guaranteed</p>
                 <p>🔥 <strong className="text-white">Win Streak (3+):</strong> +50% on all multipliers</p>
                 <p>⚡ <strong className="text-white">Wild (3%):</strong> One random fighter substitutes for any</p>
+                <p>☘️ <strong className="text-white">McGregor Precision:</strong> ×1.5 on any win</p>
+                <p>⚡ <strong className="text-white">Poatan KO Power:</strong> ×2 on any win</p>
+                <p>🇬🇪 <strong className="text-white">Topuria Mini Jackpot:</strong> +50× bet bonus</p>
+                <p>🌊 <strong className="text-white">Islam Bonus Boost:</strong> 25% bonus trigger chance</p>
                 <p>🔊 <strong className="text-white">Sound:</strong> Toggle with the speaker icon in the header</p>
-                <p>🏠 <strong className="text-white">House edge:</strong> ~21% RTP. This is a casino — most spins lose</p>
+                <p>🏠 <strong className="text-white">House edge:</strong> ~88% RTP. This is a casino — most spins lose</p>
               </div>
               <button onClick={() => setShowPaytable(false)}
                 className="w-full py-3 bg-red-700 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-colors">
