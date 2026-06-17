@@ -18,11 +18,39 @@ connectDB().catch(err => {
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+
+// CORS allow-list. Set FRONTEND_URL on the server to your site origin(s),
+// comma-separated (e.g. "https://kurokuku.lol,https://www.kurokuku.lol").
+// When configured, only those origins are allowed (no "*" + credentials mismatch).
+// When NOT set, we fall back to the previous permissive behavior so the app
+// keeps working — but log a warning, since this is unsafe for production.
+const ALLOWED_ORIGINS = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS.length === 0) {
+  console.warn('⚠️  FRONTEND_URL is not set in production — CORS is running in permissive mode. Set FRONTEND_URL to lock it down.');
+}
+
+const corsOrigin = (origin, callback) => {
+  // Allow non-browser / same-origin requests (no Origin header).
+  if (!origin) return callback(null, true);
+  // No allow-list configured -> preserve prior permissive behavior.
+  if (ALLOWED_ORIGINS.length === 0) return callback(null, true);
+  return callback(null, ALLOWED_ORIGINS.includes(origin));
+};
+
+const io = new Server(server, {
+  cors: {
+    origin: ALLOWED_ORIGINS.length ? ALLOWED_ORIGINS : '*',
+    methods: ['GET', 'POST']
+  }
+});
 
 // Middleware
 app.use(cors({
-  origin: (process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : '*'),
+  origin: corsOrigin,
   methods: ['GET','POST','PUT','DELETE','OPTIONS'],
   credentials: true
 }));
