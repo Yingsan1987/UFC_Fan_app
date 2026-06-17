@@ -4,7 +4,8 @@ const UFCEvent = require('../models/UFCEvent');
 const FanCoinTransaction = require('../models/FanCoinTransaction');
 const GameProgress = require('../models/GameProgress');
 const User = require('../models/User');
-const { requireAuth, optionalAuth } = require('../middleware/authMiddleware');
+const { requireAuth, optionalAuth, requireAdmin } = require('../middleware/authMiddleware');
+const { validateCoinDelta } = require('../utils/coinGuard');
 
 // Get upcoming UFC events with coin opportunities
 router.get('/events/upcoming', async (req, res) => {
@@ -56,7 +57,7 @@ router.get('/events/:eventId', async (req, res) => {
 });
 
 // Process fight results and award coins (Admin endpoint)
-router.post('/process-event/:eventId', requireAuth, async (req, res) => {
+router.post('/process-event/:eventId', requireAuth, requireAdmin, async (req, res) => {
   try {
     console.log('🏆 Processing event results for Fan Coins...');
     
@@ -323,11 +324,13 @@ router.post('/poker-rebuy', requireAuth, async (req, res) => {
 router.post('/poker-result', requireAuth, async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
-    const { coinDelta } = req.body;
 
-    if (typeof coinDelta !== 'number' || isNaN(coinDelta)) {
-      return res.status(400).json({ message: 'Invalid coinDelta' });
+    // Bound + rate-limit the client-reported delta (anti-abuse). See utils/coinGuard.js.
+    const check = validateCoinDelta('poker', firebaseUid, req.body.coinDelta);
+    if (!check.ok) {
+      return res.status(check.status).json({ message: check.message });
     }
+    const coinDelta = check.delta;
 
     const gameProgress = await GameProgress.findOne({ firebaseUid });
     if (!gameProgress) {
@@ -359,11 +362,13 @@ router.post('/poker-result', requireAuth, async (req, res) => {
 router.post('/slots-result', requireAuth, async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
-    const { coinDelta } = req.body;
 
-    if (typeof coinDelta !== 'number' || isNaN(coinDelta)) {
-      return res.status(400).json({ message: 'Invalid coinDelta' });
+    // Bound + rate-limit the client-reported delta (anti-abuse). See utils/coinGuard.js.
+    const check = validateCoinDelta('slots', firebaseUid, req.body.coinDelta);
+    if (!check.ok) {
+      return res.status(check.status).json({ message: check.message });
     }
+    const coinDelta = check.delta;
 
     const gameProgress = await GameProgress.findOne({ firebaseUid });
     if (!gameProgress) {
@@ -393,7 +398,7 @@ router.post('/slots-result', requireAuth, async (req, res) => {
 });
 
 // Create new UFC event (Admin only - simplified for now)
-router.post('/events/create', requireAuth, async (req, res) => {
+router.post('/events/create', requireAuth, requireAdmin, async (req, res) => {
   try {
     console.log('📅 Creating new UFC event...');
     

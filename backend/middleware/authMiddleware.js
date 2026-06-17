@@ -73,15 +73,16 @@ const requireAuth = async (req, res, next) => {
     if (firebaseInitialized) {
       try {
         const decodedToken = await admin.auth().verifyIdToken(token);
-        
+
         req.user = {
           uid: decodedToken.uid,
           email: decodedToken.email,
           name: decodedToken.name,
           displayName: decodedToken.name,
-          photoURL: decodedToken.picture
+          photoURL: decodedToken.picture,
+          admin: decodedToken.admin === true // custom claim, if set
         };
-        
+
         console.log('✅ Token verified via Firebase Admin for user:', req.user.email);
         return next();
       } catch (error) {
@@ -89,11 +90,18 @@ const requireAuth = async (req, res, next) => {
         return res.status(401).json({ error: 'Invalid authentication token' });
       }
     }
-    
-    // Fallback for development: Extract user info from unverified token (JWT decode)
-    // WARNING: This trusts the client token without verification - OK for development only
-    console.warn('⚠️ Firebase Admin not configured - using unverified token (development mode)');
-    
+
+    // SECURITY: never trust an unverified token in production. If Firebase Admin
+    // is not configured in prod, fail closed instead of decoding the token blind.
+    if (process.env.NODE_ENV === 'production') {
+      console.error('🚨 requireAuth: Firebase Admin not initialized in production — rejecting request. Set FIREBASE_SERVICE_ACCOUNT.');
+      return res.status(503).json({ error: 'Authentication service unavailable' });
+    }
+
+    // Fallback for LOCAL DEVELOPMENT ONLY: Extract user info from unverified token (JWT decode)
+    // WARNING: This trusts the client token without verification. Only reached when NODE_ENV !== 'production'.
+    console.warn('⚠️ Firebase Admin not configured - using unverified token (development mode only)');
+
     try {
       // Basic JWT decode (without verification)
       const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
@@ -118,9 +126,33 @@ const requireAuth = async (req, res, next) => {
   }
 };
 
+// Admin authorization middleware. MUST be chained after requireAuth so req.user is set.
+// Grants access if the verified token carries an `admin: true` custom claim, or the
+// user's uid/email is in the ADMIN_UIDS / ADMIN_EMAILS env allow-list (comma-separated).
+const ADMIN_UIDS = (process.env.ADMIN_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+const requireAdmin = (req, res, next) => {
+  const u = req.user;
+  if (!u) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  const isAdmin =
+    u.admin === true ||
+    (u.uid && ADMIN_UIDS.includes(u.uid)) ||
+    (u.email && ADMIN_EMAILS.includes(String(u.email).toLowerCase()));
+
+  if (!isAdmin) {
+    console.warn(`⛔ Admin-only route blocked for ${u.email || u.uid}`);
+    return res.status(403).json({ error: 'Admin privileges required' });
+  }
+  return next();
+};
+
 module.exports = {
   optionalAuth,
   requireAuth,
+  requireAdmin,
   firebaseInitialized
 };
 
