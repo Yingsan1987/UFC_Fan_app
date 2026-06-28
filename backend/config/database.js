@@ -13,7 +13,17 @@ const connectDB = async () => {
       w: 'majority'
     };
 
-    const conn = await mongoose.connect(process.env.MONGO_URI, options);
+    // Accept either env var name — render.yaml documents MONGODB_URI while the
+    // app historically read MONGO_URI. Supporting both avoids a silent failure
+    // (mongoose.connect(undefined) -> 5s serverSelectionTimeout on every request).
+    const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+    if (!mongoUri) {
+      throw new Error(
+        'No MongoDB connection string found. Set MONGO_URI (or MONGODB_URI) in your environment.'
+      );
+    }
+
+    const conn = await mongoose.connect(mongoUri, options);
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`📊 Database: ${conn.connection.name}`);

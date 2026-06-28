@@ -220,7 +220,7 @@ export default function Ranking() {
                     <div className="text-xs text-gray-400 font-semibold uppercase tracking-wider px-1">
                       {cr.division}
                     </div>
-                    <FighterRow cr={cr} idx={0} isChampion={cr.rank === 1} beltGradient="from-yellow-400 to-yellow-600" />
+                    <FighterRow cr={cr} idx={0} isChampion={cr.rank === 0} beltGradient="from-yellow-400 to-yellow-600" />
                   </div>
                 ))}
               </div>
@@ -287,7 +287,7 @@ export default function Ranking() {
                               <FighterRow
                                 key={cr.competitor?.id || i}
                                 cr={cr} idx={i}
-                                isChampion={cr.rank === 1}
+                                isChampion={cr.rank === 0}
                                 beltGradient={beltGradient}
                               />
                             ))

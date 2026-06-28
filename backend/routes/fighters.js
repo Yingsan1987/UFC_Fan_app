@@ -1171,9 +1171,21 @@ router.post('/sync-champions', async (req, res) => {
   }
 });
 
+// Get all fighter images (for Events page)
+// NOTE: must be registered BEFORE the '/:id' route below, otherwise Express
+// matches '/images' against '/:id' (id="images") and this handler is unreachable.
+router.get('/images', async (req, res) => {
+  try {
+    const images = await FighterImages.find().select('name image_url');
+    res.json(images);
+  } catch (error) {
+    console.error('❌ Error fetching fighter images:', error);
+    res.status(500).json({ error: 'Failed to fetch fighter images', message: error.message });
+  }
+});
+
 // Endpoint to get a specific fighter by ID
 router.get('/:id', async (req, res) => {
-  console.log(`❌ ID ROUTE HIT with ID: ${req.params.id} - This should NOT happen for api-status!`);
   try {
     const fighter = await Fighter.findById(req.params.id);
     if (!fighter) {
@@ -1215,19 +1227,6 @@ router.delete('/:id', async (req, res) => {
   } catch (error) {
     console.error('Database error:', error.message);
     res.status(500).json({ error: 'Error deleting fighter', message: error.message });
-  }
-});
-
-// Get all fighter images (for Events page)
-router.get('/images', async (req, res) => {
-  try {
-    console.log('🖼️ Fetching all fighter images...');
-    const images = await FighterImages.find().select('name image_url');
-    console.log(`✅ Found ${images.length} fighter images`);
-    res.json(images);
-  } catch (error) {
-    console.error('❌ Error fetching fighter images:', error);
-    res.status(500).json({ error: 'Failed to fetch fighter images', message: error.message });
   }
 });
 

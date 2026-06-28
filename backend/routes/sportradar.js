@@ -60,10 +60,58 @@ const initSportradar = async () => {
 };
 
 // Get MMA Rankings (changed from champions to rankings)
+// Shared helper: fuzzy-match fighter headshots from our FighterImages collection
+// onto a rankings payload (mutates competitor.image_url in place when missing).
+async function enhanceRankingsWithImages(rankings) {
+  try {
+    const { isValidImageUrl } = require('../utils/nameMatcher');
+    const fighterImages = await FighterImages.find();
+    const findImage = createFuzzyFinder(
+      fighterImages
+        .filter((img) => {
+          const u = img?.image_url || img?.image_path;
+          return img?.name && u && isValidImageUrl(u);
+        })
+        .map((img) => ({ name: img.name, value: img.image_url || img.image_path })),
+      { threshold: 0.9 }
+    );
+    rankings.forEach((ranking) => {
+      (ranking.competitor_rankings || []).forEach((cr) => {
+        const c = cr.competitor;
+        if (c && c.name && (!c.image_url || String(c.image_url).includes('placeholder'))) {
+          const nameParts = c.name.split(',').map((p) => p.trim());
+          const normalized = nameParts.length > 1 ? `${nameParts[1]} ${nameParts[0]}` : c.name;
+          const matched = findImage(normalized);
+          if (matched) c.image_url = matched;
+        }
+      });
+    });
+  } catch (imgErr) {
+    console.warn('⚠️ Could not enhance rankings with images:', imgErr.message);
+  }
+  return rankings;
+}
+
 router.get('/rankings', async (req, res) => {
   try {
-    console.log('📊 Fetching MMA Rankings from Sportradar...');
-    
+    console.log('📊 Fetching MMA Rankings...');
+
+    // 1) Prefer freshly-scraped UFC.com rankings stored in MongoDB by the
+    //    PythonAnywhere job (scrapers/ufc_rankings/). This is the source of truth.
+    try {
+      const Ranking = require('../models/Ranking');
+      const doc = await Ranking.findOne({ key: 'ufc_rankings' }).lean();
+      if (doc && Array.isArray(doc.rankings) && doc.rankings.length) {
+        console.log(`📦 Serving ${doc.rankings.length} divisions from scraped UFC rankings (updated ${doc.updatedAt})`);
+        await enhanceRankingsWithImages(doc.rankings);
+        return res.json({ rankings: doc.rankings, source: 'ufc.com', updatedAt: doc.updatedAt });
+      }
+      console.log('ℹ️ No scraped rankings in MongoDB yet — falling back to Sportradar/mock.');
+    } catch (dbErr) {
+      console.warn('⚠️ Could not read scraped rankings from MongoDB, falling back:', dbErr.message);
+    }
+
+    // 2) Fallback: Sportradar API (or mock data below).
     // Initialize SDK (only loads once, then cached)
     const sportradarMma = await initSportradar();
     
