@@ -4,6 +4,7 @@ const router = express.Router();
 const NewsArticle = require('../models/NewsArticle');
 const NewsSyncMeta = require('../models/NewsSyncMeta');
 const { fetchNewsAPI } = require('../services/newsapiService');
+const { fetchRssNews } = require('../services/rssNewsService');
 
 // Configuration
 const NEWSAPI_KEY = process.env.NEWSAPI_KEY;
@@ -41,31 +42,55 @@ async function syncUfcNews({ force = false, query = null } = {}) {
       }
     }
 
-    if (!NEWSAPI_KEY) {
-      throw new Error('NEWSAPI_KEY is not set in environment variables');
-    }
-
     const searchQuery = query || NEWS_QUERY;
     const queryTag = query ? 'custom' : 'ufc';
 
-    console.log(`🔄 Syncing news from NewsAPI (query: "${searchQuery}", lookback: ${NEWS_LOOKBACK_DAYS} days)`);
+    // Try NewsAPI first (if a key is configured), then fall back to RSS.
+    // NewsAPI's free/Developer plan is blocked in production (HTTP 426), and the
+    // key may not be set at all — in either case we fall through to public RSS
+    // feeds so news keeps working. See services/rssNewsService.js.
+    let articles = [];
+    let sourceUsed = null;
 
-    // Fetch from NewsAPI
-    const articles = await fetchNewsAPI({
-      apiKey: NEWSAPI_KEY,
-      query: searchQuery,
-      lookbackDays: NEWS_LOOKBACK_DAYS,
-      pageSize: 50
-    });
+    if (NEWSAPI_KEY) {
+      try {
+        console.log(`🔄 Syncing news from NewsAPI (query: "${searchQuery}", lookback: ${NEWS_LOOKBACK_DAYS} days)`);
+        articles = await fetchNewsAPI({
+          apiKey: NEWSAPI_KEY,
+          query: searchQuery,
+          lookbackDays: NEWS_LOOKBACK_DAYS,
+          pageSize: 50
+        });
+        sourceUsed = 'newsapi';
+      } catch (err) {
+        console.warn(`⚠️  NewsAPI fetch failed (${err.message}) — falling back to RSS feeds`);
+        articles = [];
+      }
+    } else {
+      console.log('ℹ️  NEWSAPI_KEY not set — using RSS feeds for news');
+    }
 
     if (!articles || articles.length === 0) {
-      console.log('⚠️  No articles fetched from NewsAPI');
+      console.log(`🔄 Syncing news from RSS feeds (lookback: ${NEWS_LOOKBACK_DAYS} days)`);
+      articles = await fetchRssNews({
+        lookbackDays: NEWS_LOOKBACK_DAYS,
+        max: 60,
+        query: query || null // only keyword-filter for custom queries
+      });
+      sourceUsed = 'rss';
+    }
+
+    if (!articles || articles.length === 0) {
+      console.log('⚠️  No articles fetched from NewsAPI or RSS');
       return {
         insertedCount: 0,
         updatedCount: 0,
-        totalFetched: 0
+        totalFetched: 0,
+        source: sourceUsed
       };
     }
+
+    console.log(`📥 Using ${articles.length} articles from source: ${sourceUsed}`);
 
     // Upsert articles by URL
     let insertedCount = 0;
@@ -109,12 +134,13 @@ async function syncUfcNews({ force = false, query = null } = {}) {
     meta.lastFetchCount = articles.length;
     await meta.save();
 
-    console.log(`✅ News sync complete: ${insertedCount} inserted, ${updatedCount} updated, ${articles.length} total fetched`);
+    console.log(`✅ News sync complete: ${insertedCount} inserted, ${updatedCount} updated, ${articles.length} total fetched (source: ${sourceUsed})`);
 
     return {
       insertedCount,
       updatedCount,
-      totalFetched: articles.length
+      totalFetched: articles.length,
+      source: sourceUsed
     };
   } catch (error) {
     console.error('❌ Error syncing news:', error);
