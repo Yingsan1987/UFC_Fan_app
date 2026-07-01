@@ -44,20 +44,22 @@ router.get('/', optionalAuth, async (req, res) => {
       Forum.countDocuments(),
     ]);
 
-    // Add userLiked, userDisliked flags, and calculate real comment count
+    // Compute comment counts for the whole page in ONE aggregation instead of
+    // an N+1 countDocuments() per forum. Also: no DB writes on a GET — the
+    // stored commentCount is kept in sync by the add-comment handler ($inc),
+    // so reads stay read-only (previously this endpoint wrote on every request).
     const userId = req.user ? req.user.uid : null;
-    const forumsWithUserState = await Promise.all(items.map(async forum => {
+    const forumIds = items.map(f => f._id);
+    const countAgg = await ForumComment.aggregate([
+      { $match: { forumId: { $in: forumIds } } },
+      { $group: { _id: '$forumId', count: { $sum: 1 } } },
+    ]);
+    const countMap = new Map(countAgg.map(c => [String(c._id), c.count]));
+
+    const forumsWithUserState = items.map(forum => {
       const forumObj = forum.toObject();
-      
-      // Calculate actual comment count from ForumComment collection
-      const actualCommentCount = await ForumComment.countDocuments({ forumId: forum._id });
-      forumObj.commentCount = actualCommentCount;
-      
-      // Update the database if the count is different (fix legacy data)
-      if (forum.commentCount !== actualCommentCount) {
-        await Forum.findByIdAndUpdate(forum._id, { commentCount: actualCommentCount });
-      }
-      
+      forumObj.commentCount = countMap.get(String(forum._id)) || 0;
+
       if (userId) {
         forumObj.userLiked = forum.likedBy.includes(userId);
         forumObj.userDisliked = forum.dislikedBy.includes(userId);
@@ -66,7 +68,7 @@ router.get('/', optionalAuth, async (req, res) => {
         forumObj.userDisliked = false;
       }
       return forumObj;
-    }));
+    });
 
     res.json({
       forums: forumsWithUserState,

@@ -204,9 +204,7 @@ const ADMIN_TESTER_EMAIL = 'yingsan1987@gmail.com';
 // Perform training action
 router.post('/train', requireAuth, async (req, res) => {
   try {
-    console.log('🎮 Training request received');
-    console.log('User:', req.user);
-    
+    // Avoid logging the full req.user object (contains email/PII) on every request.
     const firebaseUid = req.user.uid;
     const { trainingType, xpGained } = req.body;
     
