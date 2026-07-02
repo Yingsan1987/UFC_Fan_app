@@ -102,6 +102,16 @@ const gameProgressSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+
+  // Fantasy Picks — prediction streak tracking (for streaks & badges)
+  fantasyStreak: {
+    type: Number,
+    default: 0
+  },
+  fantasyBestStreak: {
+    type: Number,
+    default: 0
+  },
   
   // Timestamps
   createdAt: {
